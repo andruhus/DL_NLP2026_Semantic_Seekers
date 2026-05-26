@@ -14,7 +14,7 @@ from typing import BinaryIO, Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse
 from zipfile import ZipFile, is_zipfile
 
-import importlib_metadata
+import importlib.metadata
 import requests
 import torch
 import torch.nn as nn
@@ -24,7 +24,7 @@ from torch import Tensor
 from tqdm.auto import tqdm
 
 __version__ = "4.0.0"
-_torch_version = importlib_metadata.version("torch")
+_torch_version = importlib.metadata.version("torch")
 
 hf_cache_home = os.path.expanduser(
     os.getenv("HF_HOME", os.path.join(os.getenv("XDG_CACHE_HOME", "~/.cache"), "huggingface"))
