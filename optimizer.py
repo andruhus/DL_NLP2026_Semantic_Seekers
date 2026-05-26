@@ -52,6 +52,49 @@ class AdamW(Optimizer):
 
                 # Access hyperparameters from the `group` dictionary
                 alpha = group["lr"]
+                beta1, beta2 = group["betas"]
+                eps = group["eps"]
+                weight_decay = group["weight_decay"]
+                correct_bias = group["correct_bias"]
+
+                if weight_decay < 0.0:
+                    raise ValueError(
+                        "Invalid weight_decay value: {} - should be >= 0.0".format(weight_decay)
+                    )
+
+                if len(state) == 0:
+                    state["step"] = 0
+                    state["exp_avg"] = torch.zeros_like(p)
+                    state["exp_avg_sq"] = torch.zeros_like(p)
+
+                exp_avg = state["exp_avg"]
+                exp_avg_sq = state["exp_avg_sq"]
+
+                state["step"] += 1
+                t = state["step"]
+
+                with torch.no_grad():
+                    grad = p.grad
+
+                    # 1. Update first and second moments of the gradients
+                    exp_avg.mul_(beta1).add_(grad, alpha=1.0 - beta1)
+                    exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1.0 - beta2)
+
+                    # 2. Apply bias correction using the efficient Adam version
+                    denom = exp_avg_sq.sqrt().add_(eps)
+                    step_size = alpha
+
+                    if correct_bias:
+                        bias_correction1 = 1.0 - beta1 ** t
+                        bias_correction2 = 1.0 - beta2 ** t
+                        step_size *= math.sqrt(bias_correction2) / bias_correction1
+
+                    # 3. Update parameters
+                    p.addcdiv_(exp_avg, denom, value=-step_size)
+
+                    # 4. Apply decoupled weight decay after the main Adam update
+                    if weight_decay != 0.0:
+                        p.mul_(1.0 - alpha * weight_decay)
 
                 # Complete the implementation of AdamW here, reading and saving
                 # your state in the `state` dictionary above.
@@ -68,6 +111,6 @@ class AdamW(Optimizer):
                 #    (incorporating the learning rate again).
 
                 ### TODO
-                raise NotImplementedError
+                ## raise NotImplementedError
 
         return loss
