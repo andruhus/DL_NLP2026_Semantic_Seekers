@@ -37,57 +37,87 @@ class BartWithClassifier(nn.Module):
         return probabilities
 
 
-def transform_data(dataset, max_length=512):
-    """
-    dataset: pd.DataFrame
+def transform_data(dataset, max_length=512, shuffle=True):
+    tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large", local_files_only=True)
 
-    Turn the data to the format you want to use.
+    combined = [
+        str(r["sentence1"]) + " </s> " + str(r["sentence2"])
+        for _, r in dataset.iterrows()
+    ]
+    encoding = tokenizer(
+        combined, max_length=max_length, padding="max_length",
+        truncation=True, return_tensors="pt",
+    )
+    input_ids = encoding["input_ids"]
+    attention_mask = encoding["attention_mask"]
 
-    1. Extract the sentences from the dataset. We recommend using the already split
-    sentences in the dataset.
-    2. Use the AutoTokenizer from_pretrained to tokenize the sentences and obtain the
-    input_ids and attention_mask.
-    3. Currently, the labels are in the form of [6, 6, 6, 25, 25, 29]. This means that
-    the sentence pair contains type 6, 25, and 29. Turn this into a binary form, where the
-    label becomes [0, 0, 0, 0, 0, 1, ..., 1, 0, 0, 1, 0, 0].
-    IMPORTANT: You will find that the dataset contains types up to 31, but some are not
-    assigned. You need to drop 12, 19, 20, 23 and 27 when creating the binary labels.
-    This way you should end up with a binary label of size 26.     
-    Be careful that the test-student.csv does not
-    have the paraphrase_types column. You should return a DataLoader without the labels.
-    4. Use the input_ids, attention_mask, and binary labels to create a TensorDataset.
-    Return a DataLoader with the TensorDataset. You can choose a batch size of your
-    choice.
-    """
-    raise NotImplementedError
+    has_labels = "paraphrase_type_ids" in dataset.columns
+    if has_labels:
+        unused = {12, 19, 20, 23, 27}
+        valid_ids = sorted(set(range(1, 32)) - unused)
+        labels = []
+        for type_str in dataset["paraphrase_type_ids"]:
+            type_set = set(eval(str(type_str)))
+            labels.append([1 if t in type_set else 0 for t in valid_ids])
+        labels_tensor = torch.tensor(labels, dtype=torch.float)
+        ds = TensorDataset(input_ids, attention_mask, labels_tensor)
+    else:
+        ds = TensorDataset(input_ids, attention_mask)
+
+    return DataLoader(ds, batch_size=16, shuffle=shuffle)
 
 
 def train_model(model, train_data, dev_data, device):
-    """
-    Train the model. You can use any training loop you want. We recommend starting with
-    AdamW as your optimizer. You can take a look at the SST training loop for reference.
-    Think about your loss function and the number of epochs you want to train for.
-    You can also use the evaluate_model function to evaluate the
-    model on the dev set. Print the training loss, training accuracy, and dev accuracy at
-    the end of each epoch.
+    optimizer = AdamW(model.parameters(), lr=2e-5)
+    criterion = nn.BCELoss()
+    best_acc = 0.0
 
-    Return the trained model.
-    """
-    ### TODO
-    raise NotImplementedError
+    for epoch in range(5):
+        model.train()
+        total_loss, n_batches = 0.0, 0
+        for batch in tqdm(train_data, desc=f"Epoch {epoch+1}"):
+            input_ids, attention_mask, labels = batch
+            input_ids = input_ids.to(device)
+            attention_mask = attention_mask.to(device)
+            labels = labels.to(device)
+
+            optimizer.zero_grad()
+            probs = model(input_ids=input_ids, attention_mask=attention_mask)
+            loss = criterion(probs, labels)
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+            n_batches += 1
+
+        avg_loss = total_loss / n_batches
+        acc, mcc = evaluate_model(model, dev_data, device)
+        print(f"Epoch {epoch+1}: loss={avg_loss:.4f}, dev_acc={acc:.3f}, MCC={mcc:.3f}")
+
+        if acc > best_acc:
+            best_acc = acc
+            torch.save(model.state_dict(), "models/bart_detection_best.pt")
+
+    model.load_state_dict(torch.load("models/bart_detection_best.pt"))
+    return model
 
 
 
 def test_model(model, test_data, test_ids, device):
-    """
-    Test the model. Predict the paraphrase types for the given sentences and return the results in form of
-    a Pandas dataframe with the columns 'id' and 'Predicted_Paraphrase_Types'.
-    The 'Predicted_Paraphrase_Types' column should contain the binary array of your model predictions.
-    Return this dataframe.
-    """
-    ### TODO
-
-    raise NotImplementedError
+    model.eval()
+    all_preds = []
+    with torch.no_grad():
+        for batch in tqdm(test_data, desc="Testing"):
+            if len(batch) == 3:
+                input_ids, attention_mask, _ = batch
+            else:
+                input_ids, attention_mask = batch
+            input_ids = input_ids.to(device)
+            attention_mask = attention_mask.to(device)
+            probs = model(input_ids=input_ids, attention_mask=attention_mask)
+            preds = (probs > 0.5).int().cpu().numpy().tolist()
+            all_preds.extend(preds)
+    return pd.DataFrame({"id": test_ids.tolist(), "Predicted_Paraphrase_Types": all_preds})
 
 
 def evaluate_model(model, test_data, device):
@@ -161,11 +191,11 @@ def finetune_paraphrase_detection(args):
     model.to(device)
 
     train_dataset = pd.read_csv("data/etpc-paraphrase-train.csv")
+    dev_dataset = pd.read_csv("data/etpc-paraphrase-dev.csv")
     test_dataset = pd.read_csv("data/etpc-paraphrase-detection-test-student.csv")
 
-    # TODO You might do a split of the train data into train/validation set here
-    # (or in the csv files directly)
     train_data = transform_data(train_dataset)
+    dev_data = transform_data(dev_dataset, shuffle=False)
     test_data = transform_data(test_dataset)
 
     print(f"Loaded {len(train_dataset)} training samples.")

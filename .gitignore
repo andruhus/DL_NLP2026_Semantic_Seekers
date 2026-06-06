@@ -8,6 +8,11 @@ logdir
 models
 slurm_files
 
+# Personal / local files
+claude.md
+documentation_uwaish.md
+docs/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
