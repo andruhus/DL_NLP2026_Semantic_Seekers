@@ -404,16 +404,21 @@ def train_multitask(args):
             )
         )
 
-        train_acc, dev_acc = {
-            "sst": (sst_train_acc, sst_dev_acc),
-            "sts": (sts_train_corr, sts_dev_corr),
-            "qqp": (quora_train_acc, quora_dev_acc),
-            "etpc": (etpc_train_acc, etpc_dev_acc),
-            "multitask": (
-                np.mean([quora_train_acc, sst_train_acc, sts_train_corr, etpc_train_acc]),
-                np.mean([quora_dev_acc, sst_dev_acc, sts_dev_corr, etpc_dev_acc]),
-            ),
-        }[args.task]
+        if args.task == "sst":
+            train_acc, dev_acc = sst_train_acc, sst_dev_acc
+        elif args.task == "sts":
+            train_acc, dev_acc = sts_train_corr, sts_dev_corr
+        elif args.task == "qqp":
+            train_acc, dev_acc = quora_train_acc, quora_dev_acc
+        elif args.task == "etpc":
+            train_acc, dev_acc = etpc_train_acc, etpc_dev_acc
+        elif args.task == "multitask":
+            train_acc = np.mean(
+                [quora_train_acc, sst_train_acc, sts_train_corr, etpc_train_acc]
+            )
+            dev_acc = np.mean([quora_dev_acc, sst_dev_acc, sts_dev_corr, etpc_dev_acc])
+        else:
+            raise ValueError(f"Unsupported task: {args.task}")
 
         print(
             f"Epoch {epoch+1:02} ({args.task}): train loss :: {train_loss:.3f}, train :: {train_acc:.3f}, dev :: {dev_acc:.3f}"
