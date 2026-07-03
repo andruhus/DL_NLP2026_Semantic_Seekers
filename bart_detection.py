@@ -1,5 +1,7 @@
 import argparse
+import ast
 import random
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -13,6 +15,11 @@ from optimizer import AdamW
 
 
 TQDM_DISABLE = False
+
+# ETPC assigns IDs 1--31, but these five IDs are not used by the dataset.
+PARAPHRASE_TYPE_IDS = tuple(
+    type_id for type_id in range(1, 32) if type_id not in {12, 19, 20, 23, 27}
+)
 
 
 class BartWithClassifier(nn.Module):
@@ -37,7 +44,7 @@ class BartWithClassifier(nn.Module):
         return probabilities
 
 
-def transform_data(dataset, max_length=512):
+def transform_data(dataset, max_length=512, shuffle=False, batch_size=16):
     """
     dataset: pd.DataFrame
 
@@ -52,14 +59,47 @@ def transform_data(dataset, max_length=512):
     label becomes [0, 0, 0, 0, 0, 1, ..., 1, 0, 0, 1, 0, 0].
     IMPORTANT: You will find that the dataset contains types up to 31, but some are not
     assigned. You need to drop 12, 19, 20, 23 and 27 when creating the binary labels.
-    This way you should end up with a binary label of size 26.     
+    This way you should end up with a binary label of size 26.
     Be careful that the test-student.csv does not
     have the paraphrase_types column. You should return a DataLoader without the labels.
     4. Use the input_ids, attention_mask, and binary labels to create a TensorDataset.
     Return a DataLoader with the TensorDataset. You can choose a batch size of your
     choice.
     """
-    raise NotImplementedError
+    tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large", local_files_only=True)
+    encodings = tokenizer(
+        dataset["sentence1"].astype(str).tolist(),
+        dataset["sentence2"].astype(str).tolist(),
+        max_length=max_length,
+        padding="max_length",
+        truncation=True,
+        return_tensors="pt",
+    )
+
+    input_ids = encodings["input_ids"]
+    attention_mask = encodings["attention_mask"]
+
+    if "paraphrase_type_ids" not in dataset.columns:
+        tensor_dataset = TensorDataset(input_ids, attention_mask)
+    else:
+        binary_labels = []
+        for row_number, value in enumerate(dataset["paraphrase_type_ids"]):
+            try:
+                type_ids = ast.literal_eval(value) if isinstance(value, str) else value
+                type_ids = {int(type_id) for type_id in type_ids}
+            except (TypeError, ValueError, SyntaxError) as exc:
+                raise ValueError(
+                    f"Invalid paraphrase_type_ids value in row {row_number}: {value!r}"
+                ) from exc
+
+            binary_labels.append(
+                [float(type_id in type_ids) for type_id in PARAPHRASE_TYPE_IDS]
+            )
+
+        labels = torch.tensor(binary_labels, dtype=torch.float32)
+        tensor_dataset = TensorDataset(input_ids, attention_mask, labels)
+
+    return DataLoader(tensor_dataset, batch_size=batch_size, shuffle=shuffle)
 
 
 def train_model(model, train_data, dev_data, device):
@@ -73,8 +113,49 @@ def train_model(model, train_data, dev_data, device):
 
     Return the trained model.
     """
-    ### TODO
-    raise NotImplementedError
+    optimizer = AdamW(model.parameters(), lr=1e-5)
+    loss_fn = nn.BCELoss()
+    checkpoint_path = Path("models/bart_detection_best.pt")
+    checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+    best_dev_accuracy = float("-inf")
+
+    for epoch in range(5):
+        model.train()
+        total_loss = 0.0
+        correct_predictions = 0
+        prediction_count = 0
+
+        for batch in tqdm(
+            train_data, desc=f"Detection epoch {epoch + 1}/5", disable=TQDM_DISABLE
+        ):
+            input_ids, attention_mask, labels = (tensor.to(device) for tensor in batch)
+
+            optimizer.zero_grad()
+            probabilities = model(input_ids=input_ids, attention_mask=attention_mask)
+            loss = loss_fn(probabilities, labels)
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+            predictions = (probabilities.detach() > 0.5).to(labels.dtype)
+            correct_predictions += (predictions == labels).sum().item()
+            prediction_count += labels.numel()
+
+        train_loss = total_loss / max(len(train_data), 1)
+        train_accuracy = correct_predictions / max(prediction_count, 1)
+        dev_accuracy, dev_mcc = evaluate_model(model, dev_data, device)
+        print(
+            f"Epoch {epoch + 1}: loss={train_loss:.4f}, "
+            f"train_acc={train_accuracy:.3f}, dev_acc={dev_accuracy:.3f}, "
+            f"dev_MCC={dev_mcc:.3f}"
+        )
+
+        if dev_accuracy > best_dev_accuracy:
+            best_dev_accuracy = dev_accuracy
+            torch.save(model.state_dict(), checkpoint_path)
+
+    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
+    return model
 
 
 
@@ -85,9 +166,29 @@ def test_model(model, test_data, test_ids, device):
     The 'Predicted_Paraphrase_Types' column should contain the binary array of your model predictions.
     Return this dataframe.
     """
-    ### TODO
+    was_training = model.training
+    model.eval()
+    predictions = []
 
-    raise NotImplementedError
+    with torch.no_grad():
+        for batch in tqdm(test_data, desc="Detection test", disable=TQDM_DISABLE):
+            input_ids, attention_mask = batch[:2]
+            probabilities = model(
+                input_ids=input_ids.to(device), attention_mask=attention_mask.to(device)
+            )
+            predictions.extend((probabilities > 0.5).int().cpu().tolist())
+
+    model.train(was_training)
+    ids = test_ids.tolist() if hasattr(test_ids, "tolist") else list(test_ids)
+    if len(ids) != len(predictions):
+        raise ValueError(
+            f"Received {len(ids)} test IDs but generated {len(predictions)} predictions."
+        )
+
+    return pd.DataFrame(
+        {"id": ids, "Predicted_Paraphrase_Types": predictions},
+        columns=["id", "Predicted_Paraphrase_Types"],
+    )
 
 
 def evaluate_model(model, test_data, device):
@@ -163,10 +264,16 @@ def finetune_paraphrase_detection(args):
     train_dataset = pd.read_csv("data/etpc-paraphrase-train.csv")
     test_dataset = pd.read_csv("data/etpc-paraphrase-detection-test-student.csv")
 
-    # TODO You might do a split of the train data into train/validation set here
-    # (or in the csv files directly)
-    train_data = transform_data(train_dataset)
-    test_data = transform_data(test_dataset)
+    # Use the 80/20 split from the project baseline and keep the held-out rows out
+    # of training so that the reported development metrics are meaningful.
+    shuffled_dataset = train_dataset.sample(frac=1, random_state=args.seed).reset_index(drop=True)
+    split_index = int(0.8 * len(shuffled_dataset))
+    train_dataset = shuffled_dataset.iloc[:split_index].reset_index(drop=True)
+    dev_dataset = shuffled_dataset.iloc[split_index:].reset_index(drop=True)
+
+    train_data = transform_data(train_dataset, shuffle=True)
+    dev_data = transform_data(dev_dataset, shuffle=False)
+    test_data = transform_data(test_dataset, shuffle=False)
 
     print(f"Loaded {len(train_dataset)} training samples.")
 
@@ -180,6 +287,7 @@ def finetune_paraphrase_detection(args):
 
     test_ids = test_dataset["id"]
     test_results = test_model(model, test_data, test_ids, device)
+    Path("predictions/bart").mkdir(parents=True, exist_ok=True)
     test_results.to_csv("predictions/bart/etpc-paraphrase-detection-test-output.csv", index=False)
 
 
