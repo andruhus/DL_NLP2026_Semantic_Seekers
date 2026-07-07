@@ -155,6 +155,37 @@ def save_model(model, optimizer, args, config, filepath):
     print(f"Saving the model to {filepath}.")
 
 
+class EarlyStopping:
+    def __init__(self, patience=0, min_delta=0.0):
+        if patience < 0:
+            raise ValueError("Early stopping patience must be non-negative.")
+        if min_delta < 0:
+            raise ValueError("Early stopping min_delta must be non-negative.")
+
+        self.patience = patience
+        self.min_delta = min_delta
+        self.best_score = float("-inf")
+        self.epochs_without_improvement = 0
+
+    @property
+    def enabled(self):
+        return self.patience > 0
+
+    def step(self, score):
+        improved = score > self.best_score + self.min_delta
+
+        if improved:
+            self.best_score = score
+            self.epochs_without_improvement = 0
+            return True, False
+
+        if self.enabled:
+            self.epochs_without_improvement += 1
+            return False, self.epochs_without_improvement >= self.patience
+
+        return False, False
+
+
 def train_task_epoch(model, optimizer, dataloader, task, epoch, device):
     """Train the model on one task for one epoch."""
     task_desc = (
@@ -321,7 +352,10 @@ def train_multitask(args):
 
     lr = args.lr
     optimizer = AdamW(model.parameters(), lr=lr)
-    best_dev_acc = float("-inf")
+    early_stopping = EarlyStopping(
+        patience=args.early_stopping_patience,
+        min_delta=args.early_stopping_min_delta,
+    )
 
     # Run for the specified number of epochs
     for epoch in range(args.epochs):
@@ -392,9 +426,23 @@ def train_multitask(args):
             f"Epoch {epoch+1:02} ({args.task}): train loss :: {train_loss:.3f}, train :: {train_acc:.3f}, dev :: {dev_acc:.3f}"
         )
 
-        if dev_acc > best_dev_acc:
-            best_dev_acc = dev_acc
+        improved, should_stop = early_stopping.step(dev_acc)
+        if improved:
             save_model(model, optimizer, args, config, args.filepath)
+        elif early_stopping.enabled:
+            print(
+                "Early stopping: "
+                f"{early_stopping.epochs_without_improvement}/"
+                f"{early_stopping.patience} epochs without improvement."
+            )
+
+        if should_stop:
+            print(
+                "Stopping early after "
+                f"{early_stopping.epochs_without_improvement} epochs without "
+                f"dev improvement. Best dev :: {early_stopping.best_score:.3f}"
+            )
+            break
 
 
 def test_model(args):
@@ -557,6 +605,18 @@ def get_args():
     # Hyperparameters
     parser.add_argument("--batch_size", help="sst: 64 can fit a 12GB GPU", type=int, default=64)
     parser.add_argument("--hidden_dropout_prob", type=float, default=0.3)
+    parser.add_argument(
+        "--early_stopping_patience",
+        type=int,
+        default=2,
+        help="stop training after this many epochs without dev improvement; 0 disables early stopping",
+    )
+    parser.add_argument(
+        "--early_stopping_min_delta",
+        type=float,
+        default=0.001,
+        help="minimum dev improvement required to reset early stopping patience",
+    )
     parser.add_argument(
         "--lr",
         type=float,
