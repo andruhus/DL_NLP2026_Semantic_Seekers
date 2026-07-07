@@ -155,6 +155,63 @@ def save_model(model, optimizer, args, config, filepath):
     print(f"Saving the model to {filepath}.")
 
 
+def train_task_epoch(model, optimizer, dataloader, task, epoch, device):
+    """Train the model on one task for one epoch."""
+    task_desc = (
+        f"train-{task}-{epoch+1:02}"
+    )
+    train_loss = 0
+    num_batches = 0
+
+    for batch in tqdm(dataloader, desc=task_desc, disable=TQDM_DISABLE):
+        optimizer.zero_grad()
+
+        if task == "sst":
+            b_ids = batch["token_ids"].to(device)
+            b_mask = batch["attention_mask"].to(device)
+            b_labels = batch["labels"].to(device)
+
+            logits = model.predict_sentiment(b_ids, b_mask)
+            loss = F.cross_entropy(logits, b_labels.view(-1))
+        elif task == "sts":
+            b_ids1 = batch["token_ids_1"].to(device)
+            b_mask1 = batch["attention_mask_1"].to(device)
+            b_ids2 = batch["token_ids_2"].to(device)
+            b_mask2 = batch["attention_mask_2"].to(device)
+            b_labels = batch["labels"].float().to(device)
+
+            logits = model.predict_similarity(b_ids1, b_mask1, b_ids2, b_mask2)
+            loss = F.mse_loss(logits, b_labels.view(-1))
+        elif task == "qqp":
+            b_ids1 = batch["token_ids_1"].to(device)
+            b_mask1 = batch["attention_mask_1"].to(device)
+            b_ids2 = batch["token_ids_2"].to(device)
+            b_mask2 = batch["attention_mask_2"].to(device)
+            b_labels = batch["labels"].float().to(device)
+
+            logits = model.predict_paraphrase(b_ids1, b_mask1, b_ids2, b_mask2)
+            loss = F.binary_cross_entropy_with_logits(logits, b_labels.view(-1))
+        elif task == "etpc":
+            b_ids1 = batch["token_ids_1"].to(device)
+            b_mask1 = batch["attention_mask_1"].to(device)
+            b_ids2 = batch["token_ids_2"].to(device)
+            b_mask2 = batch["attention_mask_2"].to(device)
+            b_labels = batch["labels"].float().to(device)
+
+            logits = model.predict_paraphrase_types(b_ids1, b_mask1, b_ids2, b_mask2)
+            loss = F.binary_cross_entropy_with_logits(logits, b_labels)
+        else:
+            raise ValueError(f"Unsupported task: {task}")
+
+        loss.backward()
+        optimizer.step()
+
+        train_loss += loss.item()
+        num_batches += 1
+
+    return train_loss, num_batches
+
+
 def train_multitask(args):
     device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
     # Load data
@@ -272,111 +329,22 @@ def train_multitask(args):
         train_loss = 0
         num_batches = 0
 
-        if args.task == "sst" or args.task == "multitask":
-            # Train the model on the sst dataset.
+        task_dataloaders = {
+            "sst": sst_train_dataloader,
+            "sts": sts_train_dataloader,
+            "qqp": quora_train_dataloader,
+            "etpc": etpc_train_dataloader,
+        }
+        training_tasks = (
+            task_dataloaders.keys() if args.task == "multitask" else [args.task]
+        )
 
-            for batch in tqdm(
-                sst_train_dataloader, desc=f"train-{epoch+1:02}", disable=TQDM_DISABLE
-            ):
-                b_ids, b_mask, b_labels = (
-                    batch["token_ids"],
-                    batch["attention_mask"],
-                    batch["labels"],
-                )
-
-                b_ids = b_ids.to(device)
-                b_mask = b_mask.to(device)
-                b_labels = b_labels.to(device)
-
-                optimizer.zero_grad()
-                logits = model.predict_sentiment(b_ids, b_mask)
-                loss = F.cross_entropy(logits, b_labels.view(-1))
-                loss.backward()
-                optimizer.step()
-
-                train_loss += loss.item()
-                num_batches += 1
-
-        if args.task == "sts" or args.task == "multitask":
-            for batch in tqdm(
-                sts_train_dataloader, desc=f"train-sts-{epoch+1:02}", disable=TQDM_DISABLE
-            ):
-                b_ids1, b_mask1, b_ids2, b_mask2, b_labels = (
-                    batch["token_ids_1"],
-                    batch["attention_mask_1"],
-                    batch["token_ids_2"],
-                    batch["attention_mask_2"],
-                    batch["labels"],
-                )
-
-                b_ids1 = b_ids1.to(device)
-                b_mask1 = b_mask1.to(device)
-                b_ids2 = b_ids2.to(device)
-                b_mask2 = b_mask2.to(device)
-                b_labels = b_labels.float().to(device)
-
-                optimizer.zero_grad()
-                logits = model.predict_similarity(b_ids1, b_mask1, b_ids2, b_mask2)
-                loss = F.mse_loss(logits, b_labels.view(-1))
-                loss.backward()
-                optimizer.step()
-
-                train_loss += loss.item()
-                num_batches += 1
-
-        if args.task == "qqp" or args.task == "multitask":
-            for batch in tqdm(
-                quora_train_dataloader, desc=f"train-qqp-{epoch+1:02}", disable=TQDM_DISABLE
-            ):
-                b_ids1, b_mask1, b_ids2, b_mask2, b_labels = (
-                    batch["token_ids_1"],
-                    batch["attention_mask_1"],
-                    batch["token_ids_2"],
-                    batch["attention_mask_2"],
-                    batch["labels"],
-                )
-
-                b_ids1 = b_ids1.to(device)
-                b_mask1 = b_mask1.to(device)
-                b_ids2 = b_ids2.to(device)
-                b_mask2 = b_mask2.to(device)
-                b_labels = b_labels.float().to(device)
-
-                optimizer.zero_grad()
-                logits = model.predict_paraphrase(b_ids1, b_mask1, b_ids2, b_mask2)
-                loss = F.binary_cross_entropy_with_logits(logits, b_labels.view(-1))
-                loss.backward()
-                optimizer.step()
-
-                train_loss += loss.item()
-                num_batches += 1
-
-        if args.task == "etpc" or args.task == "multitask":
-            for batch in tqdm(
-                etpc_train_dataloader, desc=f"train-etpc-{epoch+1:02}", disable=TQDM_DISABLE
-            ):
-                b_ids1, b_mask1, b_ids2, b_mask2, b_labels = (
-                    batch["token_ids_1"],
-                    batch["attention_mask_1"],
-                    batch["token_ids_2"],
-                    batch["attention_mask_2"],
-                    batch["labels"],
-                )
-
-                b_ids1 = b_ids1.to(device)
-                b_mask1 = b_mask1.to(device)
-                b_ids2 = b_ids2.to(device)
-                b_mask2 = b_mask2.to(device)
-                b_labels = b_labels.float().to(device)
-
-                optimizer.zero_grad()
-                logits = model.predict_paraphrase_types(b_ids1, b_mask1, b_ids2, b_mask2)
-                loss = F.binary_cross_entropy_with_logits(logits, b_labels)
-                loss.backward()
-                optimizer.step()
-
-                train_loss += loss.item()
-                num_batches += 1
+        for task in training_tasks:
+            task_loss, task_batches = train_task_epoch(
+                model, optimizer, task_dataloaders[task], task, epoch, device
+            )
+            train_loss += task_loss
+            num_batches += task_batches
 
         train_loss = train_loss / num_batches
 
