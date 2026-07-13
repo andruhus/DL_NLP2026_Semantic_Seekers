@@ -1,6 +1,4 @@
 import argparse
-import csv
-import os
 from pprint import pformat
 import random
 import re
@@ -498,29 +496,8 @@ def get_args():
     parser.add_argument("--sts_dev", type=str, default="data/sts-similarity-dev.csv")
     parser.add_argument("--sts_test", type=str, default="data/sts-similarity-test-student.csv")
 
-    etpc_source = "data/etpc-paraphrase-train.csv"
-    etpc_train_split = "data/etpc-paraphrase-train-split.csv"
-    etpc_dev_split = "data/etpc-paraphrase-dev.csv"
-    if not (os.path.exists(etpc_train_split) and os.path.exists(etpc_dev_split)):
-        with open(etpc_source, "r", encoding="utf-8", newline="") as fp:
-            reader = csv.DictReader(fp)
-            rows = list(reader)
-            fieldnames = reader.fieldnames
-
-        random.Random(args.seed).shuffle(rows)
-        dev_size = max(1, int(len(rows) * 0.1))
-        split_at = len(rows) - dev_size
-        for path, split_rows in (
-            (etpc_train_split, rows[:split_at]),
-            (etpc_dev_split, rows[split_at:]),
-        ):
-            with open(path, "w", encoding="utf-8", newline="") as fp:
-                writer = csv.DictWriter(fp, fieldnames=fieldnames)
-                writer.writeheader()
-                writer.writerows(split_rows)
-
-    parser.add_argument("--etpc_train", type=str, default=etpc_train_split)
-    parser.add_argument("--etpc_dev", type=str, default=etpc_dev_split)
+    parser.add_argument("--etpc_train", type=str, default="data/etpc-paraphrase-train.csv")
+    parser.add_argument("--etpc_dev", type=str, default="data/etpc-paraphrase-train.csv")
     parser.add_argument(
         "--etpc_test", type=str, default="data/etpc-paraphrase-detection-test-student.csv"
     )
