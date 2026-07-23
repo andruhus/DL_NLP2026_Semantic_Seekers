@@ -1,4 +1,5 @@
 import argparse
+import csv
 import os
 from pprint import pformat
 import random
@@ -65,19 +66,6 @@ class MultitaskBERT(nn.Module):
             elif config.option == "finetune":
                 param.requires_grad = True
         ### TODO
-        raise NotImplementedError
-
-    def forward(self, input_ids, attention_mask):
-        """Takes a batch of sentences and produces embeddings for them."""
-
-        # The final BERT embedding is the hidden state of [CLS] token (the first token).
-        # See BertModel.forward() for more details.
-        # Here, you can start by just returning the embeddings straight from BERT.
-        # When thinking of improvements, you can later try modifying this
-        # (e.g., by adding other layers).
-        ### TODO
-        # ---- DOWNSTREAM TASK HEADS ----
-
         # 1) Sentiment classification (5 Klassen)
         self.sentiment_classifier = nn.Linear(config.hidden_size, 5)
 
@@ -92,6 +80,24 @@ class MultitaskBERT(nn.Module):
 
         # 4) Paraphrase type detection (26 Klassen)
         self.paraphrase_type_classifier = nn.Linear(3*config.hidden_size, 26)
+
+    def forward(self, input_ids, attention_mask):
+        """Takes a batch of sentences and produces embeddings for them."""
+
+        # The final BERT embedding is the hidden state of [CLS] token (the first token).
+        # See BertModel.forward() for more details.
+        # Here, you can start by just returning the embeddings straight from BERT.
+        # When thinking of improvements, you can later try modifying this
+        # (e.g., by adding other layers).
+        ### TODO
+        # ---- DOWNSTREAM TASK HEADS ----
+        # BERT ausführen
+        outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
+
+        # CLS‑Embedding extrahieren
+        cls_embedding = outputs["pooler_output"]
+
+        return cls_embedding
 
     def predict_sentiment(self, input_ids, attention_mask):
         """
@@ -120,22 +126,22 @@ class MultitaskBERT(nn.Module):
         during evaluation, and handled as a logit by the appropriate loss function.
         Dataset: Quora
         """
-        ### TODO
-    # BERT für Satz 1
-    out1 = self.bert(input_ids=input_ids_1, attention_mask=attention_mask_1)
-    cls1 = out1["pooler_output"]
+            ### TODO
+        # BERT für Satz 1
+        out1 = self.bert(input_ids=input_ids_1, attention_mask=attention_mask_1)
+        cls1 = out1["pooler_output"]
 
-    # BERT für Satz 2
-    out2 = self.bert(input_ids=input_ids_2, attention_mask=attention_mask_2)
-    cls2 = out2["pooler_output"]
+        # BERT für Satz 2
+        out2 = self.bert(input_ids=input_ids_2, attention_mask=attention_mask_2)
+        cls2 = out2["pooler_output"]
 
-    # Kombination der beiden Embeddings (hängen einfach 3*embedding zusammen)
-    combined = torch.cat([cls1, cls2, torch.abs(cls1 - cls2)], dim=1)
+        # Kombination der beiden Embeddings (hängen einfach 3*embedding zusammen)
+        combined = torch.cat([cls1, cls2, torch.abs(cls1 - cls2)], dim=1)
 
-    # Klassifikations‑Head
-    logit = self.paraphrase_classifier(combined)
+        # Klassifikations‑Head
+        logit = self.paraphrase_classifier(combined)
 
-    return logit
+        return logit
 
     def predict_similarity(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
         """
@@ -381,17 +387,70 @@ def train_multitask(args):
         if args.task == "sts" or args.task == "multitask":
             # Trains the model on the sts dataset
             ### TODO
-            raise NotImplementedError
+            # Trains the model on the sts dataset
+            for batch in tqdm(
+                sts_train_dataloader, desc=f"train-{epoch+1:02}", disable=TQDM_DISABLE
+            ):
+                b_ids1 = batch["token_ids_1"].to(device)
+                b_mask1 = batch["attention_mask_1"].to(device)
+                b_ids2 = batch["token_ids_2"].to(device)
+                b_mask2 = batch["attention_mask_2"].to(device)
+                b_labels = batch["labels"].to(device).float()
+
+                optimizer.zero_grad()
+                preds = model.predict_similarity(b_ids1, b_mask1, b_ids2, b_mask2)
+                loss = F.mse_loss(preds.view(-1), b_labels.view(-1))
+                loss.backward()
+                optimizer.step()
+
+                train_loss += loss.item()
+                num_batches += 1
 
         if args.task == "qqp" or args.task == "multitask":
             # Trains the model on the qqp dataset
             ### TODO
-            raise NotImplementedError
+            if args.task == "qqp" or args.task == "multitask":
+                # Trains the model on the qqp dataset
+                for batch in tqdm(
+                        quora_train_dataloader, desc=f"train-{epoch + 1:02}", disable=TQDM_DISABLE
+                ):
+                    b_ids1 = batch["token_ids_1"].to(device)
+                    b_mask1 = batch["attention_mask_1"].to(device)
+                    b_ids2 = batch["token_ids_2"].to(device)
+                    b_mask2 = batch["attention_mask_2"].to(device)
+                    b_labels = batch["labels"].to(device).float()
+
+                    optimizer.zero_grad()
+                    logits = model.predict_paraphrase(b_ids1, b_mask1, b_ids2, b_mask2)
+                    loss = F.binary_cross_entropy_with_logits(logits.view(-1), b_labels.view(-1))
+                    loss.backward()
+                    optimizer.step()
+
+                    train_loss += loss.item()
+                    num_batches += 1
+
+
 
         if args.task == "etpc" or args.task == "multitask":
             # Trains the model on the etpc dataset
             ### TODO
-            raise NotImplementedError
+            for batch in tqdm(
+                    etpc_train_dataloader, desc=f"train-{epoch + 1:02}", disable=TQDM_DISABLE
+            ):
+                b_ids1 = batch["token_ids_1"].to(device)
+                b_mask1 = batch["attention_mask_1"].to(device)
+                b_ids2 = batch["token_ids_2"].to(device)
+                b_mask2 = batch["attention_mask_2"].to(device)
+                b_labels = batch["labels"].to(device).float()  # [batch, 26]
+
+                optimizer.zero_grad()
+                logits = model.predict_paraphrase_types(b_ids1, b_mask1, b_ids2, b_mask2)
+                loss = F.binary_cross_entropy_with_logits(logits, b_labels)
+                loss.backward()
+                optimizer.step()
+
+                train_loss += loss.item()
+                num_batches += 1
 
         train_loss = train_loss / num_batches
 
@@ -418,13 +477,14 @@ def train_multitask(args):
                 task=args.task,
             )
         )
-
+        multitask_train_acc = np.mean([quora_train_acc, sst_train_acc, sts_train_corr, etpc_train_acc])
+        multitask_dev_acc = np.mean([quora_dev_acc, sst_dev_acc, sts_dev_corr, etpc_dev_acc])
         train_acc, dev_acc = {
             "sst": (sst_train_acc, sst_dev_acc),
             "sts": (sts_train_corr, sts_dev_corr),
             "qqp": (quora_train_acc, quora_dev_acc),
             "etpc": (etpc_train_acc, etpc_dev_acc),
-            "multitask": (0, 0),  # TODO
+            "multitask": (multitask_train_acc, multitask_dev_acc),
         }[args.task]
 
         print(
@@ -492,8 +552,28 @@ def get_args():
     # TODO
     # You should split the train data into a train and dev set first and change the
     # default path of the --etpc_dev argument to your dev set.
-    parser.add_argument("--etpc_train", type=str, default="data/etpc-paraphrase-train.csv")
-    parser.add_argument("--etpc_dev", type=str, default="data/etpc-paraphrase-dev.csv")
+    with open("data/etpc-paraphrase-train.csv", "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        header = next(reader)
+        rows = list(reader)
+
+    random.shuffle(rows)
+
+    train_size = int(0.85 * len(rows))
+    train_rows = rows[:train_size]
+    dev_rows = rows[train_size:]
+
+    with open("data/etpc-paraphrase-train-split.csv", "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        writer.writerows(train_rows)
+
+    with open("data/etpc-paraphrase-dev-split.csv", "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        writer.writerows(dev_rows)
+    parser.add_argument("--etpc_train", type=str, default="data/etpc-paraphrase-train-split.csv")
+    parser.add_argument("--etpc_dev", type=str, default="data/etpc-paraphrase-dev-split.csv")
     parser.add_argument(
         "--etpc_test", type=str, default="data/etpc-paraphrase-detection-test-student.csv"
     )

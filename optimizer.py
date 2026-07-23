@@ -41,8 +41,9 @@ class AdamW(Optimizer):
             for p in group["params"]:
                 if p.grad is None:
                     continue
-                grad = p.grad.data
-                if grad.is_sparse:
+                theta = p.data
+                g_t = p.grad.data
+                if g_t.is_sparse:
                     raise RuntimeError(
                         "Adam does not support sparse gradients, please consider SparseAdam instead"
                     )
@@ -67,7 +68,35 @@ class AdamW(Optimizer):
                 # 4- After that main gradient-based update, update again using weight decay
                 #    (incorporating the learning rate again).
 
-                ### TODO
-                raise NotImplementedError
+                beta1, beta2 = group["betas"]
+                eps = group["eps"]
+                weight_decay = group["weight_decay"]
+                correct_bias = group["correct_bias"]
+
+                if len(state) == 0:
+                    state["step"] = 0
+                    state["exp_avg"] = torch.zeros_like(p.data)
+                    state["exp_avg_sq"] = torch.zeros_like(p.data)
+                # 1
+                m_t = state["exp_avg"]
+                v_t = state["exp_avg_sq"]
+                state["step"] += 1
+                t = state["step"]
+
+                m_t.mul_(beta1).add_(g_t, alpha=1.0 - beta1)
+                v_t.mul_(beta2).addcmul_(g_t, g_t, value=1.0 - beta2)
+
+                denom = v_t.sqrt().add_(eps)
+                step_size = alpha
+                # 2
+                if correct_bias:
+                    bias_correction1 = 1.0 - beta1 ** t
+                    bias_correction2 = 1.0 - beta2 ** t
+                    step_size *= math.sqrt(bias_correction2) / bias_correction1
+                #3
+                theta.addcdiv_(m_t, denom, value=-step_size)
+                # 4
+                if weight_decay > 0.0:
+                    theta.mul_(1.0 - alpha * weight_decay)
 
         return loss
