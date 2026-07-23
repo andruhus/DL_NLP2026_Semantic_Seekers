@@ -58,7 +58,7 @@ class MultitaskBERT(nn.Module):
         # You will want to add layers here to perform the downstream tasks.
         # Pretrain mode does not require updating bert parameters.
         self.bert = BertModel.from_pretrained(
-            "bert-base-uncased", local_files_only=config.local_files_only
+            "~/.cache/huggingface/transformers/", local_files_only=config.local_files_only
         )
         for param in self.bert.parameters():
             if config.option == "pretrain":
