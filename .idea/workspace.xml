@@ -5,8 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d952c574-2aa9-4fdc-942c-1e19e3ec069d" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/multitask_classifier.py" beforeDir="false" afterPath="$PROJECT_DIR$/multitask_classifier.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/optimizer.py" beforeDir="false" afterPath="$PROJECT_DIR$/optimizer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/run_gpu_sanity_check.sh" beforeDir="false" afterPath="$PROJECT_DIR$/run_gpu_sanity_check.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/run_train.sh" beforeDir="false" afterPath="$PROJECT_DIR$/run_train.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
