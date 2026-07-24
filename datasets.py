@@ -32,7 +32,7 @@ class SentenceClassificationDataset(Dataset):
         self.dataset = dataset
         self.p = args
         self.tokenizer = BertTokenizer.from_pretrained(
-            "bert-base-uncased", local_files_only=args.local_files_only
+            "~/.cache/huggingface/transformers/", local_files_only=args.local_files_only
         )
 
     def __len__(self):
