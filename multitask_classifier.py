@@ -64,8 +64,10 @@ class MultitaskBERT(nn.Module):
                 param.requires_grad = False
             elif config.option == "finetune":
                 param.requires_grad = True
-        ### TODO
-        raise NotImplementedError
+        self.sentiment_classifier = nn.Linear(BERT_HIDDEN_SIZE, N_SENTIMENT_CLASSES)
+        self.paraphrase_classifier = nn.Linear(BERT_HIDDEN_SIZE * 2, 1)
+        self.similarity_regressor = nn.Linear(BERT_HIDDEN_SIZE * 2, 1)
+        self.paraphrase_type_classifier = nn.Linear(BERT_HIDDEN_SIZE * 2, 26)
 
     def forward(self, input_ids, attention_mask):
         """Takes a batch of sentences and produces embeddings for them."""
@@ -75,8 +77,8 @@ class MultitaskBERT(nn.Module):
         # Here, you can start by just returning the embeddings straight from BERT.
         # When thinking of improvements, you can later try modifying this
         # (e.g., by adding other layers).
-        ### TODO
-        raise NotImplementedError
+        output = self.bert(input_ids, attention_mask)
+        return output['pooler_output']
 
     def predict_sentiment(self, input_ids, attention_mask):
         """
@@ -86,8 +88,8 @@ class MultitaskBERT(nn.Module):
         Thus, your output should contain 5 logits for each sentence.
         Dataset: SST
         """
-        ### TODO
-        raise NotImplementedError
+        embedding = self.forward(input_ids, attention_mask)
+        return self.sentiment_classifier(embedding)
 
     def predict_paraphrase(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
         """
@@ -96,8 +98,9 @@ class MultitaskBERT(nn.Module):
         during evaluation, and handled as a logit by the appropriate loss function.
         Dataset: Quora
         """
-        ### TODO
-        raise NotImplementedError
+        emb1 = self.forward(input_ids_1, attention_mask_1)
+        emb2 = self.forward(input_ids_2, attention_mask_2)
+        return self.paraphrase_classifier(torch.cat([emb1, emb2], dim=1))
 
     def predict_similarity(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
         """
@@ -106,8 +109,9 @@ class MultitaskBERT(nn.Module):
         it will be handled as a logit by the appropriate loss function.
         Dataset: STS
         """
-        ### TODO
-        raise NotImplementedError
+        emb1 = self.forward(input_ids_1, attention_mask_1)
+        emb2 = self.forward(input_ids_2, attention_mask_2)
+        return torch.sigmoid(self.similarity_regressor(torch.cat([emb1, emb2], dim=1))) * 5
 
     def predict_paraphrase_types(
         self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2
@@ -119,8 +123,9 @@ class MultitaskBERT(nn.Module):
         during evaluation, and handled as a logit by the appropriate loss function.
         Dataset: ETPC
         """
-        ### TODO
-        raise NotImplementedError
+        emb1 = self.forward(input_ids_1, attention_mask_1)
+        emb2 = self.forward(input_ids_2, attention_mask_2)
+        return self.paraphrase_type_classifier(torch.cat([emb1, emb2], dim=1))
 
 
 def save_model(model, optimizer, args, config, filepath):
@@ -177,10 +182,41 @@ def train_multitask(args):
             collate_fn=sst_dev_data.collate_fn,
         )
 
-    ### TODO
-    #   Load data for the other datasets
-    # If you are doing the paraphrase type detection with the minBERT model as well, make sure
-    # to transform the the data labels into binaries (as required in the bart_detection.py script)
+    if args.task == "sts" or args.task == "multitask":
+        sts_train_data = SentencePairDataset(sts_train_data, args, isRegression=True)
+        sts_dev_data = SentencePairDataset(sts_dev_data, args, isRegression=True)
+        sts_train_dataloader = DataLoader(
+            sts_train_data, shuffle=True, batch_size=args.batch_size,
+            collate_fn=sts_train_data.collate_fn,
+        )
+        sts_dev_dataloader = DataLoader(
+            sts_dev_data, shuffle=False, batch_size=args.batch_size,
+            collate_fn=sts_dev_data.collate_fn,
+        )
+
+    if args.task == "qqp" or args.task == "multitask":
+        quora_train_data = SentencePairDataset(quora_train_data, args)
+        quora_dev_data = SentencePairDataset(quora_dev_data, args)
+        quora_train_dataloader = DataLoader(
+            quora_train_data, shuffle=True, batch_size=args.batch_size,
+            collate_fn=quora_train_data.collate_fn,
+        )
+        quora_dev_dataloader = DataLoader(
+            quora_dev_data, shuffle=False, batch_size=args.batch_size,
+            collate_fn=quora_dev_data.collate_fn,
+        )
+
+    if args.task == "etpc" or args.task == "multitask":
+        etpc_train_data = SentencePairDataset(etpc_train_data, args)
+        etpc_dev_data = SentencePairDataset(etpc_dev_data, args)
+        etpc_train_dataloader = DataLoader(
+            etpc_train_data, shuffle=True, batch_size=args.batch_size,
+            collate_fn=etpc_train_data.collate_fn,
+        )
+        etpc_dev_dataloader = DataLoader(
+            etpc_dev_data, shuffle=False, batch_size=args.batch_size,
+            collate_fn=etpc_dev_data.collate_fn,
+        )
 
     # Init model
     config = {
@@ -239,19 +275,68 @@ def train_multitask(args):
                 num_batches += 1
 
         if args.task == "sts" or args.task == "multitask":
-            # Trains the model on the sts dataset
-            ### TODO
-            raise NotImplementedError
+            for batch in tqdm(sts_train_dataloader, desc=f"train-{epoch+1:02}", disable=TQDM_DISABLE):
+                b_ids1, b_mask1, b_ids2, b_mask2, b_labels = (
+                    batch["token_ids_1"], batch["attention_mask_1"],
+                    batch["token_ids_2"], batch["attention_mask_2"],
+                    batch["labels"],
+                )
+                b_ids1, b_mask1 = b_ids1.to(device), b_mask1.to(device)
+                b_ids2, b_mask2 = b_ids2.to(device), b_mask2.to(device)
+                b_labels = b_labels.to(device)
+
+                optimizer.zero_grad()
+                logits = model.predict_similarity(b_ids1, b_mask1, b_ids2, b_mask2)
+                loss = F.mse_loss(logits.flatten().float(), b_labels.flatten().float())
+                loss.backward()
+                optimizer.step()
+
+                train_loss += loss.item()
+                num_batches += 1
 
         if args.task == "qqp" or args.task == "multitask":
-            # Trains the model on the qqp dataset
-            ### TODO
-            raise NotImplementedError
+            for batch in tqdm(quora_train_dataloader, desc=f"train-{epoch+1:02}", disable=TQDM_DISABLE):
+                b_ids1, b_mask1, b_ids2, b_mask2, b_labels = (
+                    batch["token_ids_1"], batch["attention_mask_1"],
+                    batch["token_ids_2"], batch["attention_mask_2"],
+                    batch["labels"],
+                )
+                b_ids1, b_mask1 = b_ids1.to(device), b_mask1.to(device)
+                b_ids2, b_mask2 = b_ids2.to(device), b_mask2.to(device)
+                b_labels = b_labels.to(device)
+
+                optimizer.zero_grad()
+                logits = model.predict_paraphrase(b_ids1, b_mask1, b_ids2, b_mask2)
+                loss = F.binary_cross_entropy_with_logits(
+                    logits.flatten().float(), b_labels.flatten().float()
+                )
+                loss.backward()
+                optimizer.step()
+
+                train_loss += loss.item()
+                num_batches += 1
 
         if args.task == "etpc" or args.task == "multitask":
-            # Trains the model on the etpc dataset
-            ### TODO
-            raise NotImplementedError
+            for batch in tqdm(etpc_train_dataloader, desc=f"train-{epoch+1:02}", disable=TQDM_DISABLE):
+                b_ids1, b_mask1, b_ids2, b_mask2, b_labels = (
+                    batch["token_ids_1"], batch["attention_mask_1"],
+                    batch["token_ids_2"], batch["attention_mask_2"],
+                    batch["labels"],
+                )
+                b_ids1, b_mask1 = b_ids1.to(device), b_mask1.to(device)
+                b_ids2, b_mask2 = b_ids2.to(device), b_mask2.to(device)
+                b_labels = b_labels.to(device)
+
+                optimizer.zero_grad()
+                logits = model.predict_paraphrase_types(b_ids1, b_mask1, b_ids2, b_mask2)
+                loss = F.binary_cross_entropy_with_logits(
+                    logits.float(), b_labels.float()
+                )
+                loss.backward()
+                optimizer.step()
+
+                train_loss += loss.item()
+                num_batches += 1
 
         train_loss = train_loss / num_batches
 

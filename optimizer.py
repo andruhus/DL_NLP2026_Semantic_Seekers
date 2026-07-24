@@ -52,22 +52,39 @@ class AdamW(Optimizer):
 
                 # Access hyperparameters from the `group` dictionary
                 alpha = group["lr"]
+                beta1, beta2 = group["betas"]
+                eps = group["eps"]
+                weight_decay = group["weight_decay"]
+                correct_bias = group["correct_bias"]
 
-                # Complete the implementation of AdamW here, reading and saving
-                # your state in the `state` dictionary above.
-                # The hyperparameters can be read from the `group` dictionary
-                # (they are lr, betas, eps, weight_decay, and correct_bias, as saved in
-                # the constructor).
-                #
-                # 1- Update first and second moments of the gradients.
-                # 2- Apply bias correction.
-                #    (using the "efficient version" given in https://arxiv.org/abs/1412.6980;
-                #     also given as the pseudo-code in the project description).
-                # 3- Update parameters (p.data).
-                # 4- After that main gradient-based update, update again using weight decay
-                #    (incorporating the learning rate again).
+                # Initialize state on first step
+                if len(state) == 0:
+                    state["step"] = 0
+                    state["exp_avg"] = torch.zeros_like(p.data)     # m_0
+                    state["exp_avg_sq"] = torch.zeros_like(p.data)  # v_0
 
-                ### TODO
-                raise NotImplementedError
+                m = state["exp_avg"]
+                v = state["exp_avg_sq"]
+                state["step"] += 1
+                t = state["step"]
+
+                # 1. Update biased first and second moment estimates (Algorithm 1, lines 5-6)
+                m.mul_(beta1).add_(grad, alpha=1.0 - beta1)
+                v.mul_(beta2).addcmul_(grad, grad, value=1.0 - beta2)
+
+                # 2. Compute bias-corrected estimates (Algorithm 1, lines 7-8)
+                if correct_bias:
+                    m_hat = m / (1.0 - beta1 ** t)
+                    v_hat = v / (1.0 - beta2 ** t)
+                else:
+                    m_hat = m
+                    v_hat = v
+
+                # 3. Update parameters (Algorithm 1, line 9)
+                p.data.addcdiv_(m_hat, v_hat.sqrt().add_(eps), value=-alpha)
+
+                # 4. Decoupled weight decay applied after the Adam update
+                if weight_decay != 0.0:
+                    p.data.add_(p.data, alpha=-alpha * weight_decay)
 
         return loss

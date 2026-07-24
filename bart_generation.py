@@ -15,35 +15,90 @@ from optimizer import AdamW
 TQDM_DISABLE = False
 
 
-def transform_data(dataset, max_length=256):
-    """
-    Turn the data to the format you want to use.
-    Use AutoTokenizer to obtain encoding (input_ids and attention_mask).
-    Tokenize the sentence pair in the following format:
-    sentence_1 + SEP + sentence_1 segment location + SEP + paraphrase_type_ids.
-    Return Data Loader.
-    """
-    ### TODO 
-    raise NotImplementedError
+def transform_data(dataset, max_length=256, shuffle=True):
+    tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large", local_files_only=True)
+
+    inputs = [
+        str(r["sentence1"]) + " </s> " +
+        str(r["sentence1_segment_location"]) + " </s> " +
+        str(r["paraphrase_type_ids"])
+        for _, r in dataset.iterrows()
+    ]
+    input_enc = tokenizer(
+        inputs, max_length=max_length, padding="max_length",
+        truncation=True, return_tensors="pt",
+    )
+    input_ids = input_enc["input_ids"]
+    attention_mask = input_enc["attention_mask"]
+
+    has_targets = "sentence2" in dataset.columns
+    if has_targets:
+        targets = dataset["sentence2"].tolist()
+        target_enc = tokenizer(
+            targets, max_length=max_length, padding="max_length",
+            truncation=True, return_tensors="pt",
+        )
+        labels = target_enc["input_ids"].clone()
+        labels[labels == tokenizer.pad_token_id] = -100
+    else:
+        labels = torch.full((input_ids.size(0),), -100, dtype=torch.long)
+
+    ds = TensorDataset(input_ids, attention_mask, labels)
+    return DataLoader(ds, batch_size=8, shuffle=shuffle)
 
 
 def train_model(model, train_data, dev_data, device, tokenizer):
-    """
-    Train the model. Return and save the model.
-    """
-    ### TODO
-    raise NotImplementedError
+    optimizer = AdamW(model.parameters(), lr=2e-5)
+    best_bleu = 0.0
+
+    for epoch in range(5):
+        model.train()
+        total_loss, n_batches = 0.0, 0
+        for batch in tqdm(train_data, desc=f"Epoch {epoch+1}"):
+            input_ids, attention_mask, labels = batch
+            input_ids = input_ids.to(device)
+            attention_mask = attention_mask.to(device)
+            labels = labels.to(device)
+
+            optimizer.zero_grad()
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
+            loss = outputs.loss
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+            n_batches += 1
+
+        avg_loss = total_loss / n_batches
+        bleu = evaluate_model(model, dev_data, device, tokenizer)
+        print(f"Epoch {epoch+1}: loss={avg_loss:.4f}, penalized_BLEU={bleu:.3f}")
+
+        if bleu > best_bleu:
+            best_bleu = bleu
+            torch.save(model.state_dict(), "models/bart_generation_best.pt")
+
+    model.load_state_dict(torch.load("models/bart_generation_best.pt"))
+    return model
 
 
 def test_model(test_data, test_ids, device, model, tokenizer):
-    """
-    Test the model. Generate paraphrases for the given sentences (sentence1) and return the results
-    in form of a Pandas dataframe with the columns 'id' and 'Generated_sentence2'.
-    The data format in the columns should be the same as in the train dataset.
-    Return this dataframe.
-    """
-    ### TODO
-    raise NotImplementedError
+    model.eval()
+    predictions = []
+    with torch.no_grad():
+        for batch in tqdm(test_data, desc="Testing"):
+            input_ids, attention_mask, _ = batch
+            input_ids = input_ids.to(device)
+            attention_mask = attention_mask.to(device)
+            outputs = model.generate(
+                input_ids, attention_mask=attention_mask,
+                max_length=128, num_beams=5, early_stopping=True,
+            )
+            decoded = [
+                tokenizer.decode(g, skip_special_tokens=True, clean_up_tokenization_spaces=True)
+                for g in outputs
+            ]
+            predictions.extend(decoded)
+    return pd.DataFrame({"id": test_ids.tolist(), "Generated_sentence2": predictions})
 
 
 def evaluate_model(model, test_data, device, tokenizer):
