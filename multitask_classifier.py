@@ -565,13 +565,9 @@ def get_args():
 if __name__ == "__main__":
     args = get_args()
     args.filepath = f"models/{args.option}-{args.epochs}-{args.lr}-{args.task}.pt"  # save path
+    # Logging aktivieren
+    logfile = setup_logging(args.filepath)
     seed_everything(args.seed)  # fix the seed for reproducibility
     train_multitask(args)
     test_model(args)
 
-    # Logging aktivieren
-    logfile = setup_logging(args.filepath)
-
-    seed_everything(args.seed)
-    train_multitask(args)
-    test_model(args)
