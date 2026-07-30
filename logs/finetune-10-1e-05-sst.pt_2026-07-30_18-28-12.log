@@ -1,0 +1,15 @@
+2026-07-30 18:28:12 - Logfile gestartet für Modell: models/finetune-10-1e-05-sst.pt
+2026-07-30 18:28:14 - ------------------------------
+2026-07-30 18:28:14 -     BERT Model Configuration
+2026-07-30 18:28:14 - ------------------------------
+2026-07-30 18:28:14 - {'batch_size': 64,
+ 'epochs': 10,
+ 'filepath': 'models/finetune-10-1e-05-sst.pt',
+ 'hidden_dropout_prob': 0.1,
+ 'local_files_only': True,
+ 'lr': 1e-05,
+ 'option': 'finetune',
+ 'seed': 11711,
+ 'task': 'sst',
+ 'use_gpu': True}
+2026-07-30 18:28:14 - ------------------------------
