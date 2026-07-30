@@ -24,7 +24,33 @@ from evaluation import model_eval_multitask, test_model_multitask
 from optimizer import AdamW
 
 TQDM_DISABLE = True
+import logging
+from datetime import datetime
+import os
+#LOGFILE
+def setup_logging(model_name):
+    # Ordner für Logs anlegen
+    os.makedirs("logs", exist_ok=True)
 
+    # Zeitstempel für eindeutige Logfiles
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    # Log-Dateiname
+    logfile = f"logs/{model_name}_{timestamp}.log"
+
+    # Logging konfigurieren
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[
+            logging.FileHandler(logfile),
+            logging.StreamHandler()  # optional: weiterhin auf der Konsole ausgeben
+        ]
+    )
+
+    logging.info(f"Logfile gestartet für Modell: {model_name}")
+    return logfile
 
 # fix the random seed
 def seed_everything(seed=11711):
@@ -140,7 +166,7 @@ def save_model(model, optimizer, args, config, filepath):
     }
 
     torch.save(save_info, filepath)
-    print(f"Saving the model to {filepath}.")
+    logging.info(f"Saving the model to {filepath}.")
 
 
 # TODO Currently only trains on SST dataset!
@@ -230,11 +256,11 @@ def train_multitask(args):
     config = SimpleNamespace(**config)
 
     separator = "-" * 30
-    print(separator)
-    print("    BERT Model Configuration")
-    print(separator)
-    print(pformat({k: v for k, v in vars(args).items() if "csv" not in str(v)}))
-    print(separator)
+    logging.info(separator)
+    logging.info("    BERT Model Configuration")
+    logging.info(separator)
+    logging.info(pformat({k: v for k, v in vars(args).items() if "csv" not in str(v)}))
+    logging.info(separator)
 
     model = MultitaskBERT(config)
     model = model.to(device)
@@ -372,7 +398,7 @@ def train_multitask(args):
             "multitask": (0, 0),  # TODO
         }[args.task]
 
-        print(
+        logging.info(
             f"Epoch {epoch+1:02} ({args.task}): train loss :: {train_loss:.3f}, train :: {train_acc:.3f}, dev :: {dev_acc:.3f}"
         )
 
@@ -390,7 +416,7 @@ def test_model(args):
         model = MultitaskBERT(config)
         model.load_state_dict(saved["model"])
         model = model.to(device)
-        print(f"Loaded model to test from {args.filepath}")
+        logging.info(f"Loaded model to test from {args.filepath}")
 
         return test_model_multitask(args, model, device)
 
@@ -539,5 +565,12 @@ if __name__ == "__main__":
     args = get_args()
     args.filepath = f"models/{args.option}-{args.epochs}-{args.lr}-{args.task}.pt"  # save path
     seed_everything(args.seed)  # fix the seed for reproducibility
+    train_multitask(args)
+    test_model(args)
+
+    # Logging aktivieren
+    logfile = setup_logging(args.filepath)
+
+    seed_everything(args.seed)
     train_multitask(args)
     test_model(args)
