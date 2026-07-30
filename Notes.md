@@ -5,3 +5,10 @@
 - hier kann man dann noch genauer modelname spezifizieren
 2. Wo wird ausgegeben was ausgeprinted wird?
 3. Wie soll überhaupt ein Logfile aussehen?
+
+## Hebel um Model zu pushen
+### 1. Pooling Layer verbessern
+### 2. Loss function verbessern
+### 3. Klassifikationslayer verbessern
+### 4. Data Augmentation
+- zb durch trainingsdaten hin und rückübersetzen und damit dann variation reinbekommen

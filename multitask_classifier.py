@@ -36,7 +36,8 @@ def setup_logging(model_name):
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     # Log-Dateiname
-    logfile = f"logs/{model_name}_{timestamp}.log"
+    basename = os.path.basename(model_name)
+    logfile = f"logs/{basename}_{timestamp}.log"
 
     # Logging konfigurieren
     logging.basicConfig(
