@@ -27,6 +27,8 @@ TQDM_DISABLE = True
 import logging
 from datetime import datetime
 import os
+from transformers import get_linear_schedule_with_warmup
+
 #LOGFILE
 def setup_logging(model_name):
     # Ordner für Logs anlegen
@@ -277,6 +279,24 @@ def train_multitask(args):
 
     lr = args.lr
     optimizer = AdamW(model.parameters(), lr=lr)
+###
+### Hier kommt learning rate scheduler
+###
+    # Anzahl Trainingsschritte berechnen
+    total_steps = args.epochs * len(sst_train_dataloader)
+
+    # Warmup: 10% der Trainingsschritte
+    warmup_steps = int(0.1 * total_steps)
+
+    # Scheduler: Warmup + Linear Decay
+    scheduler = get_linear_schedule_with_warmup(
+        optimizer,
+        num_warmup_steps=warmup_steps,
+        num_training_steps=total_steps
+    )
+###
+###
+###
     best_dev_acc = float("-inf")
 
     # Run for the specified number of epochs
@@ -306,6 +326,7 @@ def train_multitask(args):
                 loss = F.cross_entropy(logits, b_labels.view(-1))
                 loss.backward()
                 optimizer.step()
+                scheduler.step()
 
                 train_loss += loss.item()
                 num_batches += 1
