@@ -94,7 +94,14 @@ class MultitaskBERT(nn.Module):
             elif config.option == "finetune":
                 param.requires_grad = True
         self.sentiment_classifier = nn.Sequential(
-            nn.Linear(3*BERT_HIDDEN_SIZE, 512),
+###
+###
+            nn.Linear(3 * BERT_HIDDEN_SIZE, 1300),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(1300, 512),
+###
+###
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(512, 128),
