@@ -93,6 +93,9 @@ class MultitaskBERT(nn.Module):
                 param.requires_grad = False
             elif config.option == "finetune":
                 param.requires_grad = True
+        self.pool_norm = nn.LayerNorm(3 * BERT_HIDDEN_SIZE)
+        self.pool_dropout = nn.Dropout(0.2)
+
         self.sentiment_classifier = nn.Sequential(
 ###
 ###
@@ -137,7 +140,8 @@ class MultitaskBERT(nn.Module):
 
         # Concatenate CLS + Mean + Max
         combined = torch.cat([cls, mean, max_pool], dim=1)  # (batch, 3*hidden)
-
+        combined = self.pool_norm(combined)
+        combined = self.pool_dropout(combined)
         return combined
 ###
 ###
