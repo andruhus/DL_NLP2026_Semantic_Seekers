@@ -5,12 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d952c574-2aa9-4fdc-942c-1e19e3ec069d" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/logdiff.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/DL_NLP2026_Semantic_Seekers.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/DL_NLP2026_Semantic_Seekers.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Dokumentation.md" beforeDir="false" afterPath="$PROJECT_DIR$/Dokumentation.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/logs/finetune-10-1e-05-sst.pt_2026-07-30_18-28-12.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/logs/finetune-10-1e-05-sst.pt_2026-07-30_18-29-45.log" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/multitask_classifier.py" beforeDir="false" afterPath="$PROJECT_DIR$/multitask_classifier.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Notes.md" beforeDir="false" afterPath="$PROJECT_DIR$/Notes.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/run_train.sh" beforeDir="false" afterPath="$PROJECT_DIR$/run_train.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,11 +47,34 @@
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;simon__sst&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/pumme/OneDrive/Dokumente/Kurse/IFZ/Cerco_Model&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/pumme/OneDrive/Dokumente/Kurse/deepl/DL_NLP2026_Semantic_Seekers&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyIntegratedToolsModulesConfigurable&quot;
   }
 }</component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Python.logdiff">
+    <configuration default="true" type="PythonConfigurationType" factoryName="Python">
+      <module name="DL_NLP2026_Semantic_Seekers" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.11 (DL_NLP2026_Semantic_Seekers)" />
+      <option name="WORKING_DIRECTORY" value="C:\Users\pumme\OneDrive\Dokumente\Kurse\deepl\DL_NLP2026_Semantic_Seekers" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/multitask_classifier.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="bert" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
       <module name="DL_NLP2026_Semantic_Seekers" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -75,6 +97,33 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="logdiff" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="DL_NLP2026_Semantic_Seekers" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="SDK_NAME" value="Python 3.11 (DL_NLP2026_Semantic_Seekers)" />
+      <option name="WORKING_DIRECTORY" value="C:\Users\pumme\OneDrive\Dokumente\Kurse\deepl\DL_NLP2026_Semantic_Seekers" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/logdiff.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.logdiff" />
+      </list>
+    </recent_temporary>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
