@@ -93,11 +93,8 @@ class MultitaskBERT(nn.Module):
                 param.requires_grad = False
             elif config.option == "finetune":
                 param.requires_grad = True
-        self.pool_norm = nn.LayerNorm(3 * BERT_HIDDEN_SIZE)
-        self.pool_dropout = nn.Dropout(0.2)
-
         self.sentiment_classifier = nn.Sequential(
-            nn.Linear(3*BERT_HIDDEN_SIZE, 512),
+            nn.Linear(BERT_HIDDEN_SIZE, 512),
             nn.ReLU(),
             nn.Dropout(0.3),
             nn.Linear(512, 128),
@@ -110,33 +107,17 @@ class MultitaskBERT(nn.Module):
         self.similarity_regressor = nn.Linear(BERT_HIDDEN_SIZE * 2, 1)
         self.paraphrase_type_classifier = nn.Linear(BERT_HIDDEN_SIZE * 2, 26)
 
-
-###
-### Pooling
-###
     def forward(self, input_ids, attention_mask):
-        """
-        Returns a combined embedding: [CLS ; mean ; max]
-        """
-        outputs = self.bert(input_ids, attention_mask)
-        last_hidden = outputs["last_hidden_state"]  # (batch, seq_len, hidden)
+        """Takes a batch of sentences and produces embeddings for them."""
 
-        cls = last_hidden[:, 0]  # CLS token
+        # The final BERT embedding is the hidden state of [CLS] token (the first token).
+        # See BertModel.forward() for more details.
+        # Here, you can start by just returning the embeddings straight from BERT.
+        # When thinking of improvements, you can later try modifying this
+        # (e.g., by adding other layers).
+        output = self.bert(input_ids, attention_mask)
+        return output['pooler_output']
 
-        # Mean pooling (mask-aware)
-        mask = attention_mask.unsqueeze(-1)  # (batch, seq_len, 1)
-        mean = (last_hidden * mask).sum(dim=1) / mask.sum(dim=1)
-
-        # Max pooling (mask-aware)
-        masked_hidden = last_hidden.masked_fill(mask == 0, -1e9)
-        max_pool = masked_hidden.max(dim=1).values
-
-        # Concatenate CLS + Mean + Max
-        combined = torch.cat([cls, mean, max_pool], dim=1)  # (batch, 3*hidden)
-        return combined
-###
-###
-###
     def predict_sentiment(self, input_ids, attention_mask):
         """
         Given a batch of sentences, outputs logits for classifying sentiment.

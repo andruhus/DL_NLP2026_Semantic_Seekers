@@ -10,6 +10,5 @@
 ### 1. Pooling Layer verbessern
 ### 2. Loss function verbessern
 ### 3. Klassifikationslayer verbessern
-- fertig, hatte zwar kleinen effekt aber erwartbar größer bei längerem Training
 ### 4. Data Augmentation
 - zb durch trainingsdaten hin und rückübersetzen und damit dann variation reinbekommen
