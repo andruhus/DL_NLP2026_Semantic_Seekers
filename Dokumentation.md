@@ -23,3 +23,18 @@
 - The test for 10 epochs might not be the most reasonable, for fast and comparable result this will still be the starting point
 - Linear Layers have a lot of weights, so making them more complex makes also the loss landscape more complex
 - A learning rate scheduler might help to find a better optimum (first overshoot and then get finer when it gets better)
+## Pooling Layer
+### Strating point
+- making the pooling output more expressive should improve the result, this idea came from quick chatgpt research
+- It sounded reasonable so it was further explored
+- More expressive pooling output can be gained when the CLS token is concatenated with the mean as well as the max vector of the other tokens
+### Result
+- The result however was quite disappointing. Performance dropped in all regards.
+- To fix this issue there was the idea to include a more complex classification layer, to increase the capacity of learning. (there should be more to learn from a more complex pooling-token)
+- the success was very limited. overall performance dropped slightly.
+- the last try to fix it was to insert additional normalization layer to stabilize the training, which also did not work.
+- Therefore the overall idea was dropped.
+
+## Activation Funktion of Classifier
+- As discussed in the Lecture, there might be better alternatives then ReLU.
+- To avoid dead neurons and enable more stable training GElU might improve performance.

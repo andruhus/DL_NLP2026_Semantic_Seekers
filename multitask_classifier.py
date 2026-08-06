@@ -95,10 +95,10 @@ class MultitaskBERT(nn.Module):
                 param.requires_grad = True
         self.sentiment_classifier = nn.Sequential(
             nn.Linear(BERT_HIDDEN_SIZE, 512),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Dropout(0.3),
             nn.Linear(512, 128),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Dropout(0.3),
             nn.Linear(128, N_SENTIMENT_CLASSES)
         )
