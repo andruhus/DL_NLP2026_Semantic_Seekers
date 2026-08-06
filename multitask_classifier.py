@@ -28,7 +28,6 @@ import logging
 from datetime import datetime
 import os
 from transformers import get_linear_schedule_with_warmup
-
 #LOGFILE
 def setup_logging(model_name):
     # Ordner für Logs anlegen
@@ -298,7 +297,14 @@ def train_multitask(args):
 ###
 ###
     best_dev_acc = float("-inf")
+    from collections import Counter
 
+
+
+    # Beispiel:
+    csv_path = "data/sst-sentiment-train.csv"
+    class_counts = compute_class_counts(csv_path)
+    print("Class counts:", class_counts)
     # Run for the specified number of epochs
     for epoch in range(args.epochs):
         model.train()
@@ -323,7 +329,10 @@ def train_multitask(args):
 
                 optimizer.zero_grad()
                 logits = model.predict_sentiment(b_ids, b_mask)
-                loss = F.cross_entropy(logits, b_labels.view(-1), label_smoothing=0.1)
+                class_counts = torch.tensor([ 961, 2104, 1528, 2090, 1215], dtype=torch.float)  # Beispielwerte
+                weights = class_counts.max() / class_counts
+                weights = weights.to(device)
+                loss = F.cross_entropy(logits, b_labels.view(-1),weight=weights, label_smoothing=0.3)
                 loss.backward()
                 optimizer.step()
                 scheduler.step()
