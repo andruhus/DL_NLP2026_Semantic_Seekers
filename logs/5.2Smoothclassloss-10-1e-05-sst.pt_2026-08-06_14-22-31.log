@@ -1,0 +1,30 @@
+2026-08-06 14:56:45 - Logfile gestartet für Modell: models/finetune-10-1e-05-sst.pt
+2026-08-06 14:56:47 - ------------------------------
+2026-08-06 14:56:47 -     BERT Model Configuration
+2026-08-06 14:56:47 - ------------------------------
+2026-08-06 14:56:47 - {'batch_size': 64,
+ 'epochs': 10,
+ 'filepath': 'models/finetune-10-1e-05-sst.pt',
+ 'hidden_dropout_prob': 0.1,
+ 'local_files_only': True,
+ 'lr': 1e-05,
+ 'option': 'finetune',
+ 'seed': 11711,
+ 'task': 'sst',
+ 'use_gpu': True}
+2026-08-06 14:56:47 - ------------------------------
+2026-08-06 14:57:16 - Epoch 01 (sst): train loss :: 1.591, train :: 0.454, dev :: 0.435
+2026-08-06 14:57:18 - Saving the model to models/finetune-10-1e-05-sst.pt.
+2026-08-06 14:57:45 - Epoch 02 (sst): train loss :: 1.493, train :: 0.494, dev :: 0.457
+2026-08-06 14:57:47 - Saving the model to models/finetune-10-1e-05-sst.pt.
+2026-08-06 14:58:14 - Epoch 03 (sst): train loss :: 1.454, train :: 0.547, dev :: 0.456
+2026-08-06 14:58:41 - Epoch 04 (sst): train loss :: 1.425, train :: 0.620, dev :: 0.505
+2026-08-06 14:58:43 - Saving the model to models/finetune-10-1e-05-sst.pt.
+2026-08-06 14:59:10 - Epoch 05 (sst): train loss :: 1.398, train :: 0.688, dev :: 0.525
+2026-08-06 14:59:12 - Saving the model to models/finetune-10-1e-05-sst.pt.
+2026-08-06 14:59:39 - Epoch 06 (sst): train loss :: 1.375, train :: 0.717, dev :: 0.514
+2026-08-06 15:00:06 - Epoch 07 (sst): train loss :: 1.354, train :: 0.752, dev :: 0.508
+2026-08-06 15:00:32 - Epoch 08 (sst): train loss :: 1.336, train :: 0.779, dev :: 0.519
+2026-08-06 15:00:59 - Epoch 09 (sst): train loss :: 1.324, train :: 0.791, dev :: 0.517
+2026-08-06 15:01:26 - Epoch 10 (sst): train loss :: 1.313, train :: 0.793, dev :: 0.514
+2026-08-06 15:01:30 - Loaded model to test from models/finetune-10-1e-05-sst.pt
