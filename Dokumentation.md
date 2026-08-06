@@ -41,3 +41,14 @@
 ### Result
 - Since it was just a small adjustment, the results did not significantly change.
 - Overfitting was consistently reduced in later epochs, though. So the change will be kept.
+## Loss Function
+### 1. smoothing
+- The loss function is not optimized for the sst task
+- there is a lot of uncertainty in the class labels I assume (there are 5 subjective classes)
+- the lets add some noice to the labels to avoid overfitting and translate the uncertainty to the labels.
+#### Results
+- quite small effect with factor 0.1, increasing to 0.2 is beneficial and to 0.4 makes also sense
+- Still that is not the "breaktthrough" and only remains a small adjustment
+### 2. class weights
+- The classes are not very balanced in the sst dataset.
+- To enable the model to learn also smaller groups, a weighted loss will be introduced
