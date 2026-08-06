@@ -323,7 +323,7 @@ def train_multitask(args):
 
                 optimizer.zero_grad()
                 logits = model.predict_sentiment(b_ids, b_mask)
-                loss = F.cross_entropy(logits, b_labels.view(-1), weight=weights, label_smoothing=0.1)
+                loss = F.cross_entropy(logits, b_labels.view(-1), label_smoothing=0.1)
                 loss.backward()
                 optimizer.step()
                 scheduler.step()
