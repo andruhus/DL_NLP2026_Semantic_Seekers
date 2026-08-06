@@ -140,8 +140,6 @@ class MultitaskBERT(nn.Module):
 
         # Concatenate CLS + Mean + Max
         combined = torch.cat([cls, mean, max_pool], dim=1)  # (batch, 3*hidden)
-        combined = self.pool_norm(combined)
-        combined = self.pool_dropout(combined)
         return combined
 ###
 ###
