@@ -1,8 +1,8 @@
-2026-08-06 14:22:31 - Logfile gestartet für Modell: models/finetune-10-1e-05-sst.pt
-2026-08-06 14:22:32 - ------------------------------
-2026-08-06 14:22:32 -     BERT Model Configuration
-2026-08-06 14:22:32 - ------------------------------
-2026-08-06 14:22:32 - {'batch_size': 64,
+2026-08-06 14:29:32 - Logfile gestartet für Modell: models/finetune-10-1e-05-sst.pt
+2026-08-06 14:29:33 - ------------------------------
+2026-08-06 14:29:33 -     BERT Model Configuration
+2026-08-06 14:29:33 - ------------------------------
+2026-08-06 14:29:33 - {'batch_size': 64,
  'epochs': 10,
  'filepath': 'models/finetune-10-1e-05-sst.pt',
  'hidden_dropout_prob': 0.1,
@@ -12,4 +12,22 @@
  'seed': 11711,
  'task': 'sst',
  'use_gpu': True}
-2026-08-06 14:22:32 - ------------------------------
+2026-08-06 14:29:33 - ------------------------------
+2026-08-06 14:30:03 - Epoch 01 (sst): train loss :: 1.581, train :: 0.451, dev :: 0.426
+2026-08-06 14:30:05 - Saving the model to models/finetune-10-1e-05-sst.pt.
+2026-08-06 14:30:32 - Epoch 02 (sst): train loss :: 1.367, train :: 0.494, dev :: 0.448
+2026-08-06 14:30:34 - Saving the model to models/finetune-10-1e-05-sst.pt.
+2026-08-06 14:31:01 - Epoch 03 (sst): train loss :: 1.247, train :: 0.552, dev :: 0.452
+2026-08-06 14:31:03 - Saving the model to models/finetune-10-1e-05-sst.pt.
+2026-08-06 14:31:30 - Epoch 04 (sst): train loss :: 1.173, train :: 0.629, dev :: 0.497
+2026-08-06 14:31:31 - Saving the model to models/finetune-10-1e-05-sst.pt.
+2026-08-06 14:31:58 - Epoch 05 (sst): train loss :: 1.104, train :: 0.684, dev :: 0.517
+2026-08-06 14:32:00 - Saving the model to models/finetune-10-1e-05-sst.pt.
+2026-08-06 14:32:27 - Epoch 06 (sst): train loss :: 1.050, train :: 0.722, dev :: 0.520
+2026-08-06 14:32:29 - Saving the model to models/finetune-10-1e-05-sst.pt.
+2026-08-06 14:32:56 - Epoch 07 (sst): train loss :: 1.005, train :: 0.750, dev :: 0.512
+2026-08-06 14:33:23 - Epoch 08 (sst): train loss :: 0.964, train :: 0.780, dev :: 0.521
+2026-08-06 14:33:25 - Saving the model to models/finetune-10-1e-05-sst.pt.
+2026-08-06 14:33:52 - Epoch 09 (sst): train loss :: 0.940, train :: 0.790, dev :: 0.518
+2026-08-06 14:34:19 - Epoch 10 (sst): train loss :: 0.914, train :: 0.790, dev :: 0.515
+2026-08-06 14:34:22 - Loaded model to test from models/finetune-10-1e-05-sst.pt
