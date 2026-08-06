@@ -38,3 +38,6 @@
 ## Activation Funktion of Classifier
 - As discussed in the Lecture, there might be better alternatives then ReLU.
 - To avoid dead neurons and enable more stable training GElU might improve performance.
+### Result
+- Since it was just a small adjustment, the results did not significantly change.
+- Overfitting was consistently reduced in later epochs, though. So the change will be kept.
