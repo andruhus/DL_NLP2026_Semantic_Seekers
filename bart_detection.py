@@ -1,24 +1,28 @@
 import argparse
-import ast
 import random
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import torch
+from sklearn.metrics import matthews_corrcoef
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 from transformers import AutoTokenizer, BartModel
-from sklearn.metrics import matthews_corrcoef
+
 from optimizer import AdamW
+from paraphrase_detection.weighted_bce import (
+    compute_pos_weights,
+    count_label_examples,
+    create_weighted_bce_loss,
+    encode_paraphrase_labels,
+    print_label_statistics,
+    verify_positive_training_examples,
+)
 
 
 TQDM_DISABLE = False
-UNUSED_PARAPHRASE_TYPE_IDS = {12, 19, 20, 23, 27}
-VALID_PARAPHRASE_TYPE_IDS = sorted(
-    set(range(1, 32)) - UNUSED_PARAPHRASE_TYPE_IDS
-)
 
 
 class BartWithClassifier(nn.Module):
@@ -39,75 +43,6 @@ class BartWithClassifier(nn.Module):
         # Add an additional fully connected layer to obtain the logits
         logits = self.classifier(cls_output)
         return logits
-
-
-def encode_paraphrase_labels(dataset):
-    """Convert paraphrase type IDs into one multi-hot vector per example."""
-    labels = []
-    for type_ids in dataset["paraphrase_type_ids"]:
-        type_set = set(ast.literal_eval(str(type_ids)))
-        labels.append(
-            [int(type_id in type_set) for type_id in VALID_PARAPHRASE_TYPE_IDS]
-        )
-    return torch.tensor(labels, dtype=torch.float)
-
-
-def count_label_examples(labels):
-    """Count positive and negative training examples for each label."""
-    if labels.ndim != 2 or labels.shape[1] != len(VALID_PARAPHRASE_TYPE_IDS):
-        raise ValueError(
-            "Expected labels with shape "
-            f"(num_examples, {len(VALID_PARAPHRASE_TYPE_IDS)}), "
-            f"but got {tuple(labels.shape)}."
-        )
-    if not torch.all((labels == 0) | (labels == 1)):
-        raise ValueError("Labels must contain only binary values (0 or 1).")
-
-    positive_counts = labels.sum(dim=0)
-    negative_counts = labels.shape[0] - positive_counts
-    return positive_counts, negative_counts
-
-
-def verify_positive_training_examples(positive_counts):
-    """Fail early if a label has no positive example in the training split."""
-    missing_labels = [
-        type_id
-        for type_id, count in zip(VALID_PARAPHRASE_TYPE_IDS, positive_counts)
-        if count.item() == 0
-    ]
-    if missing_labels:
-        raise ValueError(
-            "Every label must have a positive training example. "
-            f"Missing paraphrase type IDs: {missing_labels}"
-        )
-
-
-def compute_pos_weights(positive_counts, negative_counts):
-    """Compute PyTorch BCE positive weights for each label."""
-    verify_positive_training_examples(positive_counts)
-    # BCEWithLogitsLoss multiplies the positive loss term, so balancing uses
-    # negative / positive (not positive / negative).
-    return negative_counts / positive_counts
-
-
-def create_weighted_bce_loss(pos_weights):
-    """Create the weighted binary cross-entropy loss used for training."""
-    return nn.BCEWithLogitsLoss(pos_weight=pos_weights)
-
-
-def print_label_statistics(positive_counts, negative_counts, pos_weights):
-    statistics = pd.DataFrame({
-        "label_id": VALID_PARAPHRASE_TYPE_IDS,
-        "positive": positive_counts.int().tolist(),
-        "negative": negative_counts.int().tolist(),
-        "pos_weight": pos_weights.tolist(),
-    })
-    print("Training-label statistics:")
-    print(
-        statistics.to_string(
-            index=False, float_format=lambda value: f"{value:.4f}",
-        )
-    )
 
 
 def transform_data(dataset, max_length=512, shuffle=True):
