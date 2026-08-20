@@ -205,6 +205,7 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=11711)
     parser.add_argument("--use_gpu", action="store_true")
+    parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument(
         "--loss_mode",
         choices=("unweighted", "weighted", "compare"),
@@ -212,6 +213,8 @@ def get_args():
         help="Train with unweighted BCE, weighted BCE, or both for comparison.",
     )
     args = parser.parse_args()
+    if args.epochs < 1:
+        parser.error("--epochs must be at least 1")
     return args
 
 
@@ -237,7 +240,7 @@ def create_experiments(loss_mode, pos_weights):
 
 
 def run_experiment(
-    name, criterion, checkpoint_path, train_data, dev_data, device, seed,
+    name, criterion, checkpoint_path, train_data, dev_data, device, seed, epochs,
 ):
     # Reset the seed so compared models start from the same initialization and
     # see the same shuffled training order.
@@ -252,6 +255,7 @@ def run_experiment(
         criterion,
         device,
         checkpoint_path,
+        epochs=epochs,
     )
     accuracy, matthews_corr = evaluate_model(model, dev_data, device)
     result = {
@@ -295,6 +299,7 @@ def finetune_paraphrase_detection(args):
             dev_data,
             device,
             args.seed,
+            args.epochs,
         )
         results.append(result)
 
