@@ -1,5 +1,7 @@
 import argparse
+import ast
 import random
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -13,15 +15,20 @@ from optimizer import AdamW
 
 
 TQDM_DISABLE = False
+UNUSED_PARAPHRASE_TYPE_IDS = {12, 19, 20, 23, 27}
+VALID_PARAPHRASE_TYPE_IDS = sorted(
+    set(range(1, 32)) - UNUSED_PARAPHRASE_TYPE_IDS
+)
 
 
 class BartWithClassifier(nn.Module):
     def __init__(self, num_labels=26):
         super(BartWithClassifier, self).__init__()
 
-        self.bart = BartModel.from_pretrained("facebook/bart-large", local_files_only=True)
+        self.bart = BartModel.from_pretrained(
+            "facebook/bart-large", local_files_only=True,
+        )
         self.classifier = nn.Linear(self.bart.config.hidden_size, num_labels)
-        self.sigmoid = nn.Sigmoid()
 
     def forward(self, input_ids, attention_mask=None):
         # Use the BartModel to obtain the last hidden state
@@ -31,14 +38,82 @@ class BartWithClassifier(nn.Module):
 
         # Add an additional fully connected layer to obtain the logits
         logits = self.classifier(cls_output)
+        return logits
 
-        # Return the probabilities
-        probabilities = self.sigmoid(logits)
-        return probabilities
+
+def encode_paraphrase_labels(dataset):
+    """Convert paraphrase type IDs into one multi-hot vector per example."""
+    labels = []
+    for type_ids in dataset["paraphrase_type_ids"]:
+        type_set = set(ast.literal_eval(str(type_ids)))
+        labels.append(
+            [int(type_id in type_set) for type_id in VALID_PARAPHRASE_TYPE_IDS]
+        )
+    return torch.tensor(labels, dtype=torch.float)
+
+
+def count_label_examples(labels):
+    """Count positive and negative training examples for each label."""
+    if labels.ndim != 2 or labels.shape[1] != len(VALID_PARAPHRASE_TYPE_IDS):
+        raise ValueError(
+            "Expected labels with shape "
+            f"(num_examples, {len(VALID_PARAPHRASE_TYPE_IDS)}), "
+            f"but got {tuple(labels.shape)}."
+        )
+    if not torch.all((labels == 0) | (labels == 1)):
+        raise ValueError("Labels must contain only binary values (0 or 1).")
+
+    positive_counts = labels.sum(dim=0)
+    negative_counts = labels.shape[0] - positive_counts
+    return positive_counts, negative_counts
+
+
+def verify_positive_training_examples(positive_counts):
+    """Fail early if a label has no positive example in the training split."""
+    missing_labels = [
+        type_id
+        for type_id, count in zip(VALID_PARAPHRASE_TYPE_IDS, positive_counts)
+        if count.item() == 0
+    ]
+    if missing_labels:
+        raise ValueError(
+            "Every label must have a positive training example. "
+            f"Missing paraphrase type IDs: {missing_labels}"
+        )
+
+
+def compute_pos_weights(positive_counts, negative_counts):
+    """Compute PyTorch BCE positive weights for each label."""
+    verify_positive_training_examples(positive_counts)
+    # BCEWithLogitsLoss multiplies the positive loss term, so balancing uses
+    # negative / positive (not positive / negative).
+    return negative_counts / positive_counts
+
+
+def create_weighted_bce_loss(pos_weights):
+    """Create the weighted binary cross-entropy loss used for training."""
+    return nn.BCEWithLogitsLoss(pos_weight=pos_weights)
+
+
+def print_label_statistics(positive_counts, negative_counts, pos_weights):
+    statistics = pd.DataFrame({
+        "label_id": VALID_PARAPHRASE_TYPE_IDS,
+        "positive": positive_counts.int().tolist(),
+        "negative": negative_counts.int().tolist(),
+        "pos_weight": pos_weights.tolist(),
+    })
+    print("Training-label statistics:")
+    print(
+        statistics.to_string(
+            index=False, float_format=lambda value: f"{value:.4f}",
+        )
+    )
 
 
 def transform_data(dataset, max_length=512, shuffle=True):
-    tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large", local_files_only=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        "facebook/bart-large", local_files_only=True,
+    )
 
     combined = [
         str(r["sentence1"]) + " </s> " + str(r["sentence2"])
@@ -53,13 +128,7 @@ def transform_data(dataset, max_length=512, shuffle=True):
 
     has_labels = "paraphrase_type_ids" in dataset.columns
     if has_labels:
-        unused = {12, 19, 20, 23, 27}
-        valid_ids = sorted(set(range(1, 32)) - unused)
-        labels = []
-        for type_str in dataset["paraphrase_type_ids"]:
-            type_set = set(eval(str(type_str)))
-            labels.append([1 if t in type_set else 0 for t in valid_ids])
-        labels_tensor = torch.tensor(labels, dtype=torch.float)
+        labels_tensor = encode_paraphrase_labels(dataset)
         ds = TensorDataset(input_ids, attention_mask, labels_tensor)
     else:
         ds = TensorDataset(input_ids, attention_mask)
@@ -67,23 +136,33 @@ def transform_data(dataset, max_length=512, shuffle=True):
     return DataLoader(ds, batch_size=16, shuffle=shuffle)
 
 
-def train_model(model, train_data, dev_data, device):
+def train_model(
+    model,
+    train_data,
+    dev_data,
+    criterion,
+    device,
+    checkpoint_path,
+    epochs=5,
+):
     optimizer = AdamW(model.parameters(), lr=2e-5)
-    criterion = nn.BCELoss()
-    best_acc = 0.0
+    criterion = criterion.to(device)
+    best_acc = -float("inf")
+    checkpoint_path = Path(checkpoint_path)
+    checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
 
-    for epoch in range(5):
+    for epoch in range(epochs):
         model.train()
         total_loss, n_batches = 0.0, 0
-        for batch in tqdm(train_data, desc=f"Epoch {epoch+1}"):
+        for batch in tqdm(train_data, desc=f"Epoch {epoch+1}", disable=TQDM_DISABLE):
             input_ids, attention_mask, labels = batch
             input_ids = input_ids.to(device)
             attention_mask = attention_mask.to(device)
             labels = labels.to(device)
 
             optimizer.zero_grad()
-            probs = model(input_ids=input_ids, attention_mask=attention_mask)
-            loss = criterion(probs, labels)
+            logits = model(input_ids=input_ids, attention_mask=attention_mask)
+            loss = criterion(logits, labels)
             loss.backward()
             optimizer.step()
 
@@ -92,32 +171,38 @@ def train_model(model, train_data, dev_data, device):
 
         avg_loss = total_loss / n_batches
         acc, mcc = evaluate_model(model, dev_data, device)
-        print(f"Epoch {epoch+1}: loss={avg_loss:.4f}, dev_acc={acc:.3f}, MCC={mcc:.3f}")
+        print(
+            f"Epoch {epoch+1}: loss={avg_loss:.4f}, "
+            f"dev_acc={acc:.3f}, MCC={mcc:.3f}"
+        )
 
         if acc > best_acc:
             best_acc = acc
-            torch.save(model.state_dict(), "models/bart_detection_best.pt")
+            torch.save(model.state_dict(), checkpoint_path)
 
-    model.load_state_dict(torch.load("models/bart_detection_best.pt"))
+    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     return model
-
 
 
 def test_model(model, test_data, test_ids, device):
     model.eval()
     all_preds = []
     with torch.no_grad():
-        for batch in tqdm(test_data, desc="Testing"):
+        for batch in tqdm(test_data, desc="Testing", disable=TQDM_DISABLE):
             if len(batch) == 3:
                 input_ids, attention_mask, _ = batch
             else:
                 input_ids, attention_mask = batch
             input_ids = input_ids.to(device)
             attention_mask = attention_mask.to(device)
-            probs = model(input_ids=input_ids, attention_mask=attention_mask)
+            logits = model(input_ids=input_ids, attention_mask=attention_mask)
+            probs = torch.sigmoid(logits)
             preds = (probs > 0.5).int().cpu().numpy().tolist()
             all_preds.extend(preds)
-    return pd.DataFrame({"id": test_ids.tolist(), "Predicted_Paraphrase_Types": all_preds})
+    return pd.DataFrame({
+        "id": test_ids.tolist(),
+        "Predicted_Paraphrase_Types": all_preds,
+    })
 
 
 def evaluate_model(model, test_data, device):
@@ -135,8 +220,8 @@ def evaluate_model(model, test_data, device):
             input_ids = input_ids.to(device)
             attention_mask = attention_mask.to(device)
 
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            predicted_labels = (outputs > 0.5).int()
+            logits = model(input_ids=input_ids, attention_mask=attention_mask)
+            predicted_labels = (torch.sigmoid(logits) > 0.5).int()
 
             all_pred.append(predicted_labels)
             all_labels.append(labels)
@@ -151,13 +236,17 @@ def evaluate_model(model, test_data, device):
     accuracies = []
     matthews_coefficients = []
     for label_idx in range(true_labels_np.shape[1]):
-        correct_predictions = np.sum(true_labels_np[:, label_idx] == predicted_labels_np[:, label_idx])
+        correct_predictions = np.sum(
+            true_labels_np[:, label_idx] == predicted_labels_np[:, label_idx]
+        )
         total_predictions = true_labels_np.shape[0]
         label_accuracy = correct_predictions / total_predictions
         accuracies.append(label_accuracy)
 
         # compute Matthwes Correlation Coefficient for each paraphrase type
-        matth_coef = matthews_corrcoef(true_labels_np[:, label_idx], predicted_labels_np[:, label_idx])
+        matth_coef = matthews_corrcoef(
+            true_labels_np[:, label_idx], predicted_labels_np[:, label_idx]
+        )
         matthews_coefficients.append(matth_coef)
 
     # Calculate the average accuracy over all labels
@@ -181,14 +270,65 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=11711)
     parser.add_argument("--use_gpu", action="store_true")
+    parser.add_argument(
+        "--loss_mode",
+        choices=("unweighted", "weighted", "compare"),
+        default="compare",
+        help="Train with unweighted BCE, weighted BCE, or both for comparison.",
+    )
     args = parser.parse_args()
     return args
 
 
-def finetune_paraphrase_detection(args):
+def create_experiments(loss_mode, pos_weights):
+    experiments = []
+    if loss_mode in {"unweighted", "compare"}:
+        experiments.append(
+            (
+                "Unweighted BCE",
+                nn.BCEWithLogitsLoss(),
+                "models/bart_detection_unweighted_best.pt",
+            )
+        )
+    if loss_mode in {"weighted", "compare"}:
+        experiments.append(
+            (
+                "Weighted BCE",
+                create_weighted_bce_loss(pos_weights),
+                "models/bart_detection_weighted_best.pt",
+            )
+        )
+    return experiments
+
+
+def run_experiment(
+    name, criterion, checkpoint_path, train_data, dev_data, device, seed,
+):
+    # Reset the seed so compared models start from the same initialization and
+    # see the same shuffled training order.
+    seed_everything(seed)
     model = BartWithClassifier()
-    device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
     model.to(device)
+    print(f"\nTraining {name}...")
+    model = train_model(
+        model,
+        train_data,
+        dev_data,
+        criterion,
+        device,
+        checkpoint_path,
+    )
+    accuracy, matthews_corr = evaluate_model(model, dev_data, device)
+    result = {
+        "loss": name,
+        "dev_accuracy": accuracy,
+        "dev_mcc": matthews_corr,
+    }
+    return model, result
+
+
+def finetune_paraphrase_detection(args):
+    device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
 
     train_dataset = pd.read_csv("data/etpc-paraphrase-train.csv")
     dev_dataset = pd.read_csv("data/etpc-paraphrase-dev.csv")
@@ -196,20 +336,52 @@ def finetune_paraphrase_detection(args):
 
     train_data = transform_data(train_dataset)
     dev_data = transform_data(dev_dataset, shuffle=False)
-    test_data = transform_data(test_dataset)
+    test_data = transform_data(test_dataset, shuffle=False)
 
     print(f"Loaded {len(train_dataset)} training samples.")
 
-    model = train_model(model, train_data, dev_data, device)
+    # These statistics are computed exclusively from the training split.
+    train_labels = encode_paraphrase_labels(train_dataset)
+    positive_counts, negative_counts = count_label_examples(train_labels)
+    verify_positive_training_examples(positive_counts)
+    pos_weights = compute_pos_weights(positive_counts, negative_counts)
+    print_label_statistics(positive_counts, negative_counts, pos_weights)
 
-    print("Training finished.")
+    experiments = create_experiments(args.loss_mode, pos_weights)
+    results = []
+    prediction_model = None
+    for experiment_index, experiment in enumerate(experiments):
+        name, criterion, checkpoint_path = experiment
+        model, result = run_experiment(
+            name,
+            criterion,
+            checkpoint_path,
+            train_data,
+            dev_data,
+            device,
+            args.seed,
+        )
+        results.append(result)
 
-    accuracy, matthews_corr = evaluate_model(model, dev_data, device)
-    print(f"The accuracy of the model is: {accuracy:.3f}")
-    print(f"Matthews Correlation Coefficient of the model is: {matthews_corr:.3f}")
+        # The weighted experiment is last in comparison mode, so earlier large
+        # BART models can be released before the next one is constructed.
+        if experiment_index == len(experiments) - 1:
+            prediction_model = model
+        else:
+            del model
+            if device.type == "cuda":
+                torch.cuda.empty_cache()
+
+    comparison = pd.DataFrame(results)
+    print("\nDevelopment-set comparison:")
+    print(
+        comparison.to_string(
+            index=False, float_format=lambda value: f"{value:.4f}",
+        )
+    )
 
     test_ids = test_dataset["id"]
-    test_results = test_model(model, test_data, test_ids, device)
+    test_results = test_model(prediction_model, test_data, test_ids, device)
     test_results.to_csv("predictions/bart/etpc-paraphrase-detection-test-output.csv", index=False)
 
 
