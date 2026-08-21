@@ -85,7 +85,8 @@ def train_model(
     best_acc = -float("inf")
     checkpoint_path = Path(checkpoint_path)
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
-
+    if epochs == 0:
+        torch.save(model.state_dict(), checkpoint_path)
     for epoch in range(epochs):
         model.train()
         total_loss, n_batches = 0.0, 0
