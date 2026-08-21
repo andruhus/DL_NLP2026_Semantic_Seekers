@@ -7,6 +7,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
+#SBATCH --mail-user=andrii.demydenko@stud.uni-goettingen.de 
 #SBATCH --output=./slurm_files/paraphrase_detection_%j.out
 #SBATCH --error=./slurm_files/paraphrase_detection_%j.err
 
@@ -74,6 +75,7 @@ fi
 
 source activate dnlp
 set -u
+export TOKENIZERS_PARALLELISM=false
 
 echo "Working directory: ${WORKING_DIR}"
 echo "Node: ${NODE_NAME}"
