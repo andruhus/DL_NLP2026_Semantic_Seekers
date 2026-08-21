@@ -45,7 +45,7 @@ class BartWithClassifier(nn.Module):
         return logits
 
 
-def transform_data(dataset, max_length=512, shuffle=True):
+def transform_data(dataset, max_length=512, batch_size=16, shuffle=True):
     tokenizer = AutoTokenizer.from_pretrained(
         "facebook/bart-large", local_files_only=True,
     )
@@ -68,7 +68,7 @@ def transform_data(dataset, max_length=512, shuffle=True):
     else:
         ds = TensorDataset(input_ids, attention_mask)
 
-    return DataLoader(ds, batch_size=16, shuffle=shuffle)
+    return DataLoader(ds, batch_size=batch_size, shuffle=shuffle)
 
 
 def train_model(
@@ -206,6 +206,7 @@ def get_args():
     parser.add_argument("--seed", type=int, default=11711)
     parser.add_argument("--use_gpu", action="store_true")
     parser.add_argument("--epochs", type=int, default=5)
+    parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument(
         "--loss_mode",
         choices=("unweighted", "weighted", "compare"),
@@ -215,6 +216,8 @@ def get_args():
     args = parser.parse_args()
     if args.epochs < 1:
         parser.error("--epochs must be at least 1")
+    if args.batch_size < 1:
+        parser.error("--batch_size must be at least 1")
     return args
 
 
@@ -273,9 +276,13 @@ def finetune_paraphrase_detection(args):
     dev_dataset = pd.read_csv("data/etpc-paraphrase-dev.csv")
     test_dataset = pd.read_csv("data/etpc-paraphrase-detection-test-student.csv")
 
-    train_data = transform_data(train_dataset)
-    dev_data = transform_data(dev_dataset, shuffle=False)
-    test_data = transform_data(test_dataset, shuffle=False)
+    train_data = transform_data(train_dataset, batch_size=args.batch_size)
+    dev_data = transform_data(
+        dev_dataset, batch_size=args.batch_size, shuffle=False,
+    )
+    test_data = transform_data(
+        test_dataset, batch_size=args.batch_size, shuffle=False,
+    )
 
     print(f"Loaded {len(train_dataset)} training samples.")
 

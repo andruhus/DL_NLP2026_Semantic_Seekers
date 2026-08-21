@@ -21,23 +21,35 @@ NODE_NAME="${SLURM_NODELIST:-$(hostname)}"
 cd "${WORKING_DIR}"
 
 USE_GPU=true
+BATCH_SIZE=16
 POSITIONAL_ARGS=()
-for argument in "$@"; do
-    case "${argument}" in
+while (( $# > 0 )); do
+    case "$1" in
         --use_gpu)
             USE_GPU=true
+            shift
             ;;
         --no-use_gpu)
             USE_GPU=false
+            shift
+            ;;
+        --batch_size)
+            if (( $# < 2 )); then
+                echo "--batch_size requires a value" >&2
+                exit 2
+            fi
+            BATCH_SIZE="$2"
+            shift 2
             ;;
         *)
-            POSITIONAL_ARGS+=("${argument}")
+            POSITIONAL_ARGS+=("$1")
+            shift
             ;;
     esac
 done
 
 if (( ${#POSITIONAL_ARGS[@]} > 2 )); then
-    echo "Usage: sbatch $0 [epochs] [loss_mode] [--use_gpu|--no-use_gpu]" >&2
+    echo "Usage: sbatch $0 [epochs] [loss_mode] [--batch_size N] [--use_gpu|--no-use_gpu]" >&2
     exit 2
 fi
 
@@ -48,6 +60,7 @@ echo "Working directory: ${WORKING_DIR}"
 echo "Node: ${NODE_NAME}"
 echo "Epochs: ${EPOCHS}"
 echo "Loss mode: ${LOSS_MODE}"
+echo "Batch size: ${BATCH_SIZE}"
 echo "Use GPU: ${USE_GPU}"
 
 python --version
@@ -63,6 +76,7 @@ echo "Uncommitted changes: $(git status --porcelain | wc -l)"
 BART_ARGS=(
     --loss_mode "${LOSS_MODE}"
     --epochs "${EPOCHS}"
+    --batch_size "${BATCH_SIZE}"
 )
 if [[ "${USE_GPU}" == true ]]; then
     BART_ARGS+=(--use_gpu)
