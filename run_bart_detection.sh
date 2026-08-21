@@ -10,9 +10,10 @@
 #SBATCH --output=./slurm_files/slurm-%x-%j.out
 #SBATCH --error=./slurm_files/slurm-%x-%j.err
 
-set -euo pipefail
+set -eo pipefail
 
 source activate dnlp
+set -u
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 WORKING_DIR="${SLURM_SUBMIT_DIR:-${SCRIPT_DIR}}"
