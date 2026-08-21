@@ -214,8 +214,8 @@ def get_args():
         help="Train with unweighted BCE, weighted BCE, or both for comparison.",
     )
     args = parser.parse_args()
-    if args.epochs < 1:
-        parser.error("--epochs must be at least 1")
+    if args.epochs < 0:
+        parser.error("--epochs must be at least 0")
     if args.batch_size < 1:
         parser.error("--batch_size must be at least 1")
     return args

@@ -7,13 +7,10 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --output=./slurm_files/slurm-%x-%j.out
-#SBATCH --error=./slurm_files/slurm-%x-%j.err
+#SBATCH --output=./slurm_files/paraphrase_detection_%j.out
+#SBATCH --error=./slurm_files/paraphrase_detection_%j.err
 
 set -eo pipefail
-
-source activate dnlp
-set -u
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 WORKING_DIR="${SLURM_SUBMIT_DIR:-${SCRIPT_DIR}}"
@@ -55,6 +52,28 @@ fi
 
 EPOCHS="${POSITIONAL_ARGS[0]:-5}"
 LOSS_MODE="${POSITIONAL_ARGS[1]:-compare}"
+
+case "${LOSS_MODE}" in
+    unweighted|weighted|compare)
+        ;;
+    *)
+        echo "loss_mode must be one of: unweighted, weighted, compare" >&2
+        exit 2
+        ;;
+esac
+
+if [[ -n "${SLURM_JOB_ID:-}" ]]; then
+    RUN_DATE="$(date +%Y-%m-%d)"
+    LOG_DIRECTORY="${WORKING_DIR}/slurm_files"
+    LOG_STEM="${LOG_DIRECTORY}/paraphrase_detection_${RUN_DATE}_${SLURM_JOB_ID}_${LOSS_MODE}"
+    exec > "${LOG_STEM}.out" 2> "${LOG_STEM}.err"
+    rm -f \
+        "${LOG_DIRECTORY}/paraphrase_detection_${SLURM_JOB_ID}.out" \
+        "${LOG_DIRECTORY}/paraphrase_detection_${SLURM_JOB_ID}.err"
+fi
+
+source activate dnlp
+set -u
 
 echo "Working directory: ${WORKING_DIR}"
 echo "Node: ${NODE_NAME}"
