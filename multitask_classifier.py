@@ -275,12 +275,25 @@ def train_multitask(args):
 
     model = MultitaskBERT(config)
     model = model.to(device)
+###
+### Pretrained Model laden
+###
 
+    logging.info("Loading pretrained AllNLI model...")
+    pretrained = torch.load("models/pretrain-allnli.pt")
+    model.load_state_dict(pretrained)
+
+    for p in model.bert.parameters():
+        p.requires_grad = True
+###
+###
+###
     lr = args.lr
     optimizer = AdamW(model.parameters(), lr=lr)
 ###
 ### Hier kommt learning rate scheduler
 ###
+
     # Anzahl Trainingsschritte berechnen
     total_steps = args.epochs * len(sst_train_dataloader)
 
