@@ -4,10 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d952c574-2aa9-4fdc-942c-1e19e3ec069d" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/Dokumentation.md" beforeDir="false" afterPath="$PROJECT_DIR$/Dokumentation.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/run_train.sh" beforeDir="false" afterPath="$PROJECT_DIR$/run_train.sh" afterDir="false" />
-    </list>
+    <list default="true" id="d952c574-2aa9-4fdc-942c-1e19e3ec069d" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
