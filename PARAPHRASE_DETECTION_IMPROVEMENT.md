@@ -39,7 +39,7 @@ $$
 
 where $p_t$ is the predicted probability of the correct binary class and $\gamma \geq 0$ is the focusing parameter. Easy, confidently classified examples receive less weight, allowing training to focus on difficult decisions. When $\gamma=0$, focal loss reduces to ordinary BCE; increasing $\gamma$ suppresses easy examples more strongly.
 
-Our implementation in `paraphrase_detection/focal_loss.py` does not use an additional $\alpha$ class-balancing term, so the experiment isolates the effect of the focusing parameter. `bart_detection.py` accepts multiple unique gamma values through repeated `--focal_gamma` arguments and trains a separate model for every value. Focal loss is run through the dedicated `focal` mode; the current `compare` mode compares only unweighted and weighted BCE.
+Our implementation in `paraphrase_detection/focal_loss.py` does not use an additional $\alpha$ class-balancing term, so the experiment isolates the effect of the focusing parameter. `bart_detection.py` accepts multiple unique gamma values through repeated `--focal_gamma` arguments and trains a separate model for every value. Focal loss can be run through the dedicated `focal` mode or included in `compare`; in `compare`, the script trains unweighted BCE, weighted BCE, and one focal-loss model for every requested gamma value.
 
 ## Experiments
 
@@ -71,13 +71,19 @@ The experiments and their hypotheses were:
 | Weighted BCE | Positive term for label $c$ multiplied by $N_c^-/N_c^+$ | Better recognition of rare positive labels and therefore higher MCC, potentially at the cost of accuracy |
 | Focal loss | Easy decisions down-weighted by $(1-p_t)^\gamma$ | Greater focus on difficult labels without relying on extremely large inverse-frequency weights |
 
-The BCE comparison can be reproduced on the Grete cluster with:
+The full comparison can be reproduced on the Grete cluster with the following command. By default, `compare` runs unweighted BCE, weighted BCE, and focal loss with $\gamma=2$:
 
 ```sh
 sbatch run_bart_detection.sh 5 compare --batch_size 16 --use_gpu
 ```
 
-A focal-loss run uses the dedicated mode. The `--focal_gamma` option can be repeated to evaluate several values in one job; for example, the default $\gamma=2$ run is:
+To reproduce only the two BCE experiments in a single comparison job, add `--compare_bce_only`:
+
+```sh
+sbatch run_bart_detection.sh 5 compare --compare_bce_only --batch_size 16 --use_gpu
+```
+
+A focal-loss-only run uses the dedicated mode. The `--focal_gamma` option can be repeated to evaluate several values in one job; for example, the default $\gamma=2$ run is:
 
 ```sh
 sbatch run_bart_detection.sh 5 focal --batch_size 16 --focal_gamma 2.0 --use_gpu

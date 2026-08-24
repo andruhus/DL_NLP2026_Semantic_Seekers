@@ -216,7 +216,7 @@ def get_args():
         default="compare",
         help=(
             "Train with unweighted BCE, weighted BCE, focal loss, or compare "
-            "both BCE variants."
+            "all selected loss functions."
         ),
     )
     parser.add_argument(
@@ -229,11 +229,21 @@ def get_args():
             "multiple focal experiments (default: 2.0)."
         ),
     )
+    parser.add_argument(
+        "--compare_bce_only",
+        action="store_true",
+        help=(
+            "In compare mode, run only unweighted BCE and weighted BCE; "
+            "do not run focal-loss experiments."
+        ),
+    )
     args = parser.parse_args()
     if args.epochs < 0:
         parser.error("--epochs must be at least 0")
     if args.batch_size < 1:
         parser.error("--batch_size must be at least 1")
+    if args.compare_bce_only and args.loss_mode != "compare":
+        parser.error("--compare_bce_only requires --loss_mode compare")
     if args.focal_gammas is None:
         args.focal_gammas = [2.0]
     if any(
@@ -246,7 +256,9 @@ def get_args():
     return args
 
 
-def create_experiments(loss_mode, pos_weights, focal_gammas):
+def create_experiments(
+    loss_mode, pos_weights, focal_gammas, compare_bce_only=False,
+):
     experiments = []
     if loss_mode in {"unweighted", "compare"}:
         experiments.append(
@@ -264,8 +276,10 @@ def create_experiments(loss_mode, pos_weights, focal_gammas):
                 "models/bart_detection_weighted_best.pt",
             )
         )
-    # TODO: Add focal loss back to compare mode once it is ready.
-    if loss_mode == "focal":
+    include_focal = loss_mode == "focal" or (
+        loss_mode == "compare" and not compare_bce_only
+    )
+    if include_focal:
         for focal_gamma in focal_gammas:
             gamma_label = f"{focal_gamma:g}"
             experiments.append(
@@ -330,7 +344,10 @@ def finetune_paraphrase_detection(args):
     print_label_statistics(positive_counts, negative_counts, pos_weights)
 
     experiments = create_experiments(
-        args.loss_mode, pos_weights, args.focal_gammas,
+        args.loss_mode,
+        pos_weights,
+        args.focal_gammas,
+        compare_bce_only=args.compare_bce_only,
     )
     results = []
     prediction_model = None

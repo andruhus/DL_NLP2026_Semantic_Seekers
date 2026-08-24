@@ -21,6 +21,7 @@ cd "${WORKING_DIR}"
 USE_GPU=true
 BATCH_SIZE=16
 FOCAL_GAMMAS=()
+COMPARE_BCE_ONLY=false
 POSITIONAL_ARGS=()
 while (( $# > 0 )); do
     case "$1" in
@@ -48,6 +49,10 @@ while (( $# > 0 )); do
             FOCAL_GAMMAS+=("$2")
             shift 2
             ;;
+        --compare_bce_only)
+            COMPARE_BCE_ONLY=true
+            shift
+            ;;
         *)
             POSITIONAL_ARGS+=("$1")
             shift
@@ -56,7 +61,7 @@ while (( $# > 0 )); do
 done
 
 if (( ${#POSITIONAL_ARGS[@]} > 2 )); then
-    echo "Usage: sbatch $0 [epochs] [loss_mode] [--batch_size N] [--focal_gamma G ...] [--use_gpu|--no-use_gpu]" >&2
+    echo "Usage: sbatch $0 [epochs] [loss_mode] [--batch_size N] [--focal_gamma G ...] [--compare_bce_only] [--use_gpu|--no-use_gpu]" >&2
     exit 2
 fi
 
@@ -74,6 +79,11 @@ case "${LOSS_MODE}" in
         exit 2
         ;;
 esac
+
+if [[ "${COMPARE_BCE_ONLY}" == true && "${LOSS_MODE}" != compare ]]; then
+    echo "--compare_bce_only requires loss_mode=compare" >&2
+    exit 2
+fi
 
 if [[ -n "${SLURM_JOB_ID:-}" ]]; then
     RUN_DATE="$(date +%Y-%m-%d)"
@@ -98,6 +108,7 @@ echo "Epochs: ${EPOCHS}"
 echo "Loss mode: ${LOSS_MODE}"
 echo "Batch size: ${BATCH_SIZE}"
 echo "Focal gammas: ${FOCAL_GAMMAS[*]}"
+echo "Compare BCE only: ${COMPARE_BCE_ONLY}"
 echo "Use GPU: ${USE_GPU}"
 
 python --version
@@ -115,6 +126,9 @@ BART_ARGS=(
     --epochs "${EPOCHS}"
     --batch_size "${BATCH_SIZE}"
 )
+if [[ "${COMPARE_BCE_ONLY}" == true ]]; then
+    BART_ARGS+=(--compare_bce_only)
+fi
 for focal_gamma in "${FOCAL_GAMMAS[@]}"; do
     BART_ARGS+=(--focal_gamma "${focal_gamma}")
 done
