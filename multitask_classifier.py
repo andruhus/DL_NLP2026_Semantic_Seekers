@@ -65,7 +65,7 @@ class MultitaskBERT(nn.Module):
             elif config.option == "finetune":
                 param.requires_grad = True
         self.sentiment_classifier = nn.Linear(BERT_HIDDEN_SIZE, N_SENTIMENT_CLASSES)
-        self.paraphrase_classifier = nn.Linear(BERT_HIDDEN_SIZE * 2, 1)
+        self.paraphrase_classifier = nn.Linear(BERT_HIDDEN_SIZE * 4, 1)
         self.similarity_regressor = nn.Linear(BERT_HIDDEN_SIZE * 2, 1)
         self.paraphrase_type_classifier = nn.Linear(BERT_HIDDEN_SIZE * 2, 26)
 
@@ -100,7 +100,13 @@ class MultitaskBERT(nn.Module):
         """
         emb1 = self.forward(input_ids_1, attention_mask_1)
         emb2 = self.forward(input_ids_2, attention_mask_2)
-        return self.paraphrase_classifier(torch.cat([emb1, emb2], dim=1))
+
+        difference = torch.abs(emb1 - emb2)
+        product = emb1 * emb2
+
+        combined = torch.cat([emb1, emb2, difference, product], dim=1)
+
+        return self.paraphrase_classifier(combined)
 
     def predict_similarity(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
         """
