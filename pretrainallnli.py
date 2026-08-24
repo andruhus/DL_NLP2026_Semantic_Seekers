@@ -114,9 +114,14 @@ class MultitaskBERT(nn.Module):
         output = self.bert(input_ids, attention_mask)
         return output['pooler_output']
 
-    def predict_nli(self, input_ids, attention_mask):
-        emb = self.forward(input_ids, attention_mask)
-        return self.nli_classifier(emb)
+    def predict_nli(self, input_ids1, attention_mask1, input_ids2, attention_mask2):
+        emb1 = self.forward(input_ids1, attention_mask1)
+        emb2 = self.forward(input_ids2, attention_mask2)
+
+        # Klassisch: concat beider Embeddings
+        pair_emb = torch.cat([emb1, emb2], dim=1)
+
+        return self.nli_classifier(pair_emb)
 
 
 def save_model(model, optimizer, args, config, filepath):
