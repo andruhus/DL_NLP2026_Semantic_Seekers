@@ -20,7 +20,7 @@ cd "${WORKING_DIR}"
 
 USE_GPU=true
 BATCH_SIZE=16
-FOCAL_GAMMA=2.0
+FOCAL_GAMMAS=()
 POSITIONAL_ARGS=()
 while (( $# > 0 )); do
     case "$1" in
@@ -45,7 +45,7 @@ while (( $# > 0 )); do
                 echo "--focal_gamma requires a value" >&2
                 exit 2
             fi
-            FOCAL_GAMMA="$2"
+            FOCAL_GAMMAS+=("$2")
             shift 2
             ;;
         *)
@@ -56,12 +56,15 @@ while (( $# > 0 )); do
 done
 
 if (( ${#POSITIONAL_ARGS[@]} > 2 )); then
-    echo "Usage: sbatch $0 [epochs] [loss_mode] [--batch_size N] [--focal_gamma G] [--use_gpu|--no-use_gpu]" >&2
+    echo "Usage: sbatch $0 [epochs] [loss_mode] [--batch_size N] [--focal_gamma G ...] [--use_gpu|--no-use_gpu]" >&2
     exit 2
 fi
 
 EPOCHS="${POSITIONAL_ARGS[0]:-5}"
 LOSS_MODE="${POSITIONAL_ARGS[1]:-compare}"
+if (( ${#FOCAL_GAMMAS[@]} == 0 )); then
+    FOCAL_GAMMAS=(2.0)
+fi
 
 case "${LOSS_MODE}" in
     unweighted|weighted|focal|compare)
@@ -91,7 +94,7 @@ echo "Node: ${NODE_NAME}"
 echo "Epochs: ${EPOCHS}"
 echo "Loss mode: ${LOSS_MODE}"
 echo "Batch size: ${BATCH_SIZE}"
-echo "Focal gamma: ${FOCAL_GAMMA}"
+echo "Focal gammas: ${FOCAL_GAMMAS[*]}"
 echo "Use GPU: ${USE_GPU}"
 
 python --version
@@ -108,8 +111,10 @@ BART_ARGS=(
     --loss_mode "${LOSS_MODE}"
     --epochs "${EPOCHS}"
     --batch_size "${BATCH_SIZE}"
-    --focal_gamma "${FOCAL_GAMMA}"
 )
+for focal_gamma in "${FOCAL_GAMMAS[@]}"; do
+    BART_ARGS+=(--focal_gamma "${focal_gamma}")
+done
 if [[ "${USE_GPU}" == true ]]; then
     BART_ARGS+=(--use_gpu)
 fi

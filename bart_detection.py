@@ -222,20 +222,31 @@ def get_args():
     parser.add_argument(
         "--focal_gamma",
         type=float,
-        default=2.0,
-        help="Focusing parameter used by focal loss (default: 2.0).",
+        action="append",
+        dest="focal_gammas",
+        help=(
+            "Focusing parameter used by focal loss. Repeat this option to run "
+            "multiple focal experiments (default: 2.0)."
+        ),
     )
     args = parser.parse_args()
     if args.epochs < 0:
         parser.error("--epochs must be at least 0")
     if args.batch_size < 1:
         parser.error("--batch_size must be at least 1")
-    if not math.isfinite(args.focal_gamma) or args.focal_gamma < 0:
+    if args.focal_gammas is None:
+        args.focal_gammas = [2.0]
+    if any(
+        not math.isfinite(gamma) or gamma < 0
+        for gamma in args.focal_gammas
+    ):
         parser.error("--focal_gamma must be a finite, non-negative number")
+    if len(set(args.focal_gammas)) != len(args.focal_gammas):
+        parser.error("--focal_gamma values must be unique")
     return args
 
 
-def create_experiments(loss_mode, pos_weights, focal_gamma):
+def create_experiments(loss_mode, pos_weights, focal_gammas):
     experiments = []
     if loss_mode in {"unweighted", "compare"}:
         experiments.append(
@@ -254,14 +265,15 @@ def create_experiments(loss_mode, pos_weights, focal_gamma):
             )
         )
     if loss_mode in {"focal", "compare"}:
-        gamma_label = f"{focal_gamma:g}"
-        experiments.append(
-            (
-                f"Focal Loss (gamma={gamma_label})",
-                create_focal_loss(focal_gamma),
-                f"models/bart_detection_focal_gamma_{gamma_label}_best.pt",
+        for focal_gamma in focal_gammas:
+            gamma_label = f"{focal_gamma:g}"
+            experiments.append(
+                (
+                    f"Focal Loss (gamma={gamma_label})",
+                    create_focal_loss(focal_gamma),
+                    f"models/bart_detection_focal_gamma_{gamma_label}_best.pt",
+                )
             )
-        )
     return experiments
 
 
@@ -317,7 +329,7 @@ def finetune_paraphrase_detection(args):
     print_label_statistics(positive_counts, negative_counts, pos_weights)
 
     experiments = create_experiments(
-        args.loss_mode, pos_weights, args.focal_gamma,
+        args.loss_mode, pos_weights, args.focal_gammas,
     )
     results = []
     prediction_model = None
