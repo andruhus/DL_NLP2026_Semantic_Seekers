@@ -289,7 +289,7 @@ def get_args():
 
     # Model configuration
     parser.add_argument("--seed", type=int, default=11711)
-    parser.add_argument("--epochs", type=int, default=10)
+    parser.add_argument("--epochs", type=int, default=6)
     parser.add_argument(
         "--option",
         type=str,
