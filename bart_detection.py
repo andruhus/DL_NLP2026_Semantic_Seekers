@@ -1,4 +1,5 @@
 import argparse
+import math
 import random
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from tqdm import tqdm
 from transformers import AutoTokenizer, BartModel
 
 from optimizer import AdamW
+from paraphrase_detection.focal_loss import create_focal_loss
 from paraphrase_detection.weighted_bce import (
     compute_pos_weights,
     count_label_examples,
@@ -210,19 +212,30 @@ def get_args():
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument(
         "--loss_mode",
-        choices=("unweighted", "weighted", "compare"),
+        choices=("unweighted", "weighted", "focal", "compare"),
         default="compare",
-        help="Train with unweighted BCE, weighted BCE, or both for comparison.",
+        help=(
+            "Train with unweighted BCE, weighted BCE, focal loss, or all three "
+            "for comparison."
+        ),
+    )
+    parser.add_argument(
+        "--focal_gamma",
+        type=float,
+        default=2.0,
+        help="Focusing parameter used by focal loss (default: 2.0).",
     )
     args = parser.parse_args()
     if args.epochs < 0:
         parser.error("--epochs must be at least 0")
     if args.batch_size < 1:
         parser.error("--batch_size must be at least 1")
+    if not math.isfinite(args.focal_gamma) or args.focal_gamma < 0:
+        parser.error("--focal_gamma must be a finite, non-negative number")
     return args
 
 
-def create_experiments(loss_mode, pos_weights):
+def create_experiments(loss_mode, pos_weights, focal_gamma):
     experiments = []
     if loss_mode in {"unweighted", "compare"}:
         experiments.append(
@@ -238,6 +251,15 @@ def create_experiments(loss_mode, pos_weights):
                 "Weighted BCE",
                 create_weighted_bce_loss(pos_weights),
                 "models/bart_detection_weighted_best.pt",
+            )
+        )
+    if loss_mode in {"focal", "compare"}:
+        gamma_label = f"{focal_gamma:g}"
+        experiments.append(
+            (
+                f"Focal Loss (gamma={gamma_label})",
+                create_focal_loss(focal_gamma),
+                f"models/bart_detection_focal_gamma_{gamma_label}_best.pt",
             )
         )
     return experiments
@@ -294,7 +316,9 @@ def finetune_paraphrase_detection(args):
     pos_weights = compute_pos_weights(positive_counts, negative_counts)
     print_label_statistics(positive_counts, negative_counts, pos_weights)
 
-    experiments = create_experiments(args.loss_mode, pos_weights)
+    experiments = create_experiments(
+        args.loss_mode, pos_weights, args.focal_gamma,
+    )
     results = []
     prediction_model = None
     for experiment_index, experiment in enumerate(experiments):
@@ -311,8 +335,8 @@ def finetune_paraphrase_detection(args):
         )
         results.append(result)
 
-        # The weighted experiment is last in comparison mode, so earlier large
-        # BART models can be released before the next one is constructed.
+        # Keep only the final experiment's model for test-set prediction so
+        # earlier large BART models can be released before the next run.
         if experiment_index == len(experiments) - 1:
             prediction_model = model
         else:

@@ -20,6 +20,7 @@ cd "${WORKING_DIR}"
 
 USE_GPU=true
 BATCH_SIZE=16
+FOCAL_GAMMA=2.0
 POSITIONAL_ARGS=()
 while (( $# > 0 )); do
     case "$1" in
@@ -39,6 +40,14 @@ while (( $# > 0 )); do
             BATCH_SIZE="$2"
             shift 2
             ;;
+        --focal_gamma)
+            if (( $# < 2 )); then
+                echo "--focal_gamma requires a value" >&2
+                exit 2
+            fi
+            FOCAL_GAMMA="$2"
+            shift 2
+            ;;
         *)
             POSITIONAL_ARGS+=("$1")
             shift
@@ -47,7 +56,7 @@ while (( $# > 0 )); do
 done
 
 if (( ${#POSITIONAL_ARGS[@]} > 2 )); then
-    echo "Usage: sbatch $0 [epochs] [loss_mode] [--batch_size N] [--use_gpu|--no-use_gpu]" >&2
+    echo "Usage: sbatch $0 [epochs] [loss_mode] [--batch_size N] [--focal_gamma G] [--use_gpu|--no-use_gpu]" >&2
     exit 2
 fi
 
@@ -55,10 +64,10 @@ EPOCHS="${POSITIONAL_ARGS[0]:-5}"
 LOSS_MODE="${POSITIONAL_ARGS[1]:-compare}"
 
 case "${LOSS_MODE}" in
-    unweighted|weighted|compare)
+    unweighted|weighted|focal|compare)
         ;;
     *)
-        echo "loss_mode must be one of: unweighted, weighted, compare" >&2
+        echo "loss_mode must be one of: unweighted, weighted, focal, compare" >&2
         exit 2
         ;;
 esac
@@ -82,6 +91,7 @@ echo "Node: ${NODE_NAME}"
 echo "Epochs: ${EPOCHS}"
 echo "Loss mode: ${LOSS_MODE}"
 echo "Batch size: ${BATCH_SIZE}"
+echo "Focal gamma: ${FOCAL_GAMMA}"
 echo "Use GPU: ${USE_GPU}"
 
 python --version
@@ -98,6 +108,7 @@ BART_ARGS=(
     --loss_mode "${LOSS_MODE}"
     --epochs "${EPOCHS}"
     --batch_size "${BATCH_SIZE}"
+    --focal_gamma "${FOCAL_GAMMA}"
 )
 if [[ "${USE_GPU}" == true ]]; then
     BART_ARGS+=(--use_gpu)
