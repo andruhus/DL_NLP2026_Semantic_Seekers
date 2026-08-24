@@ -186,7 +186,7 @@ def train_multitask(args):
 ###
 
     # Anzahl Trainingsschritte berechnen
-    total_steps = args.epochs * len(sst_train_dataloader)
+    total_steps = args.epochs * len(nli_train_dataloader)
 
     # Warmup: 10% der Trainingsschritte
     warmup_steps = int(0.1 * total_steps)
@@ -231,20 +231,18 @@ def train_multitask(args):
         train_loss = train_loss / num_batches
 
         nli_train_acc, _, _ = (
-            model_eval_multitask(
+            model_eval_nli(
                 nli_train_dataloader,
                 model=model,
                 device=device,
-                task=args.task,
             )
         )
 
         nli_dev_acc, _, _ = (
-            model_eval_multitask(
+            model_eval_nli(
                 nli_dev_dataloader,
                 model=model,
-                device=device,
-                task=args.task,
+                device=device
             )
         )
 
@@ -260,19 +258,6 @@ def train_multitask(args):
             best_dev_acc = dev_acc
             save_model(model, optimizer, args, config, args.filepath)
 
-
-def test_model(args):
-    with torch.no_grad():
-        device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
-        saved = torch.load(args.filepath)
-        config = saved["model_config"]
-
-        model = MultitaskBERT(config)
-        model.load_state_dict(saved["model"])
-        model = model.to(device)
-        logging.info(f"Loaded model to test from {args.filepath}")
-
-        return test_model_multitask(args, model, device)
 
 
 def get_args():
