@@ -215,8 +215,8 @@ def get_args():
         choices=("unweighted", "weighted", "focal", "compare"),
         default="compare",
         help=(
-            "Train with unweighted BCE, weighted BCE, focal loss, or all three "
-            "for comparison."
+            "Train with unweighted BCE, weighted BCE, focal loss, or compare "
+            "both BCE variants."
         ),
     )
     parser.add_argument(
@@ -264,7 +264,8 @@ def create_experiments(loss_mode, pos_weights, focal_gammas):
                 "models/bart_detection_weighted_best.pt",
             )
         )
-    if loss_mode in {"focal", "compare"}:
+    # TODO: Add focal loss back to compare mode once it is ready.
+    if loss_mode == "focal":
         for focal_gamma in focal_gammas:
             gamma_label = f"{focal_gamma:g}"
             experiments.append(
