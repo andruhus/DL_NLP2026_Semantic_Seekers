@@ -201,6 +201,45 @@ def model_eval_multitask(
         etpc_sent_ids,
     )
 
+###
+###eval für nli pretraining
+###
+def model_eval_nli(nli_dataloader, model, device):
+    model.eval()  # eval mode (kein dropout)
+
+    nli_y_true = []
+    nli_y_pred = []
+    nli_sent_ids = []
+
+    with torch.no_grad():
+        for step, batch in enumerate(tqdm(nli_dataloader, desc="eval", disable=TQDM_DISABLE)):
+            (b_ids1, b_mask1, b_ids2, b_mask2, b_labels, b_sent_ids) = (
+                batch["token_ids_1"],
+                batch["attention_mask_1"],
+                batch["token_ids_2"],
+                batch["attention_mask_2"],
+                batch["labels"],
+                batch["sent_ids"],
+            )
+
+            b_ids1 = b_ids1.to(device)
+            b_mask1 = b_mask1.to(device)
+            b_ids2 = b_ids2.to(device)
+            b_mask2 = b_mask2.to(device)
+
+            logits = model.predict_nli(b_ids1, b_mask1, b_ids2, b_mask2)
+            y_hat = logits.argmax(dim=-1).flatten().cpu().numpy()
+            b_labels = b_labels.flatten().cpu().numpy()
+
+            nli_y_pred.extend(y_hat)
+            nli_y_true.extend(b_labels)
+            nli_sent_ids.extend(b_sent_ids)
+
+    accuracy = (np.array(nli_y_pred) == np.array(nli_y_true)).mean()
+
+    model.train()  # zurück in train mode
+
+    return accuracy, nli_y_pred, nli_sent_ids
 
 # Perform model evaluation in terms by averaging accuracies across tasks.
 def model_eval_test_multitask(
