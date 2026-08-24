@@ -52,3 +52,7 @@
 ### 2. class weights
 - The classes are not very balanced in the sst dataset.
 - To enable the model to learn also smaller groups, a weighted loss will be introduced
+## Pretraining on ALLNLI Data
+- aim is to start the model training at a good state (good initailization)
+- since there where some complications, the code was reset after establishing the pretrained model to the state before
+- nach pretraining dann erstmal nur Klassifikationskopf trainieren für paar epochs?

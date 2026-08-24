@@ -281,7 +281,7 @@ def train_multitask(args):
 
     logging.info("Loading pretrained AllNLI model...")
     pretrained = torch.load("models/pretrain-allnli.pt")
-    model.load_state_dict(pretrained)
+    model.bert.load_state_dict(pretrained)
 
     for p in model.bert.parameters():
         p.requires_grad = True

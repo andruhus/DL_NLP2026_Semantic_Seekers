@@ -355,3 +355,100 @@ def load_multitask_data(sst_filename, quora_filename, sts_filename, etpc_filenam
     print(f"Loaded {len(etpc_data)} {split} examples from {etpc_filename}")
 
     return sst_data, num_labels, quora_data, sts_data, etpc_data
+
+###
+###für allnli data
+###
+
+class AllNLIDataset(Dataset):
+    def __init__(self, dataset, args):
+        self.dataset = dataset
+        self.p = args
+        self.tokenizer = BertTokenizer.from_pretrained(
+            "bert-base-uncased", local_files_only=args.local_files_only
+        )
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        return self.dataset[idx]
+
+    def pad_data(self, data):
+        sent1 = [x[0] for x in data]
+        sent2 = [x[1] for x in data]
+        labels = [x[2] for x in data]
+        sent_ids = [x[3] for x in data]
+
+        encoding1 = self.tokenizer(sent1, return_tensors="pt", padding=True, truncation=True)
+        encoding2 = self.tokenizer(sent2, return_tensors="pt", padding=True, truncation=True)
+
+        token_ids = torch.LongTensor(encoding1["input_ids"])
+        attention_mask = torch.LongTensor(encoding1["attention_mask"])
+        token_type_ids = torch.LongTensor(encoding1["token_type_ids"])
+
+        token_ids2 = torch.LongTensor(encoding2["input_ids"])
+        attention_mask2 = torch.LongTensor(encoding2["attention_mask"])
+        token_type_ids2 = torch.LongTensor(encoding2["token_type_ids"])
+
+        labels = torch.LongTensor(labels)
+
+        return (
+            token_ids,
+            token_type_ids,
+            attention_mask,
+            token_ids2,
+            token_type_ids2,
+            attention_mask2,
+            labels,
+            sent_ids,
+        )
+
+    def collate_fn(self, all_data):
+        (
+            token_ids,
+            token_type_ids,
+            attention_mask,
+            token_ids2,
+            token_type_ids2,
+            attention_mask2,
+            labels,
+            sent_ids,
+        ) = self.pad_data(all_data)
+
+        batched_data = {
+            "token_ids_1": token_ids,
+            "token_type_ids_1": token_type_ids,
+            "attention_mask_1": attention_mask,
+            "token_ids_2": token_ids2,
+            "token_type_ids_2": token_type_ids2,
+            "attention_mask_2": attention_mask2,
+            "labels": labels,
+            "sent_ids": sent_ids,
+        }
+
+        return batched_data
+
+def load_allnli_data(filename, split="train"):
+    """
+    Loads AllNLI data in the same style as load_multitask_data.
+    CSV format:
+    sentence1,sentence2,label,id
+    """
+
+    data = []
+
+    with open(filename, "r", encoding="utf-8") as fp:
+        for record in csv.DictReader(fp):
+            sent1 = preprocess_string(record["sentence1"])
+            sent2 = preprocess_string(record["sentence2"])
+            sent_id = record["id"].lower().strip()
+
+            if split == "test":
+                data.append((sent1, sent2, sent_id))
+            else:
+                label = int(record["label"])
+                data.append((sent1, sent2, label, sent_id))
+
+    print(f"Loaded {len(data)} {split} examples from {filename}")
+    return data
