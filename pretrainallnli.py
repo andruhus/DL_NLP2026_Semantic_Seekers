@@ -95,7 +95,7 @@ class MultitaskBERT(nn.Module):
                 param.requires_grad = True
 
         self.nli_classifier = nn.Sequential(
-            nn.Linear(BERT_HIDDEN_SIZE, 512),
+            nn.Linear(BERT_HIDDEN_SIZE*2, 512),
             nn.GELU(),
             nn.Dropout(0.3),
             nn.Linear(512, 128),
