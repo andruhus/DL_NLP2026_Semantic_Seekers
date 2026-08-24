@@ -76,13 +76,16 @@ case "${LOSS_MODE}" in
 esac
 
 if [[ -n "${SLURM_JOB_ID:-}" ]]; then
-    RUN_DATE="$(date +%Y-%m-%d_%H-%M-%S)"
-    LOG_DIRECTORY="${WORKING_DIR}/slurm_files"
-    LOG_STEM="${LOG_DIRECTORY}/paraphrase_detection_${RUN_DATE}_${SLURM_JOB_ID}_${LOSS_MODE}"
+    RUN_DATE="$(date +%Y-%m-%d)"
+    RUN_TIME="$(date +%H-%M-%S)"
+    INITIAL_LOG_DIRECTORY="${WORKING_DIR}/slurm_files"
+    LOG_DIRECTORY="${INITIAL_LOG_DIRECTORY}/${RUN_DATE}/${RUN_TIME}"
+    mkdir -p "${LOG_DIRECTORY}"
+    LOG_STEM="${LOG_DIRECTORY}/paraphrase_detection_${LOSS_MODE}_${EPOCHS}_${SLURM_JOB_ID}"
     exec > "${LOG_STEM}.out" 2> "${LOG_STEM}.err"
     rm -f \
-        "${LOG_DIRECTORY}/paraphrase_detection_${SLURM_JOB_ID}.out" \
-        "${LOG_DIRECTORY}/paraphrase_detection_${SLURM_JOB_ID}.err"
+        "${INITIAL_LOG_DIRECTORY}/paraphrase_detection_${SLURM_JOB_ID}.out" \
+        "${INITIAL_LOG_DIRECTORY}/paraphrase_detection_${SLURM_JOB_ID}.err"
 fi
 
 source activate dnlp
