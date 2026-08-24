@@ -7,7 +7,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mail-user=andrii.demydenko@stud.uni-goettingen.de 
+#SBATCH --mail-user=andrii.demydenko@stud.uni-goettingen.de
 #SBATCH --output=./slurm_files/paraphrase_detection_%j.out
 #SBATCH --error=./slurm_files/paraphrase_detection_%j.err
 
@@ -64,7 +64,7 @@ case "${LOSS_MODE}" in
 esac
 
 if [[ -n "${SLURM_JOB_ID:-}" ]]; then
-    RUN_DATE="$(date +%Y-%m-%d)"
+    RUN_DATE="$(date +%Y-%m-%d_%H-%M-%S)"
     LOG_DIRECTORY="${WORKING_DIR}/slurm_files"
     LOG_STEM="${LOG_DIRECTORY}/paraphrase_detection_${RUN_DATE}_${SLURM_JOB_ID}_${LOSS_MODE}"
     exec > "${LOG_STEM}.out" 2> "${LOG_STEM}.err"
