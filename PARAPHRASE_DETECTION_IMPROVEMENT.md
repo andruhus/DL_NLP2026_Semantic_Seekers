@@ -12,7 +12,7 @@ This imbalance makes plain binary cross-entropy (BCE) potentially misleading. Be
 
 The baseline uses BART-large with a linear classification head that produces one logit for each of the 26 paraphrase types. The two sentences are concatenated with `</s>`, tokenized to a maximum length of 512, and passed through BART. The hidden state of the first token is used by the classifier. Each output is treated as an independent binary decision and optimized with `BCEWithLogitsLoss`. At evaluation time, sigmoid probabilities greater than 0.5 are mapped to positive predictions.
 
-#### Improvement 1: Weighted BCE
+#### Improvement 1: Weighted BCE (naive approach)
 
 For each paraphrase type $c$, we computed a positive-class weight using only the training split:
 
@@ -78,7 +78,56 @@ For label 9, $w=909$, so an unweighted posterior as small as $1/910 \approx 0.00
 
 For this reason, the weighted objective did not improve on unweighted BCE in our experiment. Its training loss must not be compared numerically with the BCE loss because the positive terms are rescaled; for example, a Weighted BCE loss of 0.0603 is not directly comparable to a BCE loss of 0.0073.
 
-#### Improvement 2: Focal Loss
+#### Experimental Results: 25-Epoch BCE Comparison
+
+We compared unweighted BCE with the aggressive inverse-frequency Weighted BCE for 25 epochs using a batch size of 16. The comparison is reproduced with:
+
+```sh
+sbatch run_bart_detection.sh 25 compare \
+    --compare_bce_only \
+    --batch_size 16 \
+    --use_gpu
+```
+
+The first epoch and every fifth epoch are shown below. Weighted BCE improves steadily, but it learns more slowly and does not exceed the unweighted baseline:
+
+| Epoch | Unweighted BCE accuracy | Unweighted BCE MCC | Aggressive Weighted BCE accuracy | Aggressive Weighted BCE MCC |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 | 0.910 | 0.037 | 0.556 | 0.046 |
+| 5 | 0.956 | 0.461 | 0.708 | 0.219 |
+| 10 | 0.994 | 0.832 | 0.879 | 0.584 |
+| 15 | 0.999 | 0.959 | 0.947 | 0.790 |
+| 20 | 1.000 | 0.960 | 0.975 | 0.890 |
+| 25 | 0.999 | 0.959 | 0.974 | 0.893 |
+
+The best development-set checkpoint comparison was:
+
+| Model | Development accuracy | Development MCC |
+| --- | ---: | ---: |
+| Unweighted BCE | **1.000** | **0.962** |
+| Aggressive Weighted BCE | 0.979 | 0.896 |
+
+Thus, aggressive Weighted BCE did not improve either reported metric. It eventually approached the baseline, but the unweighted objective remained stronger by 0.021 accuracy points and 0.066 MCC points.
+
+#### Improvement 2: Weighted BCE (smoothed weights approach)
+To mitigate this effect we tried 3 smoothing techniques:
+1. **Square-root weighting**   
+   \[
+   w_c = \sqrt{\frac{N_c^-}{N_c^+}}
+   \]
+
+2. **Logarithmic weighting**  
+   \[
+   w_c = \log\left(1 + \frac{N_c^-}{N_c^+}\right)
+   \]
+
+3. **Capped inverse-frequency weighting**  
+   \[
+   w_c = \min\left(\frac{N_c^-}{N_c^+}, w_{\max}\right)
+   \]
+   
+
+#### Improvement 3: Focal Loss
 
 We also implemented binary focal loss, adapted to the multi-label setting. For every example-label pair, the unreduced BCE loss is first computed. The loss is then multiplied by a focusing factor:
 
@@ -88,7 +137,7 @@ $$
 
 where $p_t$ is the predicted probability of the correct binary class and $\gamma \geq 0$ is the focusing parameter. Easy, confidently classified examples receive less weight, allowing training to focus on difficult decisions. When $\gamma=0$, focal loss reduces to ordinary BCE; increasing $\gamma$ suppresses easy examples more strongly.
 
-Our implementation in `paraphrase_detection/focal_loss.py` does not use an additional $\alpha$ class-balancing term, so the experiment isolates the effect of the focusing parameter. `bart_detection.py` accepts multiple unique gamma values through repeated `--focal_gamma` arguments and trains a separate model for every value. Focal loss can be run through the dedicated `focal` mode or included in `compare`; in `compare`, the script trains unweighted BCE, weighted BCE, and one focal-loss model for every requested gamma value.
+Our implementation in `paraphrase_detection/focal_loss.py` does not use an additional $\alpha$ class-balancing term, so the experiment isolates the effect of the focusing parameter. `bart_detection.py` accepts multiple unique gamma values through repeated `--focal_gamma` arguments and trains a separate model for every value. Focal loss can be run through the dedicated `focal` mode or included in `compare`; in `compare`, the script trains unweighted BCE, aggressive Weighted BCE, and one focal-loss model for every requested gamma value.
 
 ## Experiments
 
@@ -129,7 +178,7 @@ sbatch run_bart_detection.sh 5 compare --batch_size 16 --use_gpu
 To reproduce only the two BCE experiments in a single comparison job, add `--compare_bce_only`:
 
 ```sh
-sbatch run_bart_detection.sh 5 compare --compare_bce_only --batch_size 16 --use_gpu
+sbatch run_bart_detection.sh 25 compare --compare_bce_only --batch_size 16 --use_gpu
 ```
 
 A focal-loss-only run uses the dedicated mode. The `--focal_gamma` option can be repeated to evaluate several values in one job; for example, the default $\gamma=2$ run is:
