@@ -3,7 +3,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 # Output directory
-FIGURE_DIR = Path("figure")
+FIGURE_DIR = Path("paraphrase_detection/figure")
 FIGURE_DIR.mkdir(exist_ok=True)
 
 epochs = list(range(1, 26))
