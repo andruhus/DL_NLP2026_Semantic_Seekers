@@ -20,14 +20,63 @@ $$
 w_c = \frac{N_c^-}{N_c^+},
 $$
 
-where $N_c^+$ and $N_c^-$ are the numbers of positive and negative training examples for label $c$. The resulting vector is passed to PyTorch's `BCEWithLogitsLoss` as `pos_weight`. Consequently, the positive term for a rare label receives a larger penalty:
+where $N_c^+$ and $N_c^-$ are the numbers of positive and negative training examples for label $c$. The resulting vector is passed to PyTorch's `BCEWithLogitsLoss` as `pos_weight`, yielding
 
 $$
 \mathcal{L}_{i,c} = -w_c y_{i,c}\log\sigma(z_{i,c})
 - (1-y_{i,c})\log(1-\sigma(z_{i,c})).
 $$
 
-This calculation is implemented in `paraphrase_detection/weighted_bce.py` and is called on `train_labels` in `bart_detection.py`; no development- or test-set labels are used to calculate the weights. The observed weights range from 0.007 to 909.000. This very wide range reflects the severity of the per-label imbalance, but it also makes the objective sensitive to a few extremely rare positive examples.
+This calculation is implemented in `paraphrase_detection/weighted_bce.py` and is called on `train_labels` in `bart_detection.py`; no development- or test-set labels are used to calculate the weights.
+
+#### Training-Set Class Weights
+
+| Label ID | Positive | Negative | `pos_weight` |
+| ---: | ---: | ---: | ---: |
+| 1 | 366 | 2,364 | 6.4590 |
+| 2 | 126 | 2,604 | 20.6667 |
+| 3 | 124 | 2,606 | 21.0161 |
+| 4 | 369 | 2,361 | 6.3984 |
+| 5 | 479 | 2,251 | 4.6994 |
+| 6 | 1,753 | 977 | 0.5573 |
+| 7 | 316 | 2,414 | 7.6392 |
+| 8 | 145 | 2,585 | 17.8276 |
+| 9 | 3 | 2,727 | 909.0000 |
+| 10 | 8 | 2,722 | 340.2500 |
+| 11 | 560 | 2,170 | 3.8750 |
+| 13 | 28 | 2,702 | 96.5000 |
+| 14 | 115 | 2,615 | 22.7391 |
+| 15 | 13 | 2,717 | 209.0000 |
+| 16 | 47 | 2,683 | 57.0851 |
+| 17 | 34 | 2,696 | 79.2941 |
+| 18 | 302 | 2,428 | 8.0397 |
+| 21 | 534 | 2,196 | 4.1124 |
+| 22 | 49 | 2,681 | 54.7143 |
+| 24 | 218 | 2,512 | 11.5229 |
+| 25 | 2,096 | 634 | 0.3025 |
+| 26 | 521 | 2,209 | 4.2399 |
+| 28 | 240 | 2,490 | 10.3750 |
+| 29 | 2,711 | 19 | 0.0070 |
+| 30 | 431 | 2,299 | 5.3341 |
+| 31 | 60 | 2,670 | 44.5000 |
+
+The weights range from 0.007 to 909.000, which is too extreme for naive inverse-frequency reweighting to be stable. For label 9, one positive loss term is multiplied by 909, but this estimate is based on only three positive examples. Labels 10, 15, and 13 are similarly unreliable: 8, 13, and 28 positive examples yield weights of 340.2500, 209.0000, and 96.5000, respectively. The ETPC dataset contains genuinely rare paraphrase types, so estimates and evaluation scores for these labels are inherently noisy.
+
+Weighted BCE also changes the effective decision boundary. If $p$ is the unweighted posterior probability and $q$ is the probability learned under the weighted objective, the optimum satisfies
+
+$$
+q = \frac{w p}{w p + (1-p)}.
+$$
+
+Using the unchanged prediction rule $q > 0.5$ is therefore equivalent to
+
+$$
+p > \frac{1}{1+w}.
+$$
+
+For label 9, $w=909$, so an unweighted posterior as small as $1/910 \approx 0.0011$ is sufficient to predict the label as positive. In contrast, label 29 has $w=0.007$, so its posterior must exceed $1/1.007 \approx 0.993$ to be predicted as positive. Thus, raw weighting strongly encourages additional positive predictions for rare labels and strongly suppresses positive predictions for very frequent labels. With a fixed 0.5 threshold, this likely introduces many false positives for rare types; per-label precision and recall would be needed to confirm the error distribution.
+
+For this reason, the weighted objective did not improve on unweighted BCE in our experiment. Its training loss must not be compared numerically with the BCE loss because the positive terms are rescaled; for example, a Weighted BCE loss of 0.0603 is not directly comparable to a BCE loss of 0.0073.
 
 #### Improvement 2: Focal Loss
 
@@ -52,7 +101,7 @@ We held the model and training configuration fixed so that only the loss functio
 | Model | `facebook/bart-large` with a 26-output linear classifier |
 | Training data | ETPC paraphrase detection training split (2,730 examples) |
 | Development data | ETPC paraphrase detection development split |
-| Epochs | 5 |
+| Epochs | 25 for the BCE comparison; 5 for focal-loss sweeps |
 | Batch size | 16 |
 | Optimizer | AdamW |
 | Learning rate | $2\times10^{-5}$ |
@@ -93,13 +142,16 @@ sbatch run_bart_detection.sh 5 focal --batch_size 16 --focal_gamma 2.0 --use_gpu
 
 #### Development Performance by Epoch
 
+The full run contains 25 epochs; the table reports the first epoch and every fifth epoch thereafter.
+
 | Epoch | BCE train loss | BCE accuracy | BCE MCC | Weighted BCE train loss | Weighted BCE accuracy | Weighted BCE MCC |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 1 | 0.2766 | 0.910 | 0.037 | 1.2032 | 0.556 | 0.046 |
-| 2 | 0.2482 | 0.915 | 0.092 | 1.1474 | 0.568 | 0.110 |
-| 3 | 0.2269 | 0.926 | 0.221 | 1.0931 | 0.622 | 0.125 |
-| 4 | 0.2016 | 0.942 | 0.354 | 0.9991 | 0.594 | 0.160 |
 | 5 | 0.1747 | 0.956 | 0.461 | 0.8773 | 0.708 | 0.219 |
+| 10 | 0.0600 | 0.994 | 0.832 | 0.4365 | 0.879 | 0.584 |
+| 15 | 0.0217 | 0.999 | 0.959 | 0.2154 | 0.947 | 0.790 |
+| 20 | 0.0119 | 1.000 | 0.960 | 0.1042 | 0.975 | 0.890 |
+| 25 | 0.0073 | 0.999 | 0.959 | 0.0603 | 0.974 | 0.893 |
 
 The absolute loss values should not be compared directly because Weighted BCE rescales positive loss terms and therefore has a different numerical scale.
 
@@ -107,23 +159,23 @@ The absolute loss values should not be compared directly because Weighted BCE re
 
 | **Paraphrase Type Detection (PTD)** | **Development accuracy** | **Development MCC** |
 | --- | ---: | ---: |
-| Unweighted BCE (baseline) | **0.956** | **0.461** |
-| Weighted BCE | 0.708 | 0.219 |
-| Difference (Weighted BCE $-$ baseline) | -0.248 | -0.242 |
+| Unweighted BCE (baseline) | **1.000** | **0.962** |
+| Weighted BCE | 0.979 | 0.896 |
+| Difference (Weighted BCE $-$ baseline) | -0.021 | -0.066 |
 
 Quantitative focal-loss results are not included because no completed focal runs were available for this comparison. We therefore do not claim an optimal gamma value yet.
 
 #### Discussion
 
-The outcome did not match our initial expectation. Weighted BCE briefly achieved a higher MCC than unweighted BCE in epoch 2 (0.110 compared with 0.092), but this advantage did not persist. By epoch 5, unweighted BCE performed substantially better in both development accuracy and MCC.
+The outcome did not match our initial expectation. Weighted BCE has a slightly higher MCC in epoch 1 (0.046 compared with 0.037), but it learns much more slowly thereafter. It narrows the gap during the 25-epoch run, reaching 0.979 development accuracy and 0.896 MCC at its selected checkpoint, but it does not surpass unweighted BCE (1.000 accuracy and 0.962 MCC).
 
-The baseline's learning curve nevertheless confirms why accuracy alone is insufficient for this dataset. Its epoch-1 accuracy is already 0.910, while its MCC is only 0.037. As training continues, MCC rises to 0.461, showing that the model gradually learns more informative positive/negative decisions rather than merely exploiting label prevalence.
+The baseline's first epoch confirms why accuracy alone is insufficient for this dataset: it already reaches 0.910 accuracy while its MCC is only 0.037. However, unweighted BCE continues to improve substantially, reaching an MCC close to 0.96 after 15 epochs. Weighted BCE also improves steadily, but the raw class-ratio weights trade off too much performance on frequent labels for sensitivity to rare labels.
 
-A likely explanation for the poor Weighted BCE result is the aggressiveness of the raw inverse-frequency weights. A paraphrase type with only three positive training examples receives a positive weight of 909. Such rare examples can dominate individual gradient updates, while labels that are positive in most examples receive weights below one. This can shift the model toward predicting too many positives and can make a universal threshold of 0.5 poorly calibrated. This explanation is plausible from the weight distribution and learning curves, but per-label precision and recall would be needed to verify it directly.
+The threshold transformation above explains this trade-off more precisely than class imbalance alone. Inverse-frequency `pos_weight` does not merely increase the importance of rare positives; it changes the calibrated probabilities learned by the model. Applying the original universal threshold of 0.5 after that change is inappropriate for the most extreme weights. The result is consistent with excessive rare-label positive predictions, although per-label precision, recall, and confusion matrices are required to verify this directly.
 
-Another limitation is that checkpoints are selected by mean development accuracy even though the loss modification is intended to improve minority-label behavior. Selecting checkpoints by MCC, or by a combination of MCC and accuracy, may provide a fairer evaluation of imbalance-aware objectives.
+Fine-grained ETPC type detection is substantially harder than ordinary binary paraphrase detection, and very small class counts make exact development results sensitive to the split. We therefore treat the near-perfect unweighted development score cautiously and evaluate Weighted BCE by its relative performance under the same split rather than claiming it improves generalization.
 
-Overall, naive inverse-frequency Weighted BCE is not an improvement over the baseline in the reported configuration. This negative result is still informative: correcting severe label imbalance requires more than inserting uncapped class ratios. Focal loss is a motivated next comparison because it down-weights easy decisions dynamically instead of assigning a fixed weight as large as 909 to every positive example of a rare label.
+Overall, uncapped inverse-frequency Weighted BCE is not an improvement over the baseline in the reported configuration. More robust alternatives include capped, square-root, or logarithmic class weights; per-label threshold tuning on the development set; checkpoint selection using MCC; and focal loss, which down-weights easy examples without assigning a fixed weight of 909 to every positive instance of label 9.
 
 ### Hyperparameter Optimization
 
@@ -138,22 +190,22 @@ In each chart, the first line represents unweighted BCE and the second line repr
 ```mermaid
 xychart-beta
     title "Development accuracy by epoch"
-    x-axis "Epoch" [1, 2, 3, 4, 5]
+    x-axis "Epoch" [1, 5, 10, 15, 20, 25]
     y-axis "Mean per-label accuracy" 0 --> 1
-    line [0.910, 0.915, 0.926, 0.942, 0.956]
-    line [0.556, 0.568, 0.622, 0.594, 0.708]
+    line [0.910, 0.956, 0.994, 0.999, 1.000, 0.999]
+    line [0.556, 0.708, 0.879, 0.947, 0.975, 0.974]
 ```
 
 ```mermaid
 xychart-beta
     title "Development MCC by epoch"
-    x-axis "Epoch" [1, 2, 3, 4, 5]
-    y-axis "Mean per-label MCC" 0 --> 0.5
-    line [0.037, 0.092, 0.221, 0.354, 0.461]
-    line [0.046, 0.110, 0.125, 0.160, 0.219]
+    x-axis "Epoch" [1, 5, 10, 15, 20, 25]
+    y-axis "Mean per-label MCC" 0 --> 1
+    line [0.037, 0.461, 0.832, 0.959, 0.960, 0.959]
+    line [0.046, 0.219, 0.584, 0.790, 0.890, 0.893]
 ```
 
-The curves show that unweighted BCE improves consistently on both metrics. Weighted BCE increases MCC slowly, but its accuracy is unstable between epochs 3 and 4 and remains well below the baseline after five epochs.
+The curves show that both objectives improve over 25 epochs, but unweighted BCE reaches strong accuracy and MCC much earlier. Weighted BCE narrows the gap late in training without exceeding the baseline, consistent with overly aggressive inverse-frequency reweighting rather than a beneficial improvement.
 
 ### References for This Extension
 
