@@ -1,19 +1,17 @@
-## Methodology
-
-### Paraphrase Type Detection: Imbalance-Aware Loss Functions
+## Paraphrase Type Detection: Imbalance-Aware Loss Functions
 
 #### Motivation
-
 Paraphrase type detection is formulated as a multi-label classification problem with 26 output labels. The ETPC training split is strongly imbalanced: some paraphrase types occur in almost every example, whereas others have only a few positive examples. Across the 2,730 training examples, only 11,648 of the 70,980 binary label assignments are positive (16.410%). At the individual-label level, the number of positive examples ranges from 3 to 2,711.
 
 This imbalance makes plain binary cross-entropy (BCE) potentially misleading. Because most label decisions are negative, a model can obtain high accuracy by favoring the majority class while still failing to identify positive examples for rare paraphrase types. This behavior is visible in the first epoch of our baseline: it reaches a development accuracy of 0.910 but an MCC of only 0.037. We therefore investigated two imbalance-aware alternatives: Weighted BCE and focal loss.
 
-#### Baseline: Unweighted BCE
+### Baseline: Unweighted BCE
 
 The baseline uses BART-large with a linear classification head that produces one logit for each of the 26 paraphrase types. The two sentences are concatenated with `</s>`, tokenized to a maximum length of 512, and passed through BART. The hidden state of the first token is used by the classifier. Each output is treated as an independent binary decision and optimized with `BCEWithLogitsLoss`. At evaluation time, sigmoid probabilities greater than 0.5 are mapped to positive predictions.
 
-#### Improvement 1: Weighted BCE (naive approach)
+### Improvement 1: Weighted BCE (naive approach)
 
+#### Idea
 For each paraphrase type $c$, we computed a positive-class weight using only the training split:
 
 $$
@@ -29,7 +27,19 @@ $$
 
 This calculation is implemented in `paraphrase_detection/weighted_bce.py` and is called on `train_labels` in `bart_detection.py`; no development- or test-set labels are used to calculate the weights.
 
-#### Training-Set Class Weights
+#### Methodology
+
+##### Description
+We compared unweighted BCE with the aggressive inverse-frequency Weighted BCE for 25 epochs using a batch size of 16. The comparison is reproduced with:
+
+```sh
+sbatch run_bart_detection.sh 25 compare \
+    --compare_bce_only \
+    --batch_size 16 \
+    --use_gpu
+```
+
+##### Training-Set Class Weights
 
 | Label ID | Positive | Negative | `pos_weight` |
 | ---: | ---: | ---: | ---: |
@@ -78,18 +88,16 @@ For label 9, $w=909$, so an unweighted posterior as small as $1/910 \approx 0.00
 
 For this reason, the weighted objective did not improve on unweighted BCE in our experiment. Its training loss must not be compared numerically with the BCE loss because the positive terms are rescaled; for example, a Weighted BCE loss of 0.0603 is not directly comparable to a BCE loss of 0.0073.
 
-#### Experimental Results: 25-Epoch BCE Comparison
+#### Results
 
-We compared unweighted BCE with the aggressive inverse-frequency Weighted BCE for 25 epochs using a batch size of 16. The comparison is reproduced with:
+##### The best checkpoint:
 
-```sh
-sbatch run_bart_detection.sh 25 compare \
-    --compare_bce_only \
-    --batch_size 16 \
-    --use_gpu
-```
+| Model | Development accuracy | Development MCC |
+| --- | ---: | ---: |
+| Unweighted BCE | **1.000** | **0.962** |
+| Aggressive Weighted BCE | 0.979 | 0.896 |
 
-The first epoch and every fifth epoch are shown below. Weighted BCE improves steadily, but it learns more slowly and does not exceed the unweighted baseline:
+##### Epoch display
 
 | Epoch | Unweighted BCE accuracy | Unweighted BCE MCC | Aggressive Weighted BCE accuracy | Aggressive Weighted BCE MCC |
 | ---: | ---: | ---: | ---: | ---: |
@@ -100,12 +108,13 @@ The first epoch and every fifth epoch are shown below. Weighted BCE improves ste
 | 20 | 1.000 | 0.960 | 0.975 | 0.890 |
 | 25 | 0.999 | 0.959 | 0.974 | 0.893 |
 
-The best development-set checkpoint comparison was:
+xychart-beta
+    title "Dev Accuracy vs Epochs"
+    x-axis "Epoch" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
+    y-axis "Dev Accuracy" 0.5 --> 1.0
+    line [0.910, 0.915, 0.926, 0.942, 0.956, 0.964, 0.980, 0.987, 0.989, 0.994, 0.997, 0.997, 0.999, 0.999, 0.999, 0.999, 0.999, 1.000, 0.999, 1.000, 1.000, 1.000, 1.000, 1.000, 0.999]
+    line [0.556, 0.568, 0.622, 0.594, 0.708, 0.779, 0.793, 0.838, 0.855, 0.879, 0.899, 0.910, 0.927, 0.937, 0.947, 0.951, 0.958, 0.961, 0.966, 0.975, 0.973, 0.974, 0.979, 0.976, 0.974]
 
-| Model | Development accuracy | Development MCC |
-| --- | ---: | ---: |
-| Unweighted BCE | **1.000** | **0.962** |
-| Aggressive Weighted BCE | 0.979 | 0.896 |
 
 Thus, aggressive Weighted BCE did not improve either reported metric. It eventually approached the baseline, but the unweighted objective remained stronger by 0.021 accuracy points and 0.066 MCC points.
 
