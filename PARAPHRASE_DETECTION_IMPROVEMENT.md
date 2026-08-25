@@ -70,24 +70,6 @@ sbatch run_bart_detection.sh 25 compare \
 | 30 | 431 | 2,299 | 5.3341 |
 | 31 | 60 | 2,670 | 44.5000 |
 
-The weights range from 0.007 to 909.000, which is too extreme for naive inverse-frequency reweighting to be stable. For label 9, one positive loss term is multiplied by 909, but this estimate is based on only three positive examples. Labels 10, 15, and 13 are similarly unreliable: 8, 13, and 28 positive examples yield weights of 340.2500, 209.0000, and 96.5000, respectively. The ETPC dataset contains genuinely rare paraphrase types, so estimates and evaluation scores for these labels are inherently noisy.
-
-Weighted BCE also changes the effective decision boundary. If $p$ is the unweighted posterior probability and $q$ is the probability learned under the weighted objective, the optimum satisfies
-
-$$
-q = \frac{w p}{w p + (1-p)}.
-$$
-
-Using the unchanged prediction rule $q > 0.5$ is therefore equivalent to
-
-$$
-p > \frac{1}{1+w}.
-$$
-
-For label 9, $w=909$, so an unweighted posterior as small as $1/910 \approx 0.0011$ is sufficient to predict the label as positive. In contrast, label 29 has $w=0.007$, so its posterior must exceed $1/1.007 \approx 0.993$ to be predicted as positive. Thus, raw weighting strongly encourages additional positive predictions for rare labels and strongly suppresses positive predictions for very frequent labels. With a fixed 0.5 threshold, this likely introduces many false positives for rare types; per-label precision and recall would be needed to confirm the error distribution.
-
-For this reason, the weighted objective did not improve on unweighted BCE in our experiment. Its training loss must not be compared numerically with the BCE loss because the positive terms are rescaled; for example, a Weighted BCE loss of 0.0603 is not directly comparable to a BCE loss of 0.0073.
-
 #### Results
 
 ##### The best checkpoint:
@@ -108,17 +90,35 @@ For this reason, the weighted objective did not improve on unweighted BCE in our
 | 20 | 1.000 | 0.960 | 0.975 | 0.890 |
 | 25 | 0.999 | 0.959 | 0.974 | 0.893 |
 
-xychart-beta
-    title "Dev Accuracy vs Epochs"
-    x-axis "Epoch" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]
-    y-axis "Dev Accuracy" 0.5 --> 1.0
-    line [0.910, 0.915, 0.926, 0.942, 0.956, 0.964, 0.980, 0.987, 0.989, 0.994, 0.997, 0.997, 0.999, 0.999, 0.999, 0.999, 0.999, 1.000, 0.999, 1.000, 1.000, 1.000, 1.000, 1.000, 0.999]
-    line [0.556, 0.568, 0.622, 0.594, 0.708, 0.779, 0.793, 0.838, 0.855, 0.879, 0.899, 0.910, 0.927, 0.937, 0.947, 0.951, 0.958, 0.961, 0.966, 0.975, 0.973, 0.974, 0.979, 0.976, 0.974]
+<img src="paraphrase_detection/figure/dev_acc.png" width="700">
+
+<img src="paraphrase_detection/figure/mcc.png" width="700">
 
 
 Thus, aggressive Weighted BCE did not improve either reported metric. It eventually approached the baseline, but the unweighted objective remained stronger by 0.021 accuracy points and 0.066 MCC points.
 
-#### Improvement 2: Weighted BCE (smoothed weights approach)
+#### Discussion
+The weights range from 0.007 to 909.000, which is too extreme for naive inverse-frequency reweighting to be stable. For label 9, one positive loss term is multiplied by 909, but this estimate is based on only three positive examples. Labels 10, 15, and 13 are similarly unreliable: 8, 13, and 28 positive examples yield weights of 340.2500, 209.0000, and 96.5000, respectively. The ETPC dataset contains genuinely rare paraphrase types, so estimates and evaluation scores for these labels are inherently noisy.
+
+Weighted BCE also changes the effective decision boundary. If $p$ is the unweighted posterior probability and $q$ is the probability learned under the weighted objective, the optimum satisfies
+
+$$
+q = \frac{w p}{w p + (1-p)}.
+$$
+
+Using the unchanged prediction rule $q > 0.5$ is therefore equivalent to
+
+$$
+p > \frac{1}{1+w}.
+$$
+
+For label 9, $w=909$, so an unweighted posterior as small as $1/910 \approx 0.0011$ is sufficient to predict the label as positive. In contrast, label 29 has $w=0.007$, so its posterior must exceed $1/1.007 \approx 0.993$ to be predicted as positive. Thus, raw weighting strongly encourages additional positive predictions for rare labels and strongly suppresses positive predictions for very frequent labels. With a fixed 0.5 threshold, this likely introduces many false positives for rare types; per-label precision and recall would be needed to confirm the error distribution.
+
+For this reason, the weighted objective did not improve on unweighted BCE in our experiment. Its training loss must not be compared numerically with the BCE loss because the positive terms are rescaled; for example, a Weighted BCE loss of 0.0603 is not directly comparable to a BCE loss of 0.0073.
+
+### Improvement 2: Weighted BCE (smoothed weights approach)
+
+##
 To mitigate this effect we tried 3 smoothing techniques:
 1. **Square-root weighting**   
    \[
@@ -136,7 +136,7 @@ To mitigate this effect we tried 3 smoothing techniques:
    \]
    
 
-#### Improvement 3: Focal Loss
+### Improvement 3: Focal Loss
 
 We also implemented binary focal loss, adapted to the multi-label setting. For every example-label pair, the unreduced BCE loss is first computed. The loss is then multiplied by a focusing factor:
 
@@ -147,6 +147,24 @@ $$
 where $p_t$ is the predicted probability of the correct binary class and $\gamma \geq 0$ is the focusing parameter. Easy, confidently classified examples receive less weight, allowing training to focus on difficult decisions. When $\gamma=0$, focal loss reduces to ordinary BCE; increasing $\gamma$ suppresses easy examples more strongly.
 
 Our implementation in `paraphrase_detection/focal_loss.py` does not use an additional $\alpha$ class-balancing term, so the experiment isolates the effect of the focusing parameter. `bart_detection.py` accepts multiple unique gamma values through repeated `--focal_gamma` arguments and trains a separate model for every value. Focal loss can be run through the dedicated `focal` mode or included in `compare`; in `compare`, the script trains unweighted BCE, aggressive Weighted BCE, and one focal-loss model for every requested gamma value.
+
+#### Focal-Loss Experiment
+
+We evaluated five focusing parameters with 5 epochs and a batch size of 16:
+
+```sh
+sbatch run_bart_detection.sh 5 focal --batch_size 16 --focal_gamma 0.25 --focal_gamma 0.5 --focal_gamma 1 --focal_gamma 2 --focal_gamma 4 --use_gpu
+```
+
+| Focal-loss gamma | Development accuracy | Development MCC |
+| ---: | ---: | ---: |
+| 0.25 | 0.9505 | 0.4201 |
+| 0.5 | 0.9507 | 0.4372 |
+| 1 | **0.9567** | **0.4606** |
+| 2 | 0.9462 | 0.4130 |
+| 4 | 0.9232 | 0.1830 |
+
+Among the tested values, $\gamma=1$ performs best on both development accuracy and MCC. Its performance is almost identical to the 5-epoch unweighted BCE baseline (accuracy 0.9558, MCC 0.4610). Larger values, especially $\gamma=4$, over-focus on difficult examples and substantially reduce performance. These scores should not be compared directly with the 25-epoch BCE results because the training duration is different.
 
 ## Experiments
 
@@ -221,7 +239,17 @@ The absolute loss values should not be compared directly because Weighted BCE re
 | Weighted BCE | 0.979 | 0.896 |
 | Difference (Weighted BCE $-$ baseline) | -0.021 | -0.066 |
 
-Quantitative focal-loss results are not included because no completed focal runs were available for this comparison. We therefore do not claim an optimal gamma value yet.
+#### Focal-Loss Gamma Comparison
+
+| Focal-loss gamma | Development accuracy | Development MCC |
+| ---: | ---: | ---: |
+| 0.25 | 0.9505 | 0.4201 |
+| 0.5 | 0.9507 | 0.4372 |
+| 1 | **0.9567** | **0.4606** |
+| 2 | 0.9462 | 0.4130 |
+| 4 | 0.9232 | 0.1830 |
+
+The best tested value is $\gamma=1$. It approximately matches the 5-epoch unweighted BCE baseline, but does not provide a meaningful MCC improvement. Increasing gamma beyond 1 harms both metrics in this experiment.
 
 #### Discussion
 
@@ -239,7 +267,7 @@ Overall, uncapped inverse-frequency Weighted BCE is not an improvement over the 
 
 The main focal-loss hyperparameter is $\gamma$. Rather than tuning unrelated parameters simultaneously, we vary only $\gamma$ and keep the architecture, seed, optimizer, learning rate, number of epochs, batch size, and prediction threshold fixed. This isolates the effect of focusing. Small gamma values stay close to BCE, whereas larger values increasingly concentrate learning on hard examples. Each gamma receives a separate checkpoint and development evaluation.
 
-The current evidence is insufficient to select an optimal gamma because focal-loss scores were not part of the supplied results. A final comparison should report every tested gamma using the same accuracy and MCC metrics rather than choosing a value based on accuracy alone.
+Among the tested values, $\gamma=1$ is the selected focal-loss hyperparameter because it gives the highest development accuracy (0.9567) and MCC (0.4606). The sweep also shows that larger values are not automatically better: performance decreases for $\gamma=2$ and drops substantially for $\gamma=4$. Since these experiments use only 5 epochs, a longer run with $\gamma=1$ would be needed for a fair comparison with the 25-epoch BCE experiment.
 
 ### Visualizations
 
