@@ -16,27 +16,68 @@ def create_weighted_bce_loss(pos_weights):
     return nn.BCEWithLogitsLoss(pos_weight=pos_weights)
 
 
-def print_label_statistics(positive_counts, negative_counts, pos_weights):
-    statistics = pd.DataFrame({
+def print_label_statistics(positive_counts, negative_counts, pos_weight_sets):
+    """Print training-label counts and every configured positive-weight set."""
+    statistics = {
         "label_id": VALID_PARAPHRASE_TYPE_IDS,
         "positive": positive_counts.int().tolist(),
         "negative": negative_counts.int().tolist(),
-        "pos_weight": pos_weights.tolist(),
-    })
+    }
+    for name, pos_weights in pos_weight_sets.items():
+        statistics[f"{name}_pos_weight"] = pos_weights.tolist()
+
     print("Training-label statistics:")
     print(
-        statistics.to_string(
+        pd.DataFrame(statistics).to_string(
             index=False, float_format=lambda value: f"{value:.4f}",
         )
     )
 
 
-def compute_pos_weights(positive_counts, negative_counts):
-    """Compute PyTorch BCE positive weights for each label."""
+def _compute_raw_pos_weights(positive_counts, negative_counts):
+    """Compute the inverse-frequency ratio used as the aggressive baseline."""
     verify_positive_training_examples(positive_counts)
     # BCEWithLogitsLoss multiplies the positive loss term, so balancing uses
     # negative / positive (not positive / negative).
     return negative_counts / positive_counts
+
+
+def compute_aggressive_pos_weights(positive_counts, negative_counts):
+    """Compute raw inverse-frequency weights N^- / N^+."""
+    return _compute_raw_pos_weights(positive_counts, negative_counts)
+
+
+def compute_sqrt_pos_weights(positive_counts, negative_counts):
+    """Compute square-root inverse-frequency weights."""
+    raw_pos_weights = _compute_raw_pos_weights(
+        positive_counts, negative_counts,
+    )
+    return torch.sqrt(raw_pos_weights)
+
+
+def compute_log_pos_weights(positive_counts, negative_counts):
+    """Compute positive logarithmic inverse-frequency weights log(1 + N^- / N^+)."""
+    raw_pos_weights = _compute_raw_pos_weights(
+        positive_counts, negative_counts,
+    )
+    return torch.log1p(raw_pos_weights)
+
+
+def compute_capped_pos_weights(
+    positive_counts, negative_counts, max_weight,
+):
+    """Compute inverse-frequency weights capped at ``max_weight``."""
+    if max_weight <= 0:
+        raise ValueError("max_weight must be positive")
+    raw_pos_weights = _compute_raw_pos_weights(
+        positive_counts, negative_counts,
+    )
+    return torch.clamp(raw_pos_weights, max=max_weight)
+
+
+def compute_pos_weights(positive_counts, negative_counts):
+    """Backward-compatible alias for aggressive inverse-frequency weights."""
+    return compute_aggressive_pos_weights(positive_counts, negative_counts)
 
 
 def verify_positive_training_examples(positive_counts):

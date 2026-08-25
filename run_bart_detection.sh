@@ -22,6 +22,7 @@ USE_GPU=true
 BATCH_SIZE=16
 FOCAL_GAMMAS=()
 COMPARE_BCE_ONLY=false
+WEIGHTED_BCE_CAP=20.0
 POSITIONAL_ARGS=()
 while (( $# > 0 )); do
     case "$1" in
@@ -53,6 +54,14 @@ while (( $# > 0 )); do
             COMPARE_BCE_ONLY=true
             shift
             ;;
+        --weighted_bce_cap)
+            if (( $# < 2 )); then
+                echo "--weighted_bce_cap requires a value" >&2
+                exit 2
+            fi
+            WEIGHTED_BCE_CAP="$2"
+            shift 2
+            ;;
         *)
             POSITIONAL_ARGS+=("$1")
             shift
@@ -61,7 +70,7 @@ while (( $# > 0 )); do
 done
 
 if (( ${#POSITIONAL_ARGS[@]} > 2 )); then
-    echo "Usage: sbatch $0 [epochs] [loss_mode] [--batch_size N] [--focal_gamma G ...] [--compare_bce_only] [--use_gpu|--no-use_gpu]" >&2
+    echo "Usage: sbatch $0 [epochs] [loss_mode] [--batch_size N] [--focal_gamma G ...] [--compare_bce_only] [--weighted_bce_cap N] [--use_gpu|--no-use_gpu]" >&2
     exit 2
 fi
 
@@ -72,10 +81,10 @@ if (( ${#FOCAL_GAMMAS[@]} == 0 )); then
 fi
 
 case "${LOSS_MODE}" in
-    unweighted|weighted|focal|compare)
+    unweighted|weighted|weighted_aggressive|weighted_sqrt|weighted_log|weighted_capped|compare_weighted|compare_non_aggressive_weighted|focal|compare)
         ;;
     *)
-        echo "loss_mode must be one of: unweighted, weighted, focal, compare" >&2
+        echo "loss_mode must be one of: unweighted, weighted, weighted_aggressive, weighted_sqrt, weighted_log, weighted_capped, compare_weighted, compare_non_aggressive_weighted, focal, compare" >&2
         exit 2
         ;;
 esac
@@ -109,6 +118,7 @@ echo "Loss mode: ${LOSS_MODE}"
 echo "Batch size: ${BATCH_SIZE}"
 echo "Focal gammas: ${FOCAL_GAMMAS[*]}"
 echo "Compare BCE only: ${COMPARE_BCE_ONLY}"
+echo "Weighted BCE cap: ${WEIGHTED_BCE_CAP}"
 echo "Use GPU: ${USE_GPU}"
 
 python --version
@@ -129,6 +139,7 @@ BART_ARGS=(
 if [[ "${COMPARE_BCE_ONLY}" == true ]]; then
     BART_ARGS+=(--compare_bce_only)
 fi
+BART_ARGS+=(--weighted_bce_cap "${WEIGHTED_BCE_CAP}")
 for focal_gamma in "${FOCAL_GAMMAS[@]}"; do
     BART_ARGS+=(--focal_gamma "${focal_gamma}")
 done

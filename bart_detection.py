@@ -15,7 +15,10 @@ from transformers import AutoTokenizer, BartModel
 from optimizer import AdamW
 from paraphrase_detection.focal_loss import create_focal_loss
 from paraphrase_detection.weighted_bce import (
-    compute_pos_weights,
+    compute_aggressive_pos_weights,
+    compute_capped_pos_weights,
+    compute_log_pos_weights,
+    compute_sqrt_pos_weights,
     count_label_examples,
     create_weighted_bce_loss,
     encode_paraphrase_labels,
@@ -212,11 +215,23 @@ def get_args():
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument(
         "--loss_mode",
-        choices=("unweighted", "weighted", "focal", "compare"),
+        choices=(
+            "unweighted",
+            "weighted",
+            "weighted_aggressive",
+            "weighted_sqrt",
+            "weighted_log",
+            "weighted_capped",
+            "compare_weighted",
+            "compare_non_aggressive_weighted",
+            "focal",
+            "compare",
+        ),
         default="compare",
         help=(
-            "Train with unweighted BCE, weighted BCE, focal loss, or compare "
-            "all selected loss functions."
+            "Train one loss, compare the baseline with all weighted BCE "
+            "variants, compare only non-aggressive weighted BCE variants, or "
+            "compare the baseline, aggressive Weighted BCE, and focal loss."
         ),
     )
     parser.add_argument(
@@ -233,8 +248,17 @@ def get_args():
         "--compare_bce_only",
         action="store_true",
         help=(
-            "In compare mode, run only unweighted BCE and weighted BCE; "
-            "do not run focal-loss experiments."
+            "In compare mode, run only unweighted BCE and aggressive Weighted "
+            "BCE; do not run focal-loss experiments."
+        ),
+    )
+    parser.add_argument(
+        "--weighted_bce_cap",
+        type=float,
+        default=20.0,
+        help=(
+            "Maximum positive weight for weighted_capped, compare_weighted, "
+            "and compare_non_aggressive_weighted (default: 20.0)."
         ),
     )
     args = parser.parse_args()
@@ -244,6 +268,11 @@ def get_args():
         parser.error("--batch_size must be at least 1")
     if args.compare_bce_only and args.loss_mode != "compare":
         parser.error("--compare_bce_only requires --loss_mode compare")
+    if (
+        not math.isfinite(args.weighted_bce_cap)
+        or args.weighted_bce_cap <= 0
+    ):
+        parser.error("--weighted_bce_cap must be a finite, positive number")
     if args.focal_gammas is None:
         args.focal_gammas = [2.0]
     if any(
@@ -257,10 +286,14 @@ def get_args():
 
 
 def create_experiments(
-    loss_mode, pos_weights, focal_gammas, compare_bce_only=False,
+    loss_mode,
+    pos_weight_sets,
+    focal_gammas,
+    weighted_bce_cap=20.0,
+    compare_bce_only=False,
 ):
     experiments = []
-    if loss_mode in {"unweighted", "compare"}:
+    if loss_mode in {"unweighted", "compare", "compare_weighted"}:
         experiments.append(
             (
                 "Unweighted BCE",
@@ -268,14 +301,56 @@ def create_experiments(
                 "models/bart_detection_unweighted_best.pt",
             )
         )
-    if loss_mode in {"weighted", "compare"}:
-        experiments.append(
-            (
-                "Weighted BCE",
-                create_weighted_bce_loss(pos_weights),
-                "models/bart_detection_weighted_best.pt",
+
+    weighted_variants = (
+        (
+            "weighted_aggressive",
+            "Aggressive Weighted BCE",
+            "aggressive",
+            "models/bart_detection_weighted_aggressive_best.pt",
+        ),
+        (
+            "weighted_sqrt",
+            "Square-Root Weighted BCE",
+            "sqrt",
+            "models/bart_detection_weighted_sqrt_best.pt",
+        ),
+        (
+            "weighted_log",
+            "Logarithmic Weighted BCE",
+            "log",
+            "models/bart_detection_weighted_log_best.pt",
+        ),
+        (
+            "weighted_capped",
+            f"Capped Weighted BCE (cap={weighted_bce_cap:g})",
+            "capped",
+            f"models/bart_detection_weighted_capped_{weighted_bce_cap:g}_best.pt",
+        ),
+    )
+    if loss_mode in {"weighted", "weighted_aggressive", "compare"}:
+        selected_weighted_modes = {"weighted_aggressive"}
+    elif loss_mode == "compare_weighted":
+        selected_weighted_modes = {
+            variant_mode for variant_mode, _, _, _ in weighted_variants
+        }
+    elif loss_mode == "compare_non_aggressive_weighted":
+        selected_weighted_modes = {
+            "weighted_sqrt", "weighted_log", "weighted_capped",
+        }
+    else:
+        selected_weighted_modes = {loss_mode}
+
+    for variant_mode, name, weight_key, checkpoint_path in weighted_variants:
+        if variant_mode in selected_weighted_modes:
+            experiments.append(
+                (
+                    name,
+                    create_weighted_bce_loss(pos_weight_sets[weight_key]),
+                    checkpoint_path,
+                )
             )
-        )
+
     include_focal = loss_mode == "focal" or (
         loss_mode == "compare" and not compare_bce_only
     )
@@ -340,13 +415,25 @@ def finetune_paraphrase_detection(args):
     train_labels = encode_paraphrase_labels(train_dataset)
     positive_counts, negative_counts = count_label_examples(train_labels)
     verify_positive_training_examples(positive_counts)
-    pos_weights = compute_pos_weights(positive_counts, negative_counts)
-    print_label_statistics(positive_counts, negative_counts, pos_weights)
+    pos_weight_sets = {
+        "aggressive": compute_aggressive_pos_weights(
+            positive_counts, negative_counts,
+        ),
+        "sqrt": compute_sqrt_pos_weights(positive_counts, negative_counts),
+        "log": compute_log_pos_weights(positive_counts, negative_counts),
+        "capped": compute_capped_pos_weights(
+            positive_counts, negative_counts, args.weighted_bce_cap,
+        ),
+    }
+    print_label_statistics(
+        positive_counts, negative_counts, pos_weight_sets,
+    )
 
     experiments = create_experiments(
         args.loss_mode,
-        pos_weights,
+        pos_weight_sets,
         args.focal_gammas,
+        weighted_bce_cap=args.weighted_bce_cap,
         compare_bce_only=args.compare_bce_only,
     )
     results = []

@@ -175,7 +175,7 @@ The threshold transformation above explains this trade-off more precisely than c
 
 Fine-grained ETPC type detection is substantially harder than ordinary binary paraphrase detection, and very small class counts make exact development results sensitive to the split. We therefore treat the near-perfect unweighted development score cautiously and evaluate Weighted BCE by its relative performance under the same split rather than claiming it improves generalization.
 
-Overall, uncapped inverse-frequency Weighted BCE is not an improvement over the baseline in the reported configuration. More robust alternatives include capped, square-root, or logarithmic class weights; per-label threshold tuning on the development set; checkpoint selection using MCC; and focal loss, which down-weights easy examples without assigning a fixed weight of 909 to every positive instance of label 9.
+Overall, uncapped inverse-frequency Weighted BCE is not an improvement over the baseline in the reported configuration. We therefore implemented three less aggressive variants as separate experiments: square-root weights $\sqrt{N_c^- / N_c^+}$, logarithmic weights $\log(1 + N_c^- / N_c^+)$, and capped inverse-frequency weights $\min(N_c^- / N_c^+, 20)$. The `compare_non_aggressive_weighted` mode runs these three variants in one job. Their results must be reported separately once training is complete. Other follow-up options include per-label threshold tuning on the development set, checkpoint selection using MCC, and focal loss, which down-weights easy examples without assigning a fixed weight of 909 to every positive instance of label 9.
 
 ### Hyperparameter Optimization
 
