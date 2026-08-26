@@ -18,10 +18,10 @@ from tqdm import tqdm
 
 from bert import BertModel
 
-from datasets import load_allnli_data, AllNLIDataset, model_eval_nli
+from datasets import load_allnli_data, AllNLIDataset
 
 
-from evaluation import model_eval_multitask, test_model_multitask
+from evaluation import model_eval_multitask, test_model_multitask, model_eval_nli
 from optimizer import AdamW
 
 TQDM_DISABLE = True
