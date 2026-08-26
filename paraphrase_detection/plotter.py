@@ -57,34 +57,67 @@ def __plot_focal_best_performance(
     focal_accuracy,
     focal_mcc,
     filename,
+    baseline_accuracy=0.956,
+    baseline_mcc=0.461,
 ):
     gammas = list(focal_accuracy)
     positions = list(range(len(gammas)))
-    width = 0.4
+    gamma_labels = [f"{gamma:g}" for gamma in gammas]
+    baseline_label = "Unweighted BCE (epoch 5)"
 
-    plt.figure(figsize=(11, 5))
-    plt.bar(
-        [position - width / 2 for position in positions],
-        [focal_accuracy[gamma] for gamma in gammas],
-        width=width,
-        label="Development Accuracy",
+    # 2 rows, 1 column
+    figure, (accuracy_axis, mcc_axis) = plt.subplots(
+        2, 1, figsize=(8, 10)
     )
-    plt.bar(
-        [position + width / 2 for position in positions],
-        [focal_mcc[gamma] for gamma in gammas],
-        width=width,
-        label="Development MCC",
-    )
-    plt.xlabel(r"Focal-loss $\gamma$")
-    plt.ylabel("Best development-set score")
-    plt.xticks(positions, [f"{gamma:g}" for gamma in gammas])
-    plt.ylim(0, 1.05)
-    plt.grid(axis="y", alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
+    accuracy_axis.set_title("Focal Loss Comparison: Development Accuracy")
+    mcc_axis.set_title("Focal Loss Comparison: Development MCC")
+    subplot_data = [
+        (
+            accuracy_axis,
+            focal_accuracy,
+            "Development Accuracy",
+            baseline_accuracy,
+            None,
+            0.8,  # y-axis starts at 0.8
+        ),
+        (
+            mcc_axis,
+            focal_mcc,
+            "Development MCC",
+            baseline_mcc,
+            "orange",
+            0.0,
+        ),
+    ]
 
-    plt.savefig(FIGURE_DIR / filename, dpi=300, bbox_inches="tight")
-    plt.close()
+    for axis, scores, ylabel, baseline, color, ymin in subplot_data:
+        axis.bar(
+            positions,
+            [scores[gamma] for gamma in gammas],
+            color=color,
+        )
+
+        axis.axhline(
+            baseline,
+            color="black",
+            linestyle="--",
+            label=baseline_label,
+        )
+
+        axis.set_xlabel(r"Focal-loss $\gamma$")
+        axis.set_ylabel(ylabel)
+        axis.set_xticks(positions, gamma_labels, rotation=45)
+        axis.set_ylim(ymin, 1.05)
+        axis.grid(axis="y", alpha=0.3)
+        axis.legend()
+        
+    figure.tight_layout()
+    figure.savefig(
+        FIGURE_DIR / filename,
+        dpi=300,
+        bbox_inches="tight",
+    )
+    plt.close(figure)
 
 
 def exp1():
