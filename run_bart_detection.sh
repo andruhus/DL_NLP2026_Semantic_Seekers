@@ -7,6 +7,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
+#SBATCH --mail-type=all
 #SBATCH --mail-user=andrii.demydenko@stud.uni-goettingen.de
 #SBATCH --output=./slurm_files/paraphrase_detection_%j.out
 #SBATCH --error=./slurm_files/paraphrase_detection_%j.err
