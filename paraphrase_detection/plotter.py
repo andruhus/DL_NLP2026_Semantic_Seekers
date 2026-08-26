@@ -257,7 +257,13 @@ def exp3():
         0.999, 0.999, 1.000, 0.999, 1.000,
         1.000, 1.000, 1.000, 1.000, 0.999,
     ])
-    unweighted_mcc = np.array([0.037, 0.092, 0.221, 0.354, 0.461])
+    unweighted_mcc = np.array([
+        0.037, 0.092, 0.221, 0.354, 0.461,
+        0.594, 0.679, 0.732, 0.744, 0.832,
+        0.848, 0.899, 0.947, 0.952, 0.959,
+        0.958, 0.959, 0.959, 0.956, 0.960,
+        0.960, 0.962, 0.961, 0.962, 0.959,
+    ])
 
     focal_dev_acc: dict[float, list[float] | None] = {
         0.87: [
@@ -350,23 +356,17 @@ def exp3():
         "dev_acc_focal_diff.png",
         y_focal=focal_dev_acc_difference,
     )
-    unweighted_mcc_full = np.array([
-        0.037, 0.092, 0.221, 0.354, 0.461,
-        0.594, 0.679, 0.732, 0.744, 0.832,
-        0.848, 0.899, 0.947, 0.952, 0.959,
-        0.958, 0.959, 0.959, 0.956, 0.960,
-        0.960, 0.962, 0.961, 0.962, 0.959,
-    ])
+    
     focal_mcc_difference = {
         gamma: (
-            np.asarray(values) - unweighted_mcc_full[:len(values)]
+            np.asarray(values) - unweighted_mcc[:len(values)]
         ).tolist()
         for gamma, values in focal_mcc.items()
         if values is not None
     }
 
     __plot_graph(
-        np.zeros_like(unweighted_mcc_full),
+        np.zeros_like(unweighted_mcc),
         "MCC difference from unweighted BCE",
         "mcc_focal_diff.png",
         y_focal=focal_mcc_difference,
