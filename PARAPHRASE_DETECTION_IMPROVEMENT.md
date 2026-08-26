@@ -1,46 +1,66 @@
-## Paraphrase Type Detection: Imbalance-Aware Loss Functions
+# ETPC Paraphrase-Type Detection: Imbalance-Aware Loss Functions
 
-### Motivation
-Paraphrase type detection is formulated as a multi-label classification problem with 26 output labels. The ETPC training split is strongly imbalanced: some paraphrase types occur in almost every example, whereas others have only a few positive examples. Across the 2,730 training examples, only 11,648 of the 70,980 binary label assignments are positive (16.410%). At the individual-label level, the number of positive examples ranges from 3 to 2,711.
+## Task, Baseline, and Contribution
 
-This imbalance makes plain binary cross-entropy (BCE) potentially misleading. Because most label decisions are negative, a model can obtain high accuracy by favoring the majority class while still failing to identify positive examples for rare paraphrase types. This behavior is visible in the first epoch of our baseline: it reaches a development accuracy of 0.910 but an MCC of only 0.037. We therefore investigated two imbalance-aware alternatives: **Weighted BCE** and **Focal Loss**.
+ETPC paraphrase-type detection is formulated as a multi-label classification problem with 26 output labels. Following the course-provided task setup, the baseline fine-tunes `facebook/bart-large` with a 26-output linear classification head and binary cross-entropy (BCE). The use of BART and Hugging Face's tokenizer/model classes is the explicit task-specific exception described by the starter repository: `STRUCTURE.md` specifies `facebook/bart-large` as the starting point, and `setup_gwdg.sh` downloads that checkpoint. This extension retains that provided model and changes only its training objective; it does not introduce another pretrained model or external embedding.
 
-The experiments and their hypotheses were:
+The ETPC labels are strongly imbalanced. In the current 2,730-row training file, only 11,648 of the 70,980 binary label assignments are positive (16.410%). Individual-label positive counts range from 3 to 2,711. Plain BCE can therefore obtain high accuracy by favoring negative decisions while learning little about rare positive labels. We investigate whether inverse-frequency Weighted BCE, smoothed Weighted BCE, or focal loss can improve minority-label behavior and/or reach a useful solution faster than BCE.
 
-| Experiment | Change from baseline | Expectation |
+## Research Questions and Hypotheses
+
+1. **Final held-out performance:** Does an imbalance-aware objective improve the course's primary ETPC-detection metric, development accuracy, over the unweighted BCE baseline under the same training and checkpoint-selection protocol?
+2. **Minority-label behavior:** Does it improve mean per-label MCC and per-label precision/recall, especially for rare paraphrase types, without an unacceptable reduction in accuracy?
+3. **Training efficiency:** Under the same fixed epoch budget, does focal loss or smoothed Weighted BCE reach a strong held-out score earlier than ordinary BCE?
+
+| Method | Change from baseline | Hypothesis |
 | --- | --- | --- |
-| Unweighted BCE | None | Strong overall accuracy, but a bias toward majority decisions for rare labels |
-| Weighted BCE | Positive term for label $c$ multiplied by $N_c^-/N_c^+$ | Better recognition of rare positive labels and therefore higher MCC, potentially at the cost of accuracy |
-| Focal loss | Easy decisions down-weighted by $(1-p_t)^\gamma$ | Greater focus on difficult labels without getting discontinuous |
+| Unweighted BCE | None | Strong aggregate accuracy, but majority-negative bias for rare labels |
+| Aggressive Weighted BCE | Positive term for label $c$ multiplied by $N_c^-/N_c^+$ | Better rare-positive recall and MCC, potentially at the cost of accuracy and precision |
+| Smoothed Weighted BCE | Compress or cap $N_c^-/N_c^+$ | Retain some minority-label benefit while avoiding unstable extreme weights |
+| Focal loss | Down-weight easy decisions by $(1-p_t)^\gamma$ | Focus on difficult decisions without applying fixed class-level weights, improving early convergence and MCC |
 
-### Experimental Setup
+A valid improvement claim requires a non-overlapping held-out split and a like-for-like comparison against BCE. Accuracy remains the primary course metric; MCC and per-label error statistics are supplementary evidence for this imbalanced task.
 
-We held the model and training configuration fixed so that only the loss function changed:
+## Data and Split Compliance
+
+| Split | Current file | Rows | Current status |
+| --- | --- | ---: | --- |
+| Training | `data/etpc-paraphrase-train.csv` | 2,730 | Contains the complete original training data |
+| Development | `data/etpc-paraphrase-dev.csv` | 273 | Sampled from the training data with seed 42, but its rows are still present in the training file |
+| Test inputs | `data/etpc-paraphrase-detection-test-student.csv` | Unlabeled | Used only to generate predictions; no test labels are used for training or model selection |
+
+## Evaluation Protocol and Experimental Setup
+
+We held the architecture and core training configuration fixed so that the intended independent variable was the loss function:
 
 | Setting | Value |
 | --- | --- |
-| Model | `facebook/bart-large` with a 26-output linear classifier |
-| Training data | ETPC paraphrase detection training split (2,730 examples) |
-| Development data | ETPC paraphrase detection development split |
-| Epochs | 25 for the BCE comparison; 5 for focal-loss sweeps |
+| Model | Course-provided `facebook/bart-large` with a 26-output linear classifier |
+| Current training data | `data/etpc-paraphrase-train.csv` (2,730 rows; currently overlaps development data) |
+| Current development data | `data/etpc-paraphrase-dev.csv` (273 rows; currently contained in the training data) |
+| Epochs | 25 for BCE/Weighted-BCE comparisons and the confirmatory focal runs; 5 for the exploratory focal sweep |
 | Batch size | 16 |
-| Optimizer | AdamW |
+| Optimizer | Project `AdamW` implementation |
 | Learning rate | $2\times10^{-5}$ |
 | Random seed | 11711 |
 | Maximum sequence length | 512 tokens |
-| Prediction threshold | 0.5 |
-| Checkpoint criterion | Mean development accuracy across labels |
+| Prediction threshold | 0.5 for every label |
+| Primary metric | Mean per-label development accuracy |
+| Supplementary metric | Mean per-label MCC |
+| Checkpoint criterion | Highest development accuracy; an earlier checkpoint wins a tie |
 
-Before every experiment, the random seed is reset so that the models start from the same initialization and see the same shuffled training order. We report both mean per-label accuracy and mean per-label Matthews correlation coefficient (MCC). Accuracy measures the fraction of correct binary decisions, while MCC is especially informative here because it accounts for all four entries of the binary confusion matrix and is less easily inflated by the majority class.
+Before every experiment, the random seed is reset so that compared models start from the same initialization and see the same shuffled training order. After each epoch, the code computes accuracy and MCC, but it saves checkpoints using accuracy only. Each reported comparison row is therefore the MCC of that method's **accuracy-selected** checkpoint, not its best-MCC checkpoint. In a multi-experiment run, `bart_detection.py` currently generates test predictions from the final experiment in command order rather than selecting the strongest method across experiments.
 
-### Baseline: Unweighted BCE
+## Baseline: Unweighted BCE
 
-The baseline uses BART-large with a linear classification head that produces one logit for each of the 26 paraphrase types. The two sentences are concatenated with `</s>`, tokenized to a maximum length of 512, and passed through BART. The hidden state of the first token is used by the classifier. Each output is treated as an independent binary decision and optimized with `BCEWithLogitsLoss`. At evaluation time, sigmoid probabilities greater than 0.5 are mapped to positive predictions.
+The baseline concatenates the two sentences with `</s>`, tokenizes to a maximum length of 512, and passes the result through BART-large. The classifier uses the hidden state of the first token to produce one logit for each of the 26 paraphrase types. Every output is treated as an independent binary decision and optimized with `BCEWithLogitsLoss`; at evaluation time, sigmoid probabilities greater than 0.5 are mapped to positive predictions.
 
-### Improvement 1: Weighted BCE (naive approach)
+## Proposed Loss Functions
+
+### Method 1: Aggressive Weighted BCE
 
 #### Idea
-For each paraphrase type $c$, we computed a positive-class weight using only the training split:
+For each paraphrase type $c$, we computed a positive-class weight from the current training file:
 
 $$
 w_c = \frac{N_c^-}{N_c^+},
@@ -53,7 +73,7 @@ $$
 - (1-y_{i,c})\log(1-\sigma(z_{i,c})).
 $$
 
-This calculation is implemented in `paraphrase_detection/weighted_bce.py` and is called on `train_labels` in `bart_detection.py`; no development- or test-set labels are used to calculate the weights.
+This calculation is implemented in `paraphrase_detection/weighted_bce.py` and is called on `train_labels` in `bart_detection.py`;
 
 #### Methodology
 
@@ -67,7 +87,11 @@ sbatch run_bart_detection.sh 25 compare \
     --use_gpu
 ```
 
+This command trains unweighted BCE followed by aggressive Weighted BCE. Although each method reloads its own accuracy-selected checkpoint for reporting, the script currently writes test predictions from the final method in command order (aggressive Weighted BCE), not from the stronger method.
+
 ##### Training-Set Class Weights
+
+These preliminary counts and weights come from the overlapping 2,730-row training file and must be regenerated after correcting the split.
 
 | Label ID | Positive | Negative | `pos_weight` |
 | ---: | ---: | ---: | ---: |
@@ -98,9 +122,9 @@ sbatch run_bart_detection.sh 25 compare \
 | 30 | 431 | 2,299 | 5.3341 |
 | 31 | 60 | 2,670 | 44.5000 |
 
-#### Results
+#### Preliminary Results (overlapping development data)
 
-##### The best checkpoint:
+##### Accuracy-selected checkpoints
 
 | Model | Development accuracy | Development MCC |
 | --- | ---: | ---: |
@@ -144,11 +168,11 @@ For label 9, $w=909$, so an unweighted posterior as small as $1/910 \approx 0.00
 
 For this reason, the weighted objective did not improve on unweighted BCE in our experiment. Its training loss must not be compared numerically with the BCE loss because the positive terms are rescaled; for example, a Weighted BCE loss of 0.0603 is not directly comparable to a BCE loss of 0.0073.
 
-### Improvement 2: Weighted BCE (smoothed weights approach)
+### Method 2: Smoothed Weighted BCE
 
 #### Idea
 
-The raw inverse-frequency ratio used in Improvement 1 can produce extremely large positive weights. To retain its imbalance-aware behavior while reducing the influence of a few rare examples, we define the raw ratio
+The raw inverse-frequency ratio used in Method 1 can produce extremely large positive weights. To retain its imbalance-aware behavior while reducing the influence of a few rare examples, we define the raw ratio
 
 $$
 r_c = \frac{N_c^-}{N_c^+},
@@ -178,7 +202,7 @@ All three vectors are passed to `BCEWithLogitsLoss` as `pos_weight`. Square-root
 
 #### Methodology
 
-We trained the three smoothed Weighted BCE variants for 25 epochs with a batch size of 16. The unweighted BCE results from Improvement 1 are used as the common reference baseline. The experiment can be reproduced with:
+We trained the three smoothed Weighted BCE variants for 25 epochs with a batch size of 16. The unweighted BCE results from Method 1 are reused as the common reference; `compare_non_aggressive_weighted` does not rerun that baseline. The experiment can be reproduced with:
 
 ```sh
 sbatch run_bart_detection.sh 25 compare_non_aggressive_weighted \
@@ -187,7 +211,11 @@ sbatch run_bart_detection.sh 25 compare_non_aggressive_weighted \
     --use_gpu
 ```
 
+This command trains square-root, logarithmic, and capped weighting in that order. The current script consequently writes test predictions from the capped variant, even when another variant has the better development result.
+
 ##### Training-Set Class Weights
+
+These preliminary counts and weights come from the overlapping 2,730-row training file and must be regenerated after correcting the split.
 
 | Label ID | Positive | Negative | Square-root weight | Logarithmic weight | Capped weight |
 | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -220,9 +248,9 @@ sbatch run_bart_detection.sh 25 compare_non_aggressive_weighted \
 
 For the rarest type (label *9*), the raw ratio of *909* is reduced to *30.1496* by square-root weighting, *6.8134* by logarithmic weighting, and *20* by capping. This substantially reduces the extreme gradient contribution observed with the aggressive objective.
 
-#### Results
+#### Preliminary Results (overlapping development data)
 
-##### The best checkpoint:
+##### Accuracy-selected checkpoints
 
 | Model | Development accuracy | Development MCC |
 | --- | ---: | ---: |
@@ -250,15 +278,11 @@ Square-root weighting is the strongest smoothed variant, reaching 0.9994 develop
 
 #### Discussion
 
-The results illustrate the expected trade-off of label balancing: compared with unweighted BCE, the smoothed objectives generally sacrifice some accuracy in exchange for a higher MCC, especially during the early stages of training. This is desirable for an imbalanced multi-label task because MCC captures more informative minority-label decisions than accuracy alone.
+The results illustrate the expected trade-off of label balancing: compared with unweighted BCE, the smoothed objectives generally sacrifice some accuracy in exchange for higher MCC during the early stages of training. MCC is useful supplementary evidence here because it captures minority-label decisions more informatively than accuracy alone.
 
-During the first 10 epochs, all three smoothing techniques provide improvements over benchmark in MCC. They also learn substantially faster than the naive objective. 
+During the first 10 epochs, all three smoothing techniques exceed the reused BCE reference in MCC and learn substantially faster than the aggressive objective. With additional training, unweighted BCE catches up and slightly surpasses the smoothed variants at their accuracy-selected checkpoints. The smoothed methods therefore do not improve final development performance over BCE in this run, although all three outperform aggressive weighting in both reported metrics. These findings must be retested on the corrected non-overlapping split.
 
-With additional training, unweighted BCE catches up and slightly surpasses the smoothed variants on the final selected checkpoint. The smoothed methods therefore do not improve over the unweighted baseline in the final development score, but they all remain clearly better than the naive aggressive approach. 
-
-However all 3 techniques surpass naive aggressive approach in both dev_accuracy as well as MCC
-
-### Improvement 3: Focal Loss
+### Method 3: Focal Loss
 
 #### Idea
 We also implemented binary focal loss, adapted to the multi-label setting. For every example-label pair, the unreduced BCE loss is first computed. The loss is then multiplied by a focusing factor:
@@ -269,44 +293,53 @@ $$
 
 where $p_t$ is the predicted probability of the correct binary class and $\gamma \geq 0$ is the focusing parameter. Easy, confidently classified examples receive less weight, allowing training to focus on difficult decisions. When $\gamma=0$, focal loss reduces to ordinary BCE; increasing $\gamma$ suppresses easy examples more strongly.
 
-#### Methodlogy
-Our implementation in `paraphrase_detection/focal_loss.py` does not use an additional $\alpha$ class-balancing term, so the experiment isolates the effect of the focusing parameter. `bart_detection.py` accepts multiple unique gamma values through repeated `--focal_gamma` arguments and trains a separate model for every value. The dedicated `focal` mode runs only the requested focal-loss experiments. The default `compare` mode runs unweighted BCE, aggressive Weighted BCE, and one focal-loss model for every requested gamma value, unless `--compare_bce_only` is supplied. The `compare_weighted` mode compares unweighted BCE with all four Weighted BCE variants, while `compare_non_aggressive_weighted` runs only the square-root, logarithmic, and capped variants.
+#### Methodology
+Our implementation in `paraphrase_detection/focal_loss.py` does not use an additional $\alpha$ class-balancing term, so the experiment isolates the focusing parameter. `bart_detection.py` accepts multiple unique gamma values through repeated `--focal_gamma` arguments and trains a separate model for each value. The dedicated `focal` mode runs only those focal-loss experiments; it does **not** rerun unweighted BCE, so the tables below reuse the separately obtained deterministic BCE reference. The `compare` mode can run unweighted BCE, aggressive Weighted BCE, and requested focal variants, while `compare_non_aggressive_weighted` runs only the square-root, logarithmic, and capped variants.
 
-We evaluated two sets of five focusing parameters with 5 epochs and a batch size of 16. The initial sweep was:
-
-```sh
-sbatch run_bart_detection.sh 5 focal --batch_size 16 \
---focal_gamma 0.25 \
---focal_gamma 0.5 \
---focal_gamma 0.62 \
---focal_gamma 0.75 \ 
---focal_gamma 0.8 \ 
---focal_gamma 0.87 \
---focal_gamma 0.9 \ 
---focal_gamma 0.95 \ 
---focal_gamma 1 \
---focal_gamma 1.05 \
---focal_gamma 1.1 \
---focal_gamma 1.15 \
---focal_gamma 1.25 \ 
---focal_gamma 1.5 \
---focal_gamma 2 \
---focal_gamma 4 \
---use_gpu
-```
-
-We then ran a second sweep around the most promising region:
+The exploratory sweep evaluated 16 focusing parameters for 5 epochs with a batch size of 16:
 
 ```sh
-sbatch run_bart_detection.sh 25 focal --batch_size 16 --focal_gamma 0.87 --focal_gamma 1.1 --focal_gamma 1.15 --focal_gamma 1.25 --use_gpu
+sbatch run_bart_detection.sh 5 focal \
+    --batch_size 16 \
+    --focal_gamma 0.25 \
+    --focal_gamma 0.5 \
+    --focal_gamma 0.62 \
+    --focal_gamma 0.75 \
+    --focal_gamma 0.8 \
+    --focal_gamma 0.87 \
+    --focal_gamma 0.9 \
+    --focal_gamma 0.95 \
+    --focal_gamma 1 \
+    --focal_gamma 1.05 \
+    --focal_gamma 1.1 \
+    --focal_gamma 1.15 \
+    --focal_gamma 1.25 \
+    --focal_gamma 1.5 \
+    --focal_gamma 2 \
+    --focal_gamma 4 \
+    --use_gpu
 ```
 
-#### Results
+Based on the exploratory scores, we selected four moderate values for a 25-epoch confirmatory run:
 
-##### First Round (5 epochs)
+```sh
+sbatch run_bart_detection.sh 25 focal \
+    --batch_size 16 \
+    --focal_gamma 0.87 \
+    --focal_gamma 1.1 \
+    --focal_gamma 1.15 \
+    --focal_gamma 1.25 \
+    --use_gpu
+```
+
+Because experiment order currently controls test prediction, this command would write predictions from $\gamma=1.25$ rather than automatically selecting the best focal variant.
+
+#### Preliminary Results (overlapping development data)
+
+##### Exploratory sweep at epoch 5
 <img src="paraphrase_detection/figure/focal_best_performance.png" width="700">
 
-As we can see with the focal loss the accuracy is slightly decreased, while we achieve significant improvement over MCC. The highest development accuracy is shared by $\gamma=1.15$ and $\gamma=1.25$ (0.9577), while the highest MCC is obtained with $\gamma=0.87$ (0.5085). Larger values, especially $\gamma=4$, substantially reduce performance. As for $\gamma=0.75$ we believe it's some sort of outlier. Here is the table with all the results after 5 epoch:
+At epoch 5, $\gamma=1.15$ and $\gamma=1.25$ have the highest development accuracy (0.9577), while $\gamma=0.87$ has the highest MCC (0.5085). Relative to the separately run BCE reference, $\gamma=0.87$ changes accuracy from 0.9560 to 0.9563 and MCC from 0.4610 to 0.5085. Larger values, especially $\gamma=4$, substantially reduce both metrics. The unusually weak $\gamma=0.75$ run is retained rather than discarded; repeated clean-split runs are needed to determine whether it reflects variance or systematic optimization behavior.
 
 | Focal-loss gamma | Development accuracy | Development MCC |
 | ---: | ---: | ---: |
@@ -328,31 +361,50 @@ As we can see with the focal loss the accuracy is slightly decreased, while we a
 | 2 | 0.9462 | 0.4130 |
 | 4 | 0.9232 | 0.1830 |
 
-##### Second Round (25 epochs)
+##### Confirmatory run over 25 epochs
 
 <div style="display: flex; gap: 10px;">
   <img src="paraphrase_detection/figure/dev_acc_focal.png" width="500">
   <img src="paraphrase_detection/figure/mcc_focal.png" width="500">
 </div>
 
-To see the difference better, here's the plot to show the differences:
+The difference plots show each focal run relative to the separately obtained BCE curve:
+
 <div style="display: flex; gap: 10px;">
   <img src="paraphrase_detection/figure/dev_acc_focal_diff.png" width="500">
   <img src="paraphrase_detection/figure/mcc_focal_diff.png" width="500">
 </div>
 
-We can see that at epoch *8-9* all the focal losses show improvement over the baseline. In terms of dev_accuracy it's neglegable, while in MCC it's quite significant. We can also outline that $\gamma=0.87$ shows the best temporal outperformance in both metrics
+The raw logs and checkpoints are no longer available. The retained values in `paraphrase_detection/plotter.py` are rounded to three decimals; selected epochs and smaller differences cannot be reconstructed at higher precision. The fixed-epoch values relevant to the temporal claim are:
+
+| Model | Epoch 8 accuracy | Epoch 8 MCC | Epoch 9 accuracy | Epoch 9 MCC | Epoch 25 accuracy | Epoch 25 MCC |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Unweighted BCE | 0.987 | 0.732 | 0.989 | 0.744 | 0.999 | 0.959 |
+| Focal $\gamma=0.87$ | 0.991 | 0.870 | **0.996** | 0.931 | **1.000** | 0.960 |
+| Focal $\gamma=1.1$ | **0.992** | 0.894 | 0.995 | **0.932** | **1.000** | **0.961** |
+| Focal $\gamma=1.15$ | **0.992** | **0.900** | 0.993 | 0.917 | **1.000** | **0.961** |
+| Focal $\gamma=1.25$ | 0.991 | 0.885 | 0.994 | 0.918 | 0.999 | 0.959 |
+
+At epochs 8 and 9, every focal variant exceeds the BCE reference in both stored metrics. No single gamma consistently dominates: $\gamma=1.15$ has the highest focal MCC at epoch 8, $\gamma=1.1$ has the highest MCC at epoch 9, and $\gamma=0.87$ has the highest epoch-9 accuracy. By epoch 25, the differences have mostly disappeared. Across all 25 stored epochs, BCE and every confirmatory focal run reach a rounded maximum accuracy of 1.000 and a rounded maximum MCC of 0.962. These overlapping-data observations motivate a clean-split convergence study but do not establish generalization.
 
 #### Discussion
 
-Focal loss stays much closer to the unweighted BCE baseline than Weighted BCE because it applies a *smooth*, *confidence-dependent* weight to each example-label decision. Weighted BCE assigns a fixed weight to every positive instance of a label, regardless of whether that instance is easy or difficult; for very rare labels, this can strongly alter the optimization trajectory and effective decision boundary. Focal loss instead gradually reduces the contribution of examples as the model becomes confident about them. It is also directly connected to the baseline: when $\gamma=0$, it is exactly BCE, while small or moderate values of $\gamma$ modify the baseline objective without introducing extreme class-level weights. This explains why the focal-loss curves generally follow the BCE curve more closely than the Weighted BCE variants do.
+Focal loss stays much closer to the unweighted BCE baseline than Weighted BCE because it applies a smooth, confidence-dependent weight to each example-label decision. Weighted BCE assigns a fixed weight to every positive instance of a label, regardless of whether that instance is easy or difficult; for very rare labels, this can strongly alter the optimization trajectory and effective decision boundary. Focal loss instead gradually reduces an example's contribution as the model becomes confident. It is directly connected to the baseline: when $\gamma=0$, it is exactly BCE, while moderate values modify the objective without introducing extreme class-level weights.
 
-The observed improvements are primarily **temporal** rather than improvements in the final attainable solution. Both objectives train the model to recover the same underlying binary labels, so with sufficient training we expect their classification performance to become similar, even though their loss functions and optimization paths are not identical. The important difference is how quickly they reach a useful solution. Around epochs 8--9, all evaluated focal-loss variants temporarily outperform the BCE baseline. The gain in development accuracy is negligible, but the improvement in MCC is much clearer, indicating that focal loss learns difficult and minority-label decisions earlier instead of merely increasing the already-dominant number of correct negative predictions.
+The preliminary differences are primarily **temporal**, not evidence of a better final optimum. At a fixed early epoch, focal loss follows a different optimization path and reaches higher scores in the retained curves; with additional training, BCE catches up. Faster convergence would be practically valuable under a fixed compute budget or early stopping. However, because the current development examples also occur in training, the curves may partly measure how quickly each loss memorizes repeated examples rather than how quickly it generalizes. A clean-split rerun is necessary before attributing the higher early MCC to earlier learning of difficult or minority-label decisions.
 
-This faster convergence is practically valuable when training time or compute is limited, or when early stopping is used. In our experiments, $\gamma=0.87$ provides the strongest temporal improvement across both metrics, showing that a moderate amount of focusing can accelerate learning without moving too far from the stable BCE objective. 
+Moderate focusing parameters are the most promising candidates for that rerun, while $\gamma=4$ suppresses easy decisions too aggressively in the preliminary sweep. The corrected experiment should predeclare a selection rule and compare epochs-to-target as well as fixed-epoch accuracy and MCC.
 
 
-### References for This Extension
+## Limitations and Threats to Validity
+
+- **Single-seed evidence:** All reported values use seed 11711, so run-to-run variance is unknown.
+- **Development-set hyperparameter search:** Many gamma values were screened on the same development data used for reporting. Final claims should separate exploratory selection from a predeclared confirmatory comparison where possible.
+- **Rare-label uncertainty:** Several labels have fewer than 30 positive training examples. Their weights and per-label metrics are inherently noisy.
+
+
+## References
 
 - Lin, T.-Y., Goyal, P., Girshick, R., He, K., and Dollár, P. (2017). [Focal Loss for Dense Object Detection](https://arxiv.org/abs/1708.02002).
 - Lewis, M. et al. (2020). [BART: Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension](https://arxiv.org/abs/1910.13461).
+- PyTorch contributors. [`BCEWithLogitsLoss` documentation](https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss.html).
