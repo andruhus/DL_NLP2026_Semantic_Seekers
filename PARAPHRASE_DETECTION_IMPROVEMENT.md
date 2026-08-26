@@ -118,23 +118,117 @@ For this reason, the weighted objective did not improve on unweighted BCE in our
 
 ### Improvement 2: Weighted BCE (smoothed weights approach)
 
-##
-To mitigate this effect we tried 3 smoothing techniques:
-1. **Square-root weighting**   
-   \[
-   w_c = \sqrt{\frac{N_c^-}{N_c^+}}
-   \]
+#### Idea
 
-2. **Logarithmic weighting**  
-   \[
-   w_c = \log\left(1 + \frac{N_c^-}{N_c^+}\right)
-   \]
+The raw inverse-frequency ratio used in Improvement 1 can produce extremely large positive weights. To retain its imbalance-aware behavior while reducing the influence of a few rare examples, we define the raw ratio
 
-3. **Capped inverse-frequency weighting**  
-   \[
-   w_c = \min\left(\frac{N_c^-}{N_c^+}, w_{\max}\right)
-   \]
-   
+$$
+r_c = \frac{N_c^-}{N_c^+},
+$$
+
+and evaluate three smoothed alternatives:
+
+1. **Square-root weighting**
+
+   $$
+   w_c^{\mathrm{sqrt}} = \sqrt{r_c}.
+   $$
+
+2. **Logarithmic weighting**
+
+   $$
+   w_c^{\mathrm{log}} = \log(1 + r_c).
+   $$
+
+3. **Capped inverse-frequency weighting**
+
+   $$
+   w_c^{\mathrm{cap}} = \min(r_c, w_{\max}), \qquad w_{\max}=20.
+   $$
+
+All three vectors are passed to `BCEWithLogitsLoss` as `pos_weight`. Square-root and logarithmic transformations compress large ratios smoothly, while the capped variant preserves the original ratio up to 20 and clips every larger value.
+
+#### Methodology
+
+We trained the three smoothed Weighted BCE variants for 25 epochs with a batch size of 16. The unweighted BCE results from Improvement 1 are used as the common reference baseline. The experiment can be reproduced with:
+
+```sh
+sbatch run_bart_detection.sh 25 compare_non_aggressive_weighted \
+    --batch_size 16 \
+    --weighted_bce_cap 20 \
+    --use_gpu
+```
+
+##### Training-Set Class Weights
+
+| Label ID | Positive | Negative | Square-root weight | Logarithmic weight | Capped weight |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 366 | 2,364 | 2.5415 | 2.0094 | 6.4590 |
+| 2 | 126 | 2,604 | 4.5461 | 3.0758 | 20.0000 |
+| 3 | 124 | 2,606 | 4.5843 | 3.0918 | 20.0000 |
+| 4 | 369 | 2,361 | 2.5295 | 2.0013 | 6.3984 |
+| 5 | 479 | 2,251 | 2.1678 | 1.7404 | 4.6994 |
+| 6 | 1,753 | 977 | 0.7465 | 0.4430 | 0.5573 |
+| 7 | 316 | 2,414 | 2.7639 | 2.1563 | 7.6392 |
+| 8 | 145 | 2,585 | 4.2223 | 2.9353 | 17.8276 |
+| 9 | 3 | 2,727 | 30.1496 | 6.8134 | 20.0000 |
+| 10 | 8 | 2,722 | 18.4459 | 5.8326 | 20.0000 |
+| 11 | 560 | 2,170 | 1.9685 | 1.5841 | 3.8750 |
+| 13 | 28 | 2,702 | 9.8234 | 4.5799 | 20.0000 |
+| 14 | 115 | 2,615 | 4.7686 | 3.1671 | 20.0000 |
+| 15 | 13 | 2,717 | 14.4568 | 5.3471 | 20.0000 |
+| 16 | 47 | 2,683 | 7.5555 | 4.0619 | 20.0000 |
+| 17 | 34 | 2,696 | 8.9047 | 4.3857 | 20.0000 |
+| 18 | 302 | 2,428 | 2.8354 | 2.2016 | 8.0397 |
+| 21 | 534 | 2,196 | 2.0279 | 1.6317 | 4.1124 |
+| 22 | 49 | 2,681 | 7.3969 | 4.0202 | 20.0000 |
+| 24 | 218 | 2,512 | 3.3945 | 2.5276 | 11.5229 |
+| 25 | 2,096 | 634 | 0.5500 | 0.2643 | 0.3025 |
+| 26 | 521 | 2,209 | 2.0591 | 1.6563 | 4.2399 |
+| 28 | 240 | 2,490 | 3.2210 | 2.4314 | 10.3750 |
+| 29 | 2,711 | 19 | 0.0837 | 0.0070 | 0.0070 |
+| 30 | 431 | 2,299 | 2.3096 | 1.8459 | 5.3341 |
+| 31 | 60 | 2,670 | 6.6708 | 3.8177 | 20.0000 |
+
+For the rarest type (label 9), the raw ratio of 909 is reduced to 30.1496 by square-root weighting, 6.8134 by logarithmic weighting, and 20 by capping. This substantially reduces the extreme gradient contribution observed with the aggressive objective.
+
+#### Results
+
+##### The best checkpoint:
+
+| Model | Development accuracy | Development MCC |
+| --- | ---: | ---: |
+| Unweighted BCE (reference) | **1.0000** | **0.9615** |
+| Square-Root Weighted BCE | 0.9994 | 0.9555 |
+| Logarithmic Weighted BCE | 0.9946 | 0.9327 |
+| Capped Weighted BCE (cap=20) | 0.9875 | 0.9199 |
+
+##### Epoch display
+
+| Epoch | Baseline accuracy | Square-root accuracy | Logarithmic accuracy | Capped accuracy | Baseline MCC | Square-root MCC | Logarithmic MCC | Capped MCC |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | **0.910** | 0.907 | 0.873 | 0.654 | 0.037 | 0.043 | 0.047 | **0.100** |
+| 5 | **0.956** | 0.944 | 0.935 | 0.873 | 0.461 | 0.685 | **0.745** | 0.577 |
+| 10 | **0.994** | 0.987 | 0.977 | 0.963 | 0.832 | **0.906** | 0.880 | 0.825 |
+| 15 | **0.999** | 0.993 | 0.982 | 0.974 | **0.959** | 0.936 | 0.907 | 0.891 |
+| 20 | **1.000** | 0.998 | 0.991 | 0.980 | **0.960** | 0.954 | 0.923 | 0.908 |
+| 25 | **0.999** | 0.997 | 0.995 | 0.984 | **0.959** | 0.945 | 0.933 | 0.914 |
+
+<img src="paraphrase_detection/figure/dev_acc_soft_weighted.png" width="700">
+
+<img src="paraphrase_detection/figure/mcc_soft_weighted.png" width="700">
+
+Square-root weighting is the strongest smoothed variant, reaching 0.9994 development accuracy and 0.9555 MCC. It is much closer to the unweighted baseline than the aggressive Weighted BCE run (0.9786 accuracy and 0.8959 MCC), but it still does not improve on the baseline.
+
+#### Discussion
+
+The results illustrate the expected trade-off of label balancing: compared with unweighted BCE, the smoothed objectives generally sacrifice some accuracy in exchange for a higher MCC, especially during the early stages of training. This is desirable for an imbalanced multi-label task because MCC captures more informative minority-label decisions than accuracy alone.
+
+During the first 10 epochs, all three smoothing techniques provide improvements over benchmark in MCC. They also learn substantially faster than the naive objective. 
+
+With additional training, unweighted BCE catches up and slightly surpasses the smoothed variants on the final selected checkpoint. The smoothed methods therefore do not improve over the unweighted baseline in the final development score, but they all remain clearly better than the naive aggressive approach. 
+
+However all 3 techniques surpass naive aggressive approach in both dev_accuracy as well as MCC
 
 ### Improvement 3: Focal Loss
 
