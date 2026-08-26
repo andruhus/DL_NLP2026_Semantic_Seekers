@@ -14,7 +14,7 @@ def __plot_graph(
     y_weighted_sqrt=None,
     y_weighted_log=None,
     y_weighted_capped=None,
-    y_focal=None,
+    y_focal: dict[float, list[float]] | None = None,
 ):
     epochs = list(range(1, 26))
     plt.figure(figsize=(8, 5))
@@ -25,8 +25,16 @@ def __plot_graph(
         ("Square-Root Weighted BCE", y_weighted_sqrt),
         ("Logarithmic Weighted BCE", y_weighted_log),
         ("Capped Weighted BCE", y_weighted_capped),
-        ("Focal Loss", y_focal),
     ]
+    if y_focal is not None:
+        curves.extend(
+            (
+                f"Focal Loss (gamma = {gamma:g})",
+                values,
+            )
+            for gamma, values in y_focal.items()
+        )
+
     for label, values in curves:
         if values is not None:
             plt.plot(epochs, values, marker="o", label=label)
