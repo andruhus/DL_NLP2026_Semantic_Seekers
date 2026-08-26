@@ -29,7 +29,7 @@ def __plot_graph(
     if y_focal is not None:
         curves.extend(
             (
-                f"Focal Loss (gamma = {gamma:g})",
+                rf"Focal Loss ($\gamma = {gamma:g}$)",
                 values,
             )
             for gamma, values in y_focal.items()
@@ -96,5 +96,55 @@ def exp1():
         y_weighted=weighted_mcc,
     )
 
+
+def exp2():
+    unweighted_dev_acc = [
+        0.910, 0.915, 0.926, 0.942, 0.956,
+        0.964, 0.980, 0.987, 0.989, 0.994,
+        0.997, 0.997, 0.999, 0.999, 0.999,
+        0.999, 0.999, 1.000, 0.999, 1.000,
+        1.000, 1.000, 1.000, 1.000, 0.999,
+    ]
+
+    unweighted_mcc = [
+        0.037, 0.092, 0.221, 0.354, 0.461,
+        0.594, 0.679, 0.732, 0.744, 0.832,
+        0.848, 0.899, 0.947, 0.952, 0.959,
+        0.958, 0.959, 0.959, 0.956, 0.960,
+        0.960, 0.962, 0.961, 0.962, 0.959,
+    ]
+
+    # TODO: Replace each None with its 25-epoch metric values.
+    soft_weighted_dev_acc = None
+    soft_weighted_mcc = None
+    soft_weighted_sqrt_dev_acc = None
+    soft_weighted_sqrt_mcc = None
+    soft_weighted_log_dev_acc = None
+    soft_weighted_log_mcc = None
+    soft_weighted_capped_dev_acc = None
+    soft_weighted_capped_mcc = None
+
+    __plot_graph(
+        unweighted_dev_acc,
+        "Dev Accuracy",
+        "dev_acc_soft_weighted.png",
+        y_weighted=soft_weighted_dev_acc,
+        y_weighted_sqrt=soft_weighted_sqrt_dev_acc,
+        y_weighted_log=soft_weighted_log_dev_acc,
+        y_weighted_capped=soft_weighted_capped_dev_acc,
+    )
+
+    __plot_graph(
+        unweighted_mcc,
+        "MCC",
+        "mcc_soft_weighted.png",
+        y_weighted=soft_weighted_mcc,
+        y_weighted_sqrt=soft_weighted_sqrt_mcc,
+        y_weighted_log=soft_weighted_log_mcc,
+        y_weighted_capped=soft_weighted_capped_mcc,
+    )
+
+
 if __name__ == '__main__':
     exp1()
+    exp2()
