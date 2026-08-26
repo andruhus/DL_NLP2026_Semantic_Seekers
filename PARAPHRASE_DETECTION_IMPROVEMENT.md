@@ -270,13 +270,7 @@ sbatch run_bart_detection.sh 5 focal --batch_size 16 \
 We then ran a second sweep around the most promising region:
 
 ```sh
-sbatch run_bart_detection.sh 5 focal --batch_size 16 --focal_gamma 0.87 --focal_gamma 1 --focal_gamma 1.25 --use_gpu
-```
-
-The additional focused sweep was reproduced with:
-
-```sh
-sbatch run_bart_detection.sh 25 focal --batch_size 16 --focal_gamma 0.87 --focal_gamma 0.9 --focal_gamma 0.95 --focal_gamma 1.05 --focal_gamma 1.1 --focal_gamma 1.15 --use_gpu
+sbatch run_bart_detection.sh 25 focal --batch_size 16 --focal_gamma 0.87 --focal_gamma 1.1 --focal_gamma 1.15 --focal_gamma 1.25 --use_gpu
 ```
 
 #### Results
