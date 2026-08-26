@@ -252,8 +252,14 @@ sbatch run_bart_detection.sh 5 focal --batch_size 16 \
 --focal_gamma 0.5 \
 --focal_gamma 0.62 \
 --focal_gamma 0.75 \ 
+--focal_gamma 0.8 \ 
 --focal_gamma 0.87 \
+--focal_gamma 0.9 \ 
+--focal_gamma 0.95 \ 
 --focal_gamma 1 \
+--focal_gamma 1.05 \
+--focal_gamma 1.1 \
+--focal_gamma 1.15 \
 --focal_gamma 1.25 \ 
 --focal_gamma 1.5 \
 --focal_gamma 2 \
@@ -267,22 +273,35 @@ We then ran a second sweep around the most promising region:
 sbatch run_bart_detection.sh 5 focal --batch_size 16 --focal_gamma 0.87 --focal_gamma 1 --focal_gamma 1.25 --use_gpu
 ```
 
+The additional focused sweep was reproduced with:
+
+```sh
+sbatch run_bart_detection.sh 25 focal --batch_size 16 --focal_gamma 0.87 --focal_gamma 0.9 --focal_gamma 0.95 --focal_gamma 1.05 --focal_gamma 1.1 --focal_gamma 1.15 --use_gpu
+```
+
 #### Results
 
 | Focal-loss gamma | Development accuracy | Development MCC |
 | ---: | ---: | ---: |
+| 0 (baseline) | 0.9560 | 0.4610 |
 | 0.25 | 0.9505 | 0.4201 |
 | 0.5 | 0.9507 | 0.4372 |
 | 0.62 | 0.9391 | 0.3571 |
 | 0.75 | 0.9107 | 0.0380 |
+| 0.8 | 0.9445 | 0.3913 |
 | 0.87 | 0.9563 | **0.5085** |
+| 0.9 | 0.9498 | 0.4516 |
+| 0.95 | 0.9528 | 0.4382 |
 | 1 | 0.9567 | 0.4606 |
+| 1.05 | 0.9560 | 0.4605 |
+| 1.1 | 0.9576 | 0.4671 |
+| 1.15 | **0.9577** | 0.4800 |
 | 1.25 | **0.9577** | 0.4992 |
 | 1.5 | 0.9542 | 0.4486 |
 | 2 | 0.9462 | 0.4130 |
 | 4 | 0.9232 | 0.1830 |
 
-The best accuracy is obtained with $\gamma=1.25$ (0.9577), while the best MCC is obtained with $\gamma=0.87$ (0.5085). Therefore, there is no single gamma that maximizes both metrics. Both values outperform the 5-epoch unweighted BCE baseline in at least one metric: gamma 1.25 improves accuracy over 0.9558, and gamma 0.87 improves MCC over 0.4610. Larger values, especially $\gamma=4$, substantially reduce performance. These scores should not be compared directly with the 25-epoch BCE results because the training duration is different.
+The highest development accuracy is shared by $\gamma=1.15$ and $\gamma=1.25$ (0.9577), while the highest MCC is obtained with $\gamma=0.87$ (0.5085). Therefore, there is no single gamma that maximizes both metrics. The best MCC improves over the 5-epoch unweighted BCE baseline (0.4610), while the best accuracy improves over the baseline accuracy (0.9560). Larger values, especially $\gamma=4$, substantially reduce performance. These scores should not be compared directly with the 25-epoch BCE results because the training duration is different.
 
 ## Experiments
 
