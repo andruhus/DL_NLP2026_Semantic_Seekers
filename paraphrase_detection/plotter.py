@@ -14,9 +14,9 @@ def __plot_graph(
     y_weighted_sqrt=None,
     y_weighted_log=None,
     y_weighted_capped=None,
-    y_focal: dict[float, list[float]] | None = None,
+    y_focal: dict[float, list[float] | None] | None = None,
 ):
-    epochs = list(range(1, 26))
+    epochs = list(range(1, len(y_unweighted) + 1))
     plt.figure(figsize=(8, 5))
 
     curves = [
@@ -48,6 +48,41 @@ def __plot_graph(
 
     plt.savefig(FIGURE_DIR / filename, dpi=300, bbox_inches="tight")
     plt.close()
+
+
+def __plot_focal_best_performance(
+    focal_accuracy,
+    focal_mcc,
+    filename,
+):
+    gammas = list(focal_accuracy)
+    positions = list(range(len(gammas)))
+    width = 0.4
+
+    plt.figure(figsize=(11, 5))
+    plt.bar(
+        [position - width / 2 for position in positions],
+        [focal_accuracy[gamma] for gamma in gammas],
+        width=width,
+        label="Development Accuracy",
+    )
+    plt.bar(
+        [position + width / 2 for position in positions],
+        [focal_mcc[gamma] for gamma in gammas],
+        width=width,
+        label="Development MCC",
+    )
+    plt.xlabel(r"Focal-loss $\gamma$")
+    plt.ylabel("Best development-set score")
+    plt.xticks(positions, [f"{gamma:g}" for gamma in gammas])
+    plt.ylim(0, 1.05)
+    plt.grid(axis="y", alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+
+    plt.savefig(FIGURE_DIR / filename, dpi=300, bbox_inches="tight")
+    plt.close()
+
 
 def exp1():
     unweighted_dev_acc = [
@@ -145,6 +180,83 @@ def exp2():
     )
 
 
+def exp3():
+    # The focal-loss experiments ran for five epochs, so use the matching
+    # five-epoch unweighted BCE reference curves.
+    unweighted_dev_acc = [0.910, 0.915, 0.926, 0.942, 0.956]
+    unweighted_mcc = [0.037, 0.092, 0.221, 0.354, 0.461]
+
+    # TODO: Replace each None with its five-epoch metric values for that gamma.
+    focal_dev_acc: dict[float, list[float] | None] = {
+        0.25: None,
+        0.5: None,
+        0.62: None,
+        0.75: None,
+        0.87: None,
+        1.0: None,
+        1.25: None,
+        1.5: None,
+        2.0: None,
+        4.0: None,
+    }
+    focal_mcc: dict[float, list[float] | None] = {
+        0.25: None,
+        0.5: None,
+        0.62: None,
+        0.75: None,
+        0.87: None,
+        1.0: None,
+        1.25: None,
+        1.5: None,
+        2.0: None,
+        4.0: None,
+    }
+
+    __plot_graph(
+        unweighted_dev_acc,
+        "Dev Accuracy",
+        "dev_acc_focal.png",
+        y_focal=focal_dev_acc,
+    )
+    __plot_graph(
+        unweighted_mcc,
+        "MCC",
+        "mcc_focal.png",
+        y_focal=focal_mcc,
+    )
+
+    focal_best_accuracy = {
+        0.25: 0.9505,
+        0.5: 0.9507,
+        0.62: 0.9391,
+        0.75: 0.9107,
+        0.87: 0.9563,
+        1.0: 0.9567,
+        1.25: 0.9577,
+        1.5: 0.9542,
+        2.0: 0.9462,
+        4.0: 0.9232,
+    }
+    focal_best_mcc = {
+        0.25: 0.4201,
+        0.5: 0.4372,
+        0.62: 0.3571,
+        0.75: 0.0380,
+        0.87: 0.5085,
+        1.0: 0.4606,
+        1.25: 0.4992,
+        1.5: 0.4486,
+        2.0: 0.4130,
+        4.0: 0.1830,
+    }
+    __plot_focal_best_performance(
+        focal_best_accuracy,
+        focal_best_mcc,
+        "focal_best_performance.png",
+    )
+
+
 if __name__ == '__main__':
     exp1()
     exp2()
+    exp3()
