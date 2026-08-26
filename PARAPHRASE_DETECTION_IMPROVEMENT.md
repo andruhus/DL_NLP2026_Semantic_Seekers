@@ -345,8 +345,11 @@ We can see that at epoch *8-9* all the focal losses show improvement over the ba
 
 #### Discussion
 
-1) Focal loss unlike weighted BCE is continuous and thus closely follows the baseline
-2) The improvements are temporal, because both Focal Loss as well as BCE are expected to converge to the same truth. But we've showed that by using Focal Loss we can achieve that much quicker
+Focal loss stays much closer to the unweighted BCE baseline than Weighted BCE because it applies a *smooth*, *confidence-dependent* weight to each example-label decision. Weighted BCE assigns a fixed weight to every positive instance of a label, regardless of whether that instance is easy or difficult; for very rare labels, this can strongly alter the optimization trajectory and effective decision boundary. Focal loss instead gradually reduces the contribution of examples as the model becomes confident about them. It is also directly connected to the baseline: when $\gamma=0$, it is exactly BCE, while small or moderate values of $\gamma$ modify the baseline objective without introducing extreme class-level weights. This explains why the focal-loss curves generally follow the BCE curve more closely than the Weighted BCE variants do.
+
+The observed improvements are primarily **temporal** rather than improvements in the final attainable solution. Both objectives train the model to recover the same underlying binary labels, so with sufficient training we expect their classification performance to become similar, even though their loss functions and optimization paths are not identical. The important difference is how quickly they reach a useful solution. Around epochs 8--9, all evaluated focal-loss variants temporarily outperform the BCE baseline. The gain in development accuracy is negligible, but the improvement in MCC is much clearer, indicating that focal loss learns difficult and minority-label decisions earlier instead of merely increasing the already-dominant number of correct negative predictions.
+
+This faster convergence is practically valuable when training time or compute is limited, or when early stopping is used. In our experiments, $\gamma=0.87$ provides the strongest temporal improvement across both metrics, showing that a moderate amount of focusing can accelerate learning without moving too far from the stable BCE objective. 
 
 
 ### References for This Extension
