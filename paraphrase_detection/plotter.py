@@ -149,21 +149,53 @@ def exp2():
         0.960, 0.962, 0.961, 0.962, 0.959,
     ]
 
-    # TODO: Replace each None with its 25-epoch metric values.
-    soft_weighted_dev_acc = None
-    soft_weighted_mcc = None
-    soft_weighted_sqrt_dev_acc = None
-    soft_weighted_sqrt_mcc = None
-    soft_weighted_log_dev_acc = None
-    soft_weighted_log_mcc = None
-    soft_weighted_capped_dev_acc = None
-    soft_weighted_capped_mcc = None
+    soft_weighted_sqrt_dev_acc = [
+        0.907, 0.906, 0.906, 0.910, 0.944,
+        0.956, 0.969, 0.975, 0.982, 0.987,
+        0.991, 0.990, 0.990, 0.991, 0.993,
+        0.994, 0.993, 0.997, 0.996, 0.998,
+        0.996, 0.997, 0.997, 0.999, 0.997,
+    ]
+    soft_weighted_sqrt_mcc = [
+        0.043, 0.122, 0.381, 0.517, 0.685,
+        0.730, 0.801, 0.832, 0.870, 0.906,
+        0.921, 0.924, 0.924, 0.929, 0.936,
+        0.940, 0.938, 0.949, 0.940, 0.954,
+        0.948, 0.950, 0.947, 0.956, 0.945,
+    ]
+    soft_weighted_log_dev_acc = [
+        0.873, 0.861, 0.880, 0.906, 0.935,
+        0.943, 0.961, 0.967, 0.972, 0.977,
+        0.980, 0.971, 0.981, 0.983, 0.982,
+        0.986, 0.986, 0.988, 0.984, 0.991,
+        0.989, 0.992, 0.993, 0.994, 0.995,
+    ]
+    soft_weighted_log_mcc = [
+        0.047, 0.126, 0.366, 0.615, 0.745,
+        0.769, 0.832, 0.857, 0.873, 0.880,
+        0.892, 0.891, 0.902, 0.914, 0.907,
+        0.914, 0.917, 0.921, 0.914, 0.923,
+        0.920, 0.929, 0.931, 0.933, 0.933,
+    ]
+    soft_weighted_capped_dev_acc = [
+        0.654, 0.771, 0.718, 0.795, 0.873,
+        0.886, 0.907, 0.924, 0.938, 0.963,
+        0.965, 0.958, 0.965, 0.967, 0.974,
+        0.976, 0.972, 0.975, 0.972, 0.980,
+        0.980, 0.982, 0.987, 0.987, 0.984,
+    ]
+    soft_weighted_capped_mcc = [
+        0.100, 0.205, 0.311, 0.399, 0.577,
+        0.640, 0.686, 0.726, 0.796, 0.825,
+        0.850, 0.851, 0.874, 0.874, 0.891,
+        0.896, 0.890, 0.898, 0.900, 0.908,
+        0.909, 0.908, 0.920, 0.919, 0.914,
+    ]
 
     __plot_graph(
         unweighted_dev_acc,
         "Dev Accuracy",
         "dev_acc_soft_weighted.png",
-        y_weighted=soft_weighted_dev_acc,
         y_weighted_sqrt=soft_weighted_sqrt_dev_acc,
         y_weighted_log=soft_weighted_log_dev_acc,
         y_weighted_capped=soft_weighted_capped_dev_acc,
@@ -173,7 +205,6 @@ def exp2():
         unweighted_mcc,
         "MCC",
         "mcc_soft_weighted.png",
-        y_weighted=soft_weighted_mcc,
         y_weighted_sqrt=soft_weighted_sqrt_mcc,
         y_weighted_log=soft_weighted_log_mcc,
         y_weighted_capped=soft_weighted_capped_mcc,
