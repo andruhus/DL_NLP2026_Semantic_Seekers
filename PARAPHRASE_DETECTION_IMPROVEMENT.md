@@ -138,6 +138,7 @@ To mitigate this effect we tried 3 smoothing techniques:
 
 ### Improvement 3: Focal Loss
 
+#### Idea
 We also implemented binary focal loss, adapted to the multi-label setting. For every example-label pair, the unreduced BCE loss is first computed. The loss is then multiplied by a focusing factor:
 
 $$
@@ -146,25 +147,48 @@ $$
 
 where $p_t$ is the predicted probability of the correct binary class and $\gamma \geq 0$ is the focusing parameter. Easy, confidently classified examples receive less weight, allowing training to focus on difficult decisions. When $\gamma=0$, focal loss reduces to ordinary BCE; increasing $\gamma$ suppresses easy examples more strongly.
 
-Our implementation in `paraphrase_detection/focal_loss.py` does not use an additional $\alpha$ class-balancing term, so the experiment isolates the effect of the focusing parameter. `bart_detection.py` accepts multiple unique gamma values through repeated `--focal_gamma` arguments and trains a separate model for every value. Focal loss can be run through the dedicated `focal` mode or included in `compare`; in `compare`, the script trains unweighted BCE, aggressive Weighted BCE, and one focal-loss model for every requested gamma value.
+#### Methodlogy
+Our implementation in `paraphrase_detection/focal_loss.py` does not use an additional $\alpha$ class-balancing term, so the experiment isolates the effect of the focusing parameter. `bart_detection.py` accepts multiple unique gamma values through repeated `--focal_gamma` arguments and trains a separate model for every value. The dedicated `focal` mode runs only the requested focal-loss experiments. The default `compare` mode runs unweighted BCE, aggressive Weighted BCE, and one focal-loss model for every requested gamma value, unless `--compare_bce_only` is supplied. The `compare_weighted` mode compares unweighted BCE with all four Weighted BCE variants, while `compare_non_aggressive_weighted` runs only the square-root, logarithmic, and capped variants.
 
-#### Focal-Loss Experiment
-
-We evaluated five focusing parameters with 5 epochs and a batch size of 16:
+We evaluated two sets of five focusing parameters with 5 epochs and a batch size of 16. The initial sweep was:
 
 ```sh
-sbatch run_bart_detection.sh 5 focal --batch_size 16 --focal_gamma 0.25 --focal_gamma 0.5 --focal_gamma 1 --focal_gamma 2 --focal_gamma 4 --use_gpu
+sbatch run_bart_detection.sh 5 focal --batch_size 16 \
+--focal_gamma 0.25 \
+--focal_gamma 0.5 \
+--focal_gamma 0.62 \
+--focal_gamma 0.75 \ 
+--focal_gamma 0.87 \
+--focal_gamma 1 \
+--focal_gamma 1.25 \ 
+--focal_gamma 1.5 \
+--focal_gamma 2 \
+--focal_gamma 4 \
+--use_gpu
 ```
+
+We then ran a second sweep around the most promising region:
+
+```sh
+sbatch run_bart_detection.sh 5 focal --batch_size 16 --focal_gamma 0.87 --focal_gamma 1 --focal_gamma 1.25 --use_gpu
+```
+
+#### Results
 
 | Focal-loss gamma | Development accuracy | Development MCC |
 | ---: | ---: | ---: |
 | 0.25 | 0.9505 | 0.4201 |
 | 0.5 | 0.9507 | 0.4372 |
-| 1 | **0.9567** | **0.4606** |
+| 0.62 | 0.9391 | 0.3571 |
+| 0.75 | 0.9107 | 0.0380 |
+| 0.87 | 0.9563 | **0.5085** |
+| 1 | 0.9567 | 0.4606 |
+| 1.25 | **0.9577** | 0.4992 |
+| 1.5 | 0.9542 | 0.4486 |
 | 2 | 0.9462 | 0.4130 |
 | 4 | 0.9232 | 0.1830 |
 
-Among the tested values, $\gamma=1$ performs best on both development accuracy and MCC. Its performance is almost identical to the 5-epoch unweighted BCE baseline (accuracy 0.9558, MCC 0.4610). Larger values, especially $\gamma=4$, over-focus on difficult examples and substantially reduce performance. These scores should not be compared directly with the 25-epoch BCE results because the training duration is different.
+The best accuracy is obtained with $\gamma=1.25$ (0.9577), while the best MCC is obtained with $\gamma=0.87$ (0.5085). Therefore, there is no single gamma that maximizes both metrics. Both values outperform the 5-epoch unweighted BCE baseline in at least one metric: gamma 1.25 improves accuracy over 0.9558, and gamma 0.87 improves MCC over 0.4610. Larger values, especially $\gamma=4$, substantially reduce performance. These scores should not be compared directly with the 25-epoch BCE results because the training duration is different.
 
 ## Experiments
 
@@ -245,11 +269,16 @@ The absolute loss values should not be compared directly because Weighted BCE re
 | ---: | ---: | ---: |
 | 0.25 | 0.9505 | 0.4201 |
 | 0.5 | 0.9507 | 0.4372 |
-| 1 | **0.9567** | **0.4606** |
+| 0.62 | 0.9391 | 0.3571 |
+| 0.75 | 0.9107 | 0.0380 |
+| 0.87 | 0.9563 | **0.5085** |
+| 1 | 0.9567 | 0.4606 |
+| 1.25 | **0.9577** | 0.4992 |
+| 1.5 | 0.9542 | 0.4486 |
 | 2 | 0.9462 | 0.4130 |
 | 4 | 0.9232 | 0.1830 |
 
-The best tested value is $\gamma=1$. It approximately matches the 5-epoch unweighted BCE baseline, but does not provide a meaningful MCC improvement. Increasing gamma beyond 1 harms both metrics in this experiment.
+The best accuracy is obtained with $\gamma=1.25$ (0.9577), whereas $\gamma=0.87$ gives the best MCC (0.5085). The new sweep therefore improves the selection: gamma 1.25 is preferred if accuracy is the primary criterion, and gamma 0.87 is preferred if MCC is prioritized.
 
 #### Discussion
 
@@ -267,7 +296,7 @@ Overall, uncapped inverse-frequency Weighted BCE is not an improvement over the 
 
 The main focal-loss hyperparameter is $\gamma$. Rather than tuning unrelated parameters simultaneously, we vary only $\gamma$ and keep the architecture, seed, optimizer, learning rate, number of epochs, batch size, and prediction threshold fixed. This isolates the effect of focusing. Small gamma values stay close to BCE, whereas larger values increasingly concentrate learning on hard examples. Each gamma receives a separate checkpoint and development evaluation.
 
-Among the tested values, $\gamma=1$ is the selected focal-loss hyperparameter because it gives the highest development accuracy (0.9567) and MCC (0.4606). The sweep also shows that larger values are not automatically better: performance decreases for $\gamma=2$ and drops substantially for $\gamma=4$. Since these experiments use only 5 epochs, a longer run with $\gamma=1$ would be needed for a fair comparison with the 25-epoch BCE experiment.
+The preferred focal-loss hyperparameter depends on the evaluation objective: choose $\gamma=1.25$ for the highest development accuracy, or $\gamma=0.87$ for the highest MCC. The results also show that larger values are not automatically better: performance drops for $\gamma=2$ and substantially deteriorates for $\gamma=4$. Since these experiments use only 5 epochs, longer runs with the selected gamma values would be needed for a definitive comparison with the 25-epoch BCE experiment.
 
 ### Visualizations
 
