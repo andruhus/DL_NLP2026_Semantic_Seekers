@@ -253,10 +253,10 @@ def train_multitask(args):
 
         train_acc, dev_acc = {
             "nli": (nli_train_acc, nli_dev_acc)
-        }[args.task]
+        }["nli"]
 
         logging.info(
-            f"Epoch {epoch+1:02} ({args.task}): train loss :: {train_loss:.3f}, train :: {train_acc:.3f}, dev :: {dev_acc:.3f}"
+            f"Epoch {epoch+1:02} ({"nli"}): train loss :: {train_loss:.3f}, train :: {train_acc:.3f}, dev :: {dev_acc:.3f}"
         )
 
         if dev_acc > best_dev_acc:
