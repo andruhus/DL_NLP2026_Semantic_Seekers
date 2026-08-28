@@ -297,8 +297,8 @@ def get_args():
     args, _ = parser.parse_known_args()
 
     # Dataset paths
-    parser.add_argument("--nli_train", type=str, default="data/allnli-train-small.csv")
-    parser.add_argument("--nli_dev", type=str, default="data/allnli-dev-small.csv")
+    parser.add_argument("--nli_train", type=str, default="data/allnli-train.csv")
+    parser.add_argument("--nli_dev", type=str, default="data/allnli-dev.csv")
 
 
 
