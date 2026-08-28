@@ -147,6 +147,10 @@ def train_multitask(args):
     nli_train_data = load_allnli_data(args.nli_train)  # musst du definieren
     nli_dev_data = load_allnli_data(args.nli_dev)
 
+    # --- Debug: Label-Datentyp prüfen ---
+    print("Train label example:", nli_train_data[0][2], type(nli_train_data[0][2]))
+    print("Unique train labels:", {x[2] for x in nli_train_data[:50]})
+
     nli_train_dataloader = None
     nli_dev_dataloader = None
     nli_train_data = AllNLIDataset(nli_train_data, args)
@@ -227,9 +231,10 @@ def train_multitask(args):
 
             optimizer.zero_grad()
             logits = model.predict_nli(b_ids1, b_mask1, b_ids2, b_mask2)
-            loss = F.cross_entropy(logits, b_labels, label_smoothing=0.3)
+            loss = F.cross_entropy(logits, b_labels, label_smoothing=0.0)
             loss.backward()
             optimizer.step()
+            scheduler.step()
 
             train_loss += loss.item()
             num_batches += 1
@@ -292,8 +297,8 @@ def get_args():
     args, _ = parser.parse_known_args()
 
     # Dataset paths
-    parser.add_argument("--nli_train", type=str, default="data/allnli-train.csv")
-    parser.add_argument("--nli_dev", type=str, default="data/allnli-dev.csv")
+    parser.add_argument("--nli_train", type=str, default="data/allnli-train-small.csv")
+    parser.add_argument("--nli_dev", type=str, default="data/allnli-dev-small.csv")
 
 
 
@@ -319,5 +324,4 @@ if __name__ == "__main__":
     logfile = setup_logging(args.filepath)
     seed_everything(args.seed)  # fix the seed for reproducibility
     train_multitask(args)
-    test_model(args)
 
