@@ -281,8 +281,19 @@ def train_multitask(args):
 
     logging.info("Loading pretrained AllNLI model...")
     pretrained = torch.load("models/pretrain-allnli.pt")
-    print("Pretrained keys:", list(pretrained["model"].keys())[:20])
-    print("BERT keys:", list(model.bert.state_dict().keys())[:20])
+    pretrained = torch.load(pretrained_path, map_location="cpu")
+    full_state = pretrained["model"]
+
+    bert_state = {
+        k.replace("bert.", ""): v
+        for k, v in full_state.items()
+        if k.startswith("bert.")
+    }
+
+    model.bert.load_state_dict(bert_state)
+
+    logging.info(f"Pretrained keys: {list(pretrained["model"].keys())[:20]}")
+    logging.info(f"BERT keys: {list(model.bert.state_dict().keys())[:20]}")
     model.bert.load_state_dict(pretrained["model"])
 
     for p in model.bert.parameters():
