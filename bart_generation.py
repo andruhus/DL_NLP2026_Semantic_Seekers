@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 from transformers import AutoTokenizer, BartForConditionalGeneration
 
-from lr_schedulers import (
+from paraphrase_generation.lr_schedulers import (
     ConstantLearningRate,
     CosineDecay,
     InverseSquareRoot,
