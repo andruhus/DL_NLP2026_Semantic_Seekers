@@ -7,6 +7,7 @@
 ### Starting point
 - As discussed in the lecture, Rope can help to boost performance due to more efficient positional encoding
 - But after short researching and thinking it turns out, that this approach would not be meaningful, since bert works with absolute positions not with relative
+- Additional the sst dataset has only short sequences
 ## Classification Layer
 ### Starting point
 - There is huge overfitting happening in the base form of (vgl log file)
@@ -55,4 +56,9 @@
 ## Pretraining on ALLNLI Data
 - aim is to start the model training at a good state (good initailization)
 - since there where some complications, the code was reset after establishing the pretrained model to the state before
+- after pretraining the .bert weights where transfered to the new trained sst-models
 - nach pretraining dann erstmal nur Klassifikationskopf trainieren für paar epochs?
+- unfortunately pretraining with allnli data resulted in more overfitting AND lower dev accuracy, therefore this will not be kept
+- After Hyperparameter optimization on the sst5 dataset, a more similar dataset will be chosen to do the pretraining
+## Introducing Weight decay
+- A simple technique to further decrease overfitting, which was overseen before.

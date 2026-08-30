@@ -95,10 +95,10 @@ class MultitaskBERT(nn.Module):
         self.sentiment_classifier = nn.Sequential(
             nn.Linear(BERT_HIDDEN_SIZE, 512),
             nn.GELU(),
-            nn.Dropout(0.3),
+            nn.Dropout(config.classifier_dropout),
             nn.Linear(512, 128),
             nn.GELU(),
-            nn.Dropout(0.3),
+            nn.Dropout(config.classifier_dropout),
             nn.Linear(128, N_SENTIMENT_CLASSES)
         )
 
@@ -258,6 +258,7 @@ def train_multitask(args):
     # Init model
     config = {
         "hidden_dropout_prob": args.hidden_dropout_prob,
+        "classifier_dropout": args.classifier_dropout,
         "hidden_size": BERT_HIDDEN_SIZE,
         "data_dir": ".",
         "option": args.option,
@@ -279,22 +280,18 @@ def train_multitask(args):
 ### Pretrained Model laden
 ###
 
-    logging.info("Loading pretrained AllNLI model...")
-    pretrained = torch.load("models/pretrain-allnli.pt")
-    pretrained = torch.load(pretrained_path, map_location="cpu")
-    full_state = pretrained["model"]
+#   logging.info("Loading pretrained AllNLI model...")
+#    pretrained = torch.load("models/pretrain-allnli.pt", map_location="cpu")
+#    full_state = pretrained["model"]
 
-    bert_state = {
-        k.replace("bert.", ""): v
-        for k, v in full_state.items()
-        if k.startswith("bert.")
-    }
+#    bert_state = {
+#        k.replace("bert.", ""): v
+#        for k, v in full_state.items()
+#        if k.startswith("bert.")
+#    }
 
-    model.bert.load_state_dict(bert_state)
+#    model.bert.load_state_dict(bert_state)
 
-    logging.info(f"Pretrained keys: {list(pretrained['model'].keys())[:20]}")
-    logging.info(f"BERT keys: {list(model.bert.state_dict().keys())[:20]}")
-    model.bert.load_state_dict(pretrained["model"])
 
     for p in model.bert.parameters():
         p.requires_grad = True
@@ -302,7 +299,7 @@ def train_multitask(args):
 ###
 ###
     lr = args.lr
-    optimizer = AdamW(model.parameters(), lr=lr)
+    optimizer = AdamW(model.parameters(), lr=lr, weight_decay=args.weight_decay)
 ###
 ### Hier kommt learning rate scheduler
 ###
@@ -311,7 +308,7 @@ def train_multitask(args):
     total_steps = args.epochs * len(sst_train_dataloader)
 
     # Warmup: 10% der Trainingsschritte
-    warmup_steps = int(0.1 * total_steps)
+    warmup_steps = int(args.warmup_ratio * total_steps)
 
     # Scheduler: Warmup + Linear Decay
     scheduler = get_linear_schedule_with_warmup(
@@ -354,7 +351,7 @@ def train_multitask(args):
                 class_counts = torch.tensor([ 961, 2104, 1528, 2090, 1215], dtype=torch.float)  # Beispielwerte
                 weights = class_counts.max() / class_counts
                 weights = weights.to(device)
-                loss = F.cross_entropy(logits, b_labels.view(-1),weight=weights, label_smoothing=0.3)
+                loss = F.cross_entropy(logits, b_labels.view(-1),weight=weights, label_smoothing=args.label_smoothing)
                 loss.backward()
                 optimizer.step()
                 scheduler.step()
@@ -611,12 +608,22 @@ def get_args():
     # Hyperparameters
     parser.add_argument("--batch_size", help="sst: 64 can fit a 12GB GPU", type=int, default=64)
     parser.add_argument("--hidden_dropout_prob", type=float, default=0.3)
-    parser.add_argument(
-        "--lr",
+    parser.add_argument("--lr",
         type=float,
         help="learning rate, default lr for 'pretrain': 1e-3, 'finetune': 1e-5",
         default=1e-3 if args.option == "pretrain" else 1e-5,
     )
+###
+###
+###
+    parser.add_argument("--label_smoothing", type=float, default=0.3)
+    parser.add_argument("--weight_decay", type=float, default=0.01)
+    parser.add_argument("--warmup_ratio", type=float, default=0.1)
+    parser.add_argument("--classifier_dropout", type=float, default=0.3)
+
+###
+###
+###
     parser.add_argument("--local_files_only", action="store_true")
 
     args = parser.parse_args()
