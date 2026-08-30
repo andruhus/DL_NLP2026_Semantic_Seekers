@@ -292,7 +292,7 @@ def train_multitask(args):
 
     model.bert.load_state_dict(bert_state)
 
-    logging.info(f"Pretrained keys: {list(pretrained["model"].keys())[:20]}")
+    logging.info(f"Pretrained keys: {list(pretrained['model'].keys())[:20]}")
     logging.info(f"BERT keys: {list(model.bert.state_dict().keys())[:20]}")
     model.bert.load_state_dict(pretrained["model"])
 
