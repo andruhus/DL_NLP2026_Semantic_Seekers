@@ -617,7 +617,7 @@ def get_args():
 ###
 ###
     parser.add_argument("--label_smoothing", type=float, default=0.3)
-    parser.add_argument("--weight_decay", type=float, default=0.01)
+    parser.add_argument("--weight_decay", type=float, default=0.00)
     parser.add_argument("--warmup_ratio", type=float, default=0.1)
     parser.add_argument("--classifier_dropout", type=float, default=0.3)
 
