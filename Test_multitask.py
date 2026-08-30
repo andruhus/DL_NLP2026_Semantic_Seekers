@@ -301,10 +301,7 @@ def train_multitask(args):
 
 
 
-    # Beispiel:
-    csv_path = "data/sst-sentiment-train.csv"
-    class_counts = compute_class_counts(csv_path)
-    print("Class counts:", class_counts)
+
     # Run for the specified number of epochs
     for epoch in range(args.epochs):
         model.train()
@@ -329,7 +326,7 @@ def train_multitask(args):
 
                 optimizer.zero_grad()
                 logits = model.predict_sentiment(b_ids, b_mask)
-                class_counts = torch.tensor([ 961, 2104, 1528, 2090, 1215], dtype=torch.float)  # Beispielwerte
+                class_counts = torch.tensor([ 961, 2104, 1528, 2090, 1215], dtype=torch.float)  
                 weights = class_counts.max() / class_counts
                 weights = weights.to(device)
                 loss = F.cross_entropy(logits, b_labels.view(-1),weight=weights, label_smoothing=0.3)
