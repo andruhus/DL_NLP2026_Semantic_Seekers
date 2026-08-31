@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from bert import BertModel
-from datasets import (
+from datasets_local import (
     SentenceClassificationDataset,
     SentencePairDataset,
     load_multitask_data,
@@ -293,8 +293,6 @@ def train_multitask(args):
 #    model.bert.load_state_dict(bert_state)
 
 
-    for p in model.bert.parameters():
-        p.requires_grad = True
 ###
 ###
 ###
@@ -348,7 +346,7 @@ def train_multitask(args):
                 optimizer.zero_grad()
                 logits = model.predict_sentiment(b_ids, b_mask)
                 #class counts wurden in anderem file gezählt
-                class_counts = torch.tensor([ 961, 2104, 1528, 2090, 1215], dtype=torch.float)  # Beispielwerte
+                class_counts = torch.tensor([ 961, 2104, 1528, 2090, 1215], dtype=torch.float)
                 weights = class_counts.max() / class_counts
                 weights = weights.to(device)
                 loss = F.cross_entropy(logits, b_labels.view(-1),weight=weights, label_smoothing=args.label_smoothing)

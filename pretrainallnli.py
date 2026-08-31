@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 from bert import BertModel
 
-from datasets import load_allnli_data, AllNLIDataset
+from datasets_local import load_allnli_data, AllNLIDataset
 
 
 from evaluation import model_eval_multitask, test_model_multitask, model_eval_nli

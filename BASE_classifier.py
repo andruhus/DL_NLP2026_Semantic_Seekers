@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from bert import BertModel
-from datasets import (
+from datasets_local import (
     SentenceClassificationDataset,
     SentencePairDataset,
     load_multitask_data,
