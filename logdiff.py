@@ -1,6 +1,7 @@
 import re
 from pathlib import Path
 from tabulate import tabulate
+import matplotlib.pyplot as plt
 
 EPOCH_RE = re.compile(
     r"Epoch\s+(\d+).*?train loss :: ([0-9.]+), train :: ([0-9.]+), dev :: ([0-9.]+)"
@@ -62,6 +63,38 @@ def print_diff_table(log1, log2, name1, name2):
     print(tabulate(rows, headers=headers, floatfmt=".3f"))
     print()
 
+def plot_acc(log1, log2, name1, name2):
+    epochs1 = sorted(log1.keys())
+    epochs2 = sorted(log2.keys())
+
+    train1 = [log1[e]["train"] for e in epochs1]
+    dev1   = [log1[e]["dev"]   for e in epochs1]
+
+    train2 = [log2[e]["train"] for e in epochs2]
+    dev2   = [log2[e]["dev"]   for e in epochs2]
+
+    plt.figure(figsize=(10, 6))
+
+    # Farben pro Logfile
+    color1 = "tab:blue"
+    color2 = "tab:orange"
+
+    # Logfile 1
+    plt.plot(epochs1, train1, label=f"{name1} train", color=color1, linestyle="-", marker="o")
+    plt.plot(epochs1, dev1,   label=f"{name1} dev",   color=color1, linestyle="--", marker="o")
+
+    # Logfile 2
+    plt.plot(epochs2, train2, label=f"{name2} train", color=color2, linestyle="-", marker="x")
+    plt.plot(epochs2, dev2,   label=f"{name2} dev",   color=color2, linestyle="--", marker="x")
+
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy")
+    plt.title("Train/Dev Accuracy Vergleich")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
 def main():
     log_dir = Path("logs")
     logfiles = sorted(log_dir.glob("*.log"))
@@ -72,6 +105,7 @@ def main():
     log2 = parse_logfile(lf2)
 
     print_diff_table(log1, log2, lf1.name, lf2.name)
+    plot_acc(log1, log2, lf1.name, lf2.name)
 
 if __name__ == "__main__":
     main()
