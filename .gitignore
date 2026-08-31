@@ -7,7 +7,7 @@
 logdir
 models
 slurm_files
-
+data/
 # Personal / local files
 claude.md
 documentation_uwaish.md
