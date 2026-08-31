@@ -96,10 +96,10 @@ class MultitaskBERT(nn.Module):
         self.sentiment_classifier = nn.Sequential(
             nn.Linear(BERT_HIDDEN_SIZE, 512),
             nn.GELU(),
-            nn.Dropout(0.3),
+            nn.Dropout(args.classifier_dropout),
             nn.Linear(512, 128),
             nn.GELU(),
-            nn.Dropout(0.3),
+            nn.Dropout(args.classifier_dropout),
             nn.Linear(128, N_SENTIMENT_CLASSES)
         )
 
@@ -278,7 +278,7 @@ def train_multitask(args):
     model = model.to(device)
 
     lr = args.lr
-    optimizer = AdamW(model.parameters(), lr=lr)
+    optimizer = AdamW(model.parameters(), lr=lr, weight_decay=args.weight_decay)
 ###
 ### Hier kommt learning rate scheduler
 ###
@@ -286,7 +286,7 @@ def train_multitask(args):
     total_steps = args.epochs * len(sst_train_dataloader)
 
     # Warmup: 10% der Trainingsschritte
-    warmup_steps = int(0.1 * total_steps)
+    warmup_steps = int(args.warmup_ratio * total_steps)
 
     # Scheduler: Warmup + Linear Decay
     scheduler = get_linear_schedule_with_warmup(
@@ -323,7 +323,7 @@ def train_multitask(args):
 
                 optimizer.zero_grad()
                 logits = model.predict_sentiment(b_ids, b_mask)
-                loss = F.cross_entropy(logits, b_labels.view(-1), label_smoothing=0.1)
+                loss = F.cross_entropy(logits, b_labels.view(-1), label_smoothing=args.label_smoothing)
                 loss.backward()
                 optimizer.step()
                 scheduler.step()
@@ -587,7 +587,17 @@ def get_args():
         default=1e-3 if args.option == "pretrain" else 1e-5,
     )
     parser.add_argument("--local_files_only", action="store_true")
+    ###
+    ###
+    ###
+    parser.add_argument("--label_smoothing", type=float, default=0.3)
+    parser.add_argument("--weight_decay", type=float, default=0.01)
+    parser.add_argument("--warmup_ratio", type=float, default=0.1)
+    parser.add_argument("--classifier_dropout", type=float, default=0.3)
 
+    ###
+    ###
+    ###
     args = parser.parse_args()
     return args
 
