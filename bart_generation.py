@@ -549,11 +549,7 @@ def finetune_paraphrase_generation(args):
             index=False, float_format=lambda value: f"{value:.4f}",
         )
     )
-    comparison_path = Path(
-        "predictions/bart/bart-generation-lr-scheduler-comparison.csv"
-    )
-    comparison_path.parent.mkdir(parents=True, exist_ok=True)
-    displayed_comparison.to_csv(comparison_path, index=False)
+    
 
     best_result = max(results, key=lambda result: result["dev_penalized_bleu"])
     print(
