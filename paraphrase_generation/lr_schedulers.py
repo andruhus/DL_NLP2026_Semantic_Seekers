@@ -6,6 +6,8 @@ from typing_extensions import override
 class ConstantLearningRate:
     """Constant learning-rate baseline."""
 
+    requires_metric = False
+
     def __init__(self, initial_lr, min_lr=0.0):
         self.initial_lr = initial_lr
         self.min_lr = min_lr

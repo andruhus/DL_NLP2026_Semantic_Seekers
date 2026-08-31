@@ -21,13 +21,13 @@ cd "${WORKING_DIR}"
 
 USE_GPU=true
 BATCH_SIZE=8
-LEARNING_RATE=2e-5
-MIN_LR=0.0
-STEP_DECAY_EPOCHS=1
-STEP_GAMMA=0.5
-WARMUP_STEPS=100
-METRIC_FACTOR=0.5
-METRIC_PATIENCE=1
+LEARNING_RATES=(2e-5)
+MIN_LRS=(0.0)
+STEP_DECAY_EPOCHS=(1)
+STEP_GAMMAS=(0.5)
+WARMUP_STEPS=(100)
+METRIC_FACTORS=(0.5)
+METRIC_PATIENCES=(1)
 POSITIONAL_ARGS=()
 
 while (( $# > 0 )); do
@@ -40,22 +40,35 @@ while (( $# > 0 )); do
             USE_GPU=false
             shift
             ;;
-        --batch_size|--learning_rate|--min_lr|--step_decay_epochs|--step_gamma|--warmup_steps|--metric_factor|--metric_patience)
+        --batch_size)
             if (( $# < 2 )); then
-                echo "$1 requires a value" >&2
+                echo "--batch_size requires a value" >&2
                 exit 2
             fi
-            case "$1" in
-                --batch_size) BATCH_SIZE="$2" ;;
-                --learning_rate) LEARNING_RATE="$2" ;;
-                --min_lr) MIN_LR="$2" ;;
-                --step_decay_epochs) STEP_DECAY_EPOCHS="$2" ;;
-                --step_gamma) STEP_GAMMA="$2" ;;
-                --warmup_steps) WARMUP_STEPS="$2" ;;
-                --metric_factor) METRIC_FACTOR="$2" ;;
-                --metric_patience) METRIC_PATIENCE="$2" ;;
-            esac
+            BATCH_SIZE="$2"
             shift 2
+            ;;
+        --learning_rate|--min_lr|--step_decay_epochs|--step_gamma|--warmup_steps|--metric_factor|--metric_patience)
+            OPTION="$1"
+            VALUES=()
+            shift
+            while (( $# > 0 )) && [[ "$1" != --* ]]; do
+                VALUES+=("$1")
+                shift
+            done
+            if (( ${#VALUES[@]} == 0 )); then
+                echo "${OPTION} requires at least one value" >&2
+                exit 2
+            fi
+            case "${OPTION}" in
+                --learning_rate) LEARNING_RATES=("${VALUES[@]}") ;;
+                --min_lr) MIN_LRS=("${VALUES[@]}") ;;
+                --step_decay_epochs) STEP_DECAY_EPOCHS=("${VALUES[@]}") ;;
+                --step_gamma) STEP_GAMMAS=("${VALUES[@]}") ;;
+                --warmup_steps) WARMUP_STEPS=("${VALUES[@]}") ;;
+                --metric_factor) METRIC_FACTORS=("${VALUES[@]}") ;;
+                --metric_patience) METRIC_PATIENCES=("${VALUES[@]}") ;;
+            esac
             ;;
         *)
             POSITIONAL_ARGS+=("$1")
@@ -66,6 +79,7 @@ done
 
 if (( ${#POSITIONAL_ARGS[@]} > 2 )); then
     echo "Usage: sbatch $0 [epochs] [scheduler_mode] [options]" >&2
+    echo "Scheduler options accept one or more values, e.g. --step_gamma 0.3 0.5." >&2
     exit 2
 fi
 
@@ -102,13 +116,13 @@ echo "Node: ${NODE_NAME}"
 echo "Epochs: ${EPOCHS}"
 echo "Scheduler mode: ${SCHEDULER_MODE}"
 echo "Batch size: ${BATCH_SIZE}"
-echo "Initial learning rate: ${LEARNING_RATE}"
-echo "Minimum learning rate: ${MIN_LR}"
-echo "Step-decay interval (epochs): ${STEP_DECAY_EPOCHS}"
-echo "Step-decay gamma: ${STEP_GAMMA}"
-echo "Inverse-sqrt warmup steps: ${WARMUP_STEPS}"
-echo "Metric factor: ${METRIC_FACTOR}"
-echo "Metric patience: ${METRIC_PATIENCE}"
+echo "Initial learning rates: ${LEARNING_RATES[*]}"
+echo "Minimum learning rates: ${MIN_LRS[*]}"
+echo "Step-decay intervals (epochs): ${STEP_DECAY_EPOCHS[*]}"
+echo "Step-decay gammas: ${STEP_GAMMAS[*]}"
+echo "Inverse-sqrt warmup steps: ${WARMUP_STEPS[*]}"
+echo "Metric factors: ${METRIC_FACTORS[*]}"
+echo "Metric patiences: ${METRIC_PATIENCES[*]}"
 echo "Use GPU: ${USE_GPU}"
 
 python --version
@@ -125,13 +139,13 @@ BART_ARGS=(
     --epochs "${EPOCHS}"
     --scheduler_mode "${SCHEDULER_MODE}"
     --batch_size "${BATCH_SIZE}"
-    --learning_rate "${LEARNING_RATE}"
-    --min_lr "${MIN_LR}"
-    --step_decay_epochs "${STEP_DECAY_EPOCHS}"
-    --step_gamma "${STEP_GAMMA}"
-    --warmup_steps "${WARMUP_STEPS}"
-    --metric_factor "${METRIC_FACTOR}"
-    --metric_patience "${METRIC_PATIENCE}"
+    --learning_rate "${LEARNING_RATES[@]}"
+    --min_lr "${MIN_LRS[@]}"
+    --step_decay_epochs "${STEP_DECAY_EPOCHS[@]}"
+    --step_gamma "${STEP_GAMMAS[@]}"
+    --warmup_steps "${WARMUP_STEPS[@]}"
+    --metric_factor "${METRIC_FACTORS[@]}"
+    --metric_patience "${METRIC_PATIENCES[@]}"
 )
 if [[ "${USE_GPU}" == true ]]; then
     BART_ARGS+=(--use_gpu)

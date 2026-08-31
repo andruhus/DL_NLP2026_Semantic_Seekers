@@ -1,5 +1,6 @@
 import argparse
 import math
+from itertools import product
 import random
 from pathlib import Path
 
@@ -126,13 +127,14 @@ def train_model(
             n_batches += 1
 
         avg_loss = total_loss / n_batches
-        bleu = evaluate_model(
+        bleu_scores = evaluate_model(
             model,
             dev_dataset,
             device,
             tokenizer,
             batch_size=batch_size,
         )
+        bleu = bleu_scores["penalized_bleu"]
         if lr_sched.requires_metric:
             lr_sched.step(bleu)
         print(
@@ -207,20 +209,25 @@ def evaluate_model(model, test_data, device, tokenizer, batch_size=8):
     references = test_data["sentence2"].tolist()
 
     model.train()
-    # Calculate BLEU score
-    bleu_score_reference = bleu.corpus_score(references, [predictions]).score
-    # Penalize BLEU score if its to close to the input
-    bleu_score_inputs = 100 - bleu.corpus_score(inputs, [predictions]).score
+    # Calculate BLEU against references and against the original input.
+    reference_bleu = bleu.corpus_score(predictions, [references]).score
+    input_bleu = bleu.corpus_score(predictions, [inputs]).score
 
-    print(f"BLEU Score: {bleu_score_reference}", f"Negative BLEU Score with input: {bleu_score_inputs}")
-    
+    print(
+        f"Reference BLEU: {reference_bleu}",
+        f"Input BLEU: {input_bleu}",
+    )
 
-    # Penalize BLEU and rescale it to 0-100
-    # If you perfectly predict all the targets, you should get an penalized BLEU score of around 52
-    penalized_bleu = bleu_score_reference * bleu_score_inputs / 52
+    # Penalize predictions that are too similar to the input and rescale to 0-100.
+    # A perfect target prediction yields a penalized score of roughly 52.
+    penalized_bleu = reference_bleu * (100 - input_bleu) / 52
     print(f"Penalized BLEU Score: {penalized_bleu}")
 
-    return penalized_bleu
+    return {
+        "reference_bleu": reference_bleu,
+        "input_bleu": input_bleu,
+        "penalized_bleu": penalized_bleu,
+    }
 
 
 def seed_everything(seed=11711):
@@ -252,114 +259,180 @@ def get_args():
         ),
         default="compare",
     )
-    parser.add_argument("--learning_rate", type=float, default=2e-5)
-    parser.add_argument("--min_lr", type=float, default=0.0)
-    parser.add_argument("--step_decay_epochs", type=int, default=1)
-    parser.add_argument("--step_gamma", type=float, default=0.5)
-    parser.add_argument("--warmup_steps", type=int, default=100)
-    parser.add_argument("--metric_factor", type=float, default=0.5)
-    parser.add_argument("--metric_patience", type=int, default=1)
+    parser.add_argument("--learning_rate", type=float, nargs="+", default=[2e-5])
+    parser.add_argument("--min_lr", type=float, nargs="+", default=[0.0])
+    parser.add_argument(
+        "--step_decay_epochs", type=int, nargs="+", default=[1],
+    )
+    parser.add_argument("--step_gamma", type=float, nargs="+", default=[0.5])
+    parser.add_argument("--warmup_steps", type=int, nargs="+", default=[100])
+    parser.add_argument("--metric_factor", type=float, nargs="+", default=[0.5])
+    parser.add_argument("--metric_patience", type=int, nargs="+", default=[1])
     args = parser.parse_args()
 
     if args.epochs < 1:
         parser.error("--epochs must be at least 1")
     if args.batch_size < 1:
         parser.error("--batch_size must be at least 1")
-    if not math.isfinite(args.learning_rate) or args.learning_rate <= 0.0:
-        parser.error("--learning_rate must be a finite, positive number")
-    if not math.isfinite(args.min_lr) or args.min_lr < 0.0:
-        parser.error("--min_lr must be a finite, non-negative number")
-    if args.min_lr > args.learning_rate:
-        parser.error("--min_lr cannot exceed --learning_rate")
-    if args.step_decay_epochs < 1:
-        parser.error("--step_decay_epochs must be at least 1")
-    if not math.isfinite(args.step_gamma) or not 0.0 < args.step_gamma <= 1.0:
-        parser.error("--step_gamma must be in the interval (0, 1]")
-    if args.warmup_steps < 0:
-        parser.error("--warmup_steps cannot be negative")
-    if (
-        not math.isfinite(args.metric_factor)
-        or not 0.0 < args.metric_factor < 1.0
+    if any(
+        not math.isfinite(value) or value <= 0.0
+        for value in args.learning_rate
     ):
-        parser.error("--metric_factor must be in the interval (0, 1)")
-    if args.metric_patience < 0:
-        parser.error("--metric_patience cannot be negative")
+        parser.error("--learning_rate values must be finite and positive")
+    if any(
+        not math.isfinite(value) or value < 0.0 for value in args.min_lr
+    ):
+        parser.error("--min_lr values must be finite and non-negative")
+    if any(min_lr > learning_rate for learning_rate in args.learning_rate
+           for min_lr in args.min_lr):
+        parser.error("every --min_lr value must not exceed every --learning_rate value")
+    if any(value < 1 for value in args.step_decay_epochs):
+        parser.error("--step_decay_epochs values must be at least 1")
+    if any(
+        not math.isfinite(value) or not 0.0 < value <= 1.0
+        for value in args.step_gamma
+    ):
+        parser.error("--step_gamma values must be in the interval (0, 1]")
+    if any(value < 0 for value in args.warmup_steps):
+        parser.error("--warmup_steps values cannot be negative")
+    if any(
+        not math.isfinite(value) or not 0.0 < value < 1.0
+        for value in args.metric_factor
+    ):
+        parser.error("--metric_factor values must be in the interval (0, 1)")
+    if any(value < 0 for value in args.metric_patience):
+        parser.error("--metric_patience values cannot be negative")
     return args
 
 
 def create_experiments(
     scheduler_mode,
-    learning_rate,
-    min_lr,
+    learning_rates,
+    min_lrs,
     total_steps,
     steps_per_epoch,
     step_decay_epochs,
-    step_gamma,
+    step_gammas,
     warmup_steps,
-    metric_factor,
-    metric_patience,
+    metric_factors,
+    metric_patiences,
 ):
-    all_experiments = (
-        (
-            "Constant learning rate",
+    """Create one experiment for every relevant scheduler-parameter combination."""
+    selected_modes = (
+        {
             "constant",
-            ConstantLearningRate(learning_rate),
-        ),
-        (
-            "Step decay",
             "step",
-            StepDecay(
-                learning_rate,
-                step_size=steps_per_epoch * step_decay_epochs,
-                gamma=step_gamma,
-                min_lr=min_lr,
-            ),
-        ),
-        (
-            "Cosine decay",
             "cosine",
-            CosineDecay(learning_rate, total_steps=total_steps, min_lr=min_lr),
-        ),
-        (
-            "Linear decay",
             "linear",
-            LinearDecay(learning_rate, total_steps=total_steps, min_lr=min_lr),
-        ),
-        (
-            "Inverse square root",
             "inverse_sqrt",
-            InverseSquareRoot(
-                learning_rate, warmup_steps=warmup_steps, min_lr=min_lr,
-            ),
-        ),
-        (
-            "Metric dependent",
             "metric",
-            MetricDependent(
-                learning_rate,
-                factor=metric_factor,
-                patience=metric_patience,
-                min_lr=min_lr,
-            ),
-        ),
-    )
-
-    selected = (
-        all_experiments
+        }
         if scheduler_mode == "compare"
-        else tuple(
-            experiment
-            for experiment in all_experiments
-            if experiment[1] == scheduler_mode
-        )
+        else {scheduler_mode}
     )
+    experiments = []
+
+    if "constant" in selected_modes:
+        for learning_rate in learning_rates:
+            experiments.append(
+                (
+                    f"Constant learning rate (lr={learning_rate:g})",
+                    "constant",
+                    ConstantLearningRate(learning_rate),
+                )
+            )
+
+    if "step" in selected_modes:
+        for learning_rate, min_lr, decay_epochs, gamma in product(
+            learning_rates, min_lrs, step_decay_epochs, step_gammas,
+        ):
+            step_size = steps_per_epoch * decay_epochs
+            experiments.append(
+                (
+                    "Step decay "
+                    f"(lr={learning_rate:g}, min_lr={min_lr:g}, "
+                    f"decay_epochs={decay_epochs}, step_size={step_size}, "
+                    f"gamma={gamma:g})",
+                    "step",
+                    StepDecay(
+                        learning_rate,
+                        step_size=step_size,
+                        gamma=gamma,
+                        min_lr=min_lr,
+                    ),
+                )
+            )
+
+    if "cosine" in selected_modes:
+        for learning_rate, min_lr in product(learning_rates, min_lrs):
+            experiments.append(
+                (
+                    "Cosine decay "
+                    f"(lr={learning_rate:g}, min_lr={min_lr:g}, "
+                    f"total_steps={total_steps})",
+                    "cosine",
+                    CosineDecay(
+                        learning_rate, total_steps=total_steps, min_lr=min_lr,
+                    ),
+                )
+            )
+
+    if "linear" in selected_modes:
+        for learning_rate, min_lr in product(learning_rates, min_lrs):
+            experiments.append(
+                (
+                    "Linear decay "
+                    f"(lr={learning_rate:g}, min_lr={min_lr:g}, "
+                    f"total_steps={total_steps})",
+                    "linear",
+                    LinearDecay(
+                        learning_rate, total_steps=total_steps, min_lr=min_lr,
+                    ),
+                )
+            )
+
+    if "inverse_sqrt" in selected_modes:
+        for learning_rate, min_lr, warmup in product(
+            learning_rates, min_lrs, warmup_steps,
+        ):
+            experiments.append(
+                (
+                    "Inverse square root "
+                    f"(lr={learning_rate:g}, min_lr={min_lr:g}, "
+                    f"warmup_steps={warmup})",
+                    "inverse_sqrt",
+                    InverseSquareRoot(
+                        learning_rate, warmup_steps=warmup, min_lr=min_lr,
+                    ),
+                )
+            )
+
+    if "metric" in selected_modes:
+        for learning_rate, min_lr, factor, patience in product(
+            learning_rates, min_lrs, metric_factors, metric_patiences,
+        ):
+            experiments.append(
+                (
+                    "Metric dependent "
+                    f"(lr={learning_rate:g}, min_lr={min_lr:g}, "
+                    f"factor={factor:g}, patience={patience}, threshold=1e-08)",
+                    "metric",
+                    MetricDependent(
+                        learning_rate,
+                        factor=factor,
+                        patience=patience,
+                        min_lr=min_lr,
+                    ),
+                )
+            )
+
     return [
         (
             name,
             lr_sched,
-            f"models/bart_generation_{mode}_best.pt",
+            f"models/bart_generation_{mode}_{index:03d}_best.pt",
         )
-        for name, mode, lr_sched in selected
+        for index, (name, mode, lr_sched) in enumerate(experiments, start=1)
     ]
 
 
@@ -393,7 +466,7 @@ def run_experiment(
         epochs=epochs,
         batch_size=batch_size,
     )
-    bleu = evaluate_model(
+    bleu_scores = evaluate_model(
         model,
         dev_dataset,
         device,
@@ -402,8 +475,9 @@ def run_experiment(
     )
     result = {
         "scheduler": name,
-        "dev_penalized_bleu": bleu,
-        "checkpoint_path": checkpoint_path,
+        "dev_reference_bleu": bleu_scores["reference_bleu"],
+        "dev_input_bleu": bleu_scores["input_bleu"],
+        "dev_penalized_bleu": bleu_scores["penalized_bleu"],
     }
     return model, result
 
@@ -461,7 +535,14 @@ def finetune_paraphrase_generation(args):
             torch.cuda.empty_cache()
 
     comparison = pd.DataFrame(results)
-    displayed_comparison = comparison[["scheduler", "dev_penalized_bleu"]]
+    displayed_comparison = comparison[
+        [
+            "scheduler",
+            "dev_reference_bleu",
+            "dev_input_bleu",
+            "dev_penalized_bleu",
+        ]
+    ]
     print("\nDevelopment-set scheduler comparison:")
     print(
         displayed_comparison.to_string(

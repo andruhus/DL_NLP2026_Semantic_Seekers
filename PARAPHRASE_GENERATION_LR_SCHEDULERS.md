@@ -31,7 +31,7 @@ The custom `AdamW` receives the scheduler through `lr_sched` and uses `alpha = l
 - Each run resets the seed and initializes a fresh BART model
 - Test predictions are generated with the experiment having the highest checkpoint-selected development BLEU
 
-Every experiment writes a distinct checkpoint under `models/`. The comparison table is written to:
+Every experiment writes a distinct checkpoint under `models/`. The comparison table records the parameterized scheduler name plus reference BLEU, input BLEU, and penalized BLEU. It is written to:
 
 ```text
 predictions/bart/bart-generation-lr-scheduler-comparison.csv
@@ -61,6 +61,28 @@ Step decay every two epochs with a factor of 0.5:
 sbatch run_bart_generation.sh 10 step \
     --step_decay_epochs 2 \
     --step_gamma 0.5 \
+    --use_gpu
+```
+
+### Step-decay grid search
+
+Scheduler hyperparameters accept one or more space-separated values. The script runs the Cartesian product of values relevant to the chosen scheduler. For example, this command runs four StepDecay experiments: `(1, 0.3)`, `(1, 0.5)`, `(2, 0.3)`, and `(2, 0.5)`.
+
+```sh
+sbatch run_bart_generation.sh 10 step \
+    --learning_rate 1e-5 2e-5 \
+    --min_lr 0 1e-7 \
+    --step_decay_epochs 1 2 \
+    --step_gamma 0.3 0.5 \
+    --use_gpu
+```
+
+This example actually creates 16 runs because learning rate and minimum learning rate are also varied. To vary only the two StepDecay-specific parameters, omit the learning-rate options:
+
+```sh
+sbatch run_bart_generation.sh 10 step \
+    --step_decay_epochs 1 2 \
+    --step_gamma 0.3 0.5 \
     --use_gpu
 ```
 
@@ -99,13 +121,13 @@ python bart_generation.py \
 | `--scheduler_mode` | `compare` | One mode or all modes |
 | `--epochs` | `5` | Epoch budget per experiment |
 | `--batch_size` | `8` | Training/evaluation batch size |
-| `--learning_rate` | `2e-5` | Initial/peak learning rate |
-| `--min_lr` | `0.0` | Learning-rate floor |
-| `--step_decay_epochs` | `1` | Number of epochs between step decays |
-| `--step_gamma` | `0.5` | Step-decay multiplier |
-| `--warmup_steps` | `100` | Inverse-square-root warmup updates; use `0` to disable warmup |
-| `--metric_factor` | `0.5` | Metric-dependent reduction multiplier |
-| `--metric_patience` | `1` | Number of bad epochs tolerated before reduction |
+| `--learning_rate` | `2e-5` | One or more initial/peak learning rates |
+| `--min_lr` | `0.0` | One or more learning-rate floors |
+| `--step_decay_epochs` | `1` | One or more intervals between step decays |
+| `--step_gamma` | `0.5` | One or more StepDecay multipliers |
+| `--warmup_steps` | `100` | One or more inverse-square-root warmup lengths; use `0` to disable warmup |
+| `--metric_factor` | `0.5` | One or more metric-dependent reduction multipliers |
+| `--metric_patience` | `1` | One or more tolerated bad-epoch counts before reduction |
 
 ## Interpreting results
 
