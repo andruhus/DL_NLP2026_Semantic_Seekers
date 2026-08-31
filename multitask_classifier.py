@@ -1,5 +1,4 @@
 import argparse
-from html import parser
 import os
 from pprint import pformat
 import random
@@ -24,7 +23,7 @@ from datasets import (
 from evaluation import model_eval_multitask, test_model_multitask
 from optimizer import AdamW
 
-TQDM_DISABLE = False
+TQDM_DISABLE = True
 
 
 # fix the random seed
