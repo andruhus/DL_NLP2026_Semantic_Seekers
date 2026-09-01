@@ -277,6 +277,26 @@ def train_multitask(args):
     model = MultitaskBERT(config)
     model = model.to(device)
 
+    ###
+    ### Pretrained Model laden
+    ###
+    if args.allnli=True:
+        logging.info("Loading pretrained AllNLI model...")
+        pretrained = torch.load("models/pretrain-allnli.pt", map_location="cpu")
+        full_state = pretrained["model"]
+
+        bert_state = {
+            k.replace("bert.", ""): v
+            for k, v in full_state.items()
+            if k.startswith("bert.")
+        }
+
+        model.bert.load_state_dict(bert_state)
+
+    ###
+    ###
+    ###
+
     lr = args.lr
     optimizer = AdamW(model.parameters(), lr=lr, weight_decay=args.weight_decay)
 ###
@@ -594,6 +614,8 @@ def get_args():
     parser.add_argument("--weight_decay", type=float, default=0.01)
     parser.add_argument("--warmup_ratio", type=float, default=0.1)
     parser.add_argument("--classifier_dropout", type=float, default=0.3)
+    parser.add_argument("--allnli", action="store_true")
+
 
     ###
     ###
