@@ -78,8 +78,8 @@ def sequential_search():
             "lr": lr,
             "batch_size": 16,
             "warmup_ratio": 0.1,
-            "weight_decay": 0.01,
-            "label_smoothing": 0.05,
+            "weight_decay": 0.0,
+            "label_smoothing": 0.0,
             "classifier_dropout": 0.3
         }
         score = run_job(params)
