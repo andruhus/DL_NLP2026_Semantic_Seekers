@@ -69,8 +69,7 @@ $$
 where $N_c^+$ and $N_c^-$ are the numbers of positive and negative training examples for label $c$. The resulting vector is passed to PyTorch's `BCEWithLogitsLoss` as `pos_weight`, yielding
 
 $$
-\mathcal{L}_{i,c} = -w_c y_{i,c}\log\sigma(z_{i,c})
-- (1-y_{i,c})\log(1-\sigma(z_{i,c})).
+\mathcal{L}_{i,c} = -w_c y_{i,c}\log\sigma(z_{i,c}) - (1-y_{i,c})\log(1-\sigma(z_{i,c})).
 $$
 
 This calculation is implemented in `paraphrase_detection/weighted_bce.py` and is called on `train_labels` in `bart_detection.py`;
@@ -182,21 +181,21 @@ and evaluate three smoothed alternatives:
 
 1. **Square-root weighting**
 
-   $$
-   w_c^{\mathrm{sqrt}} = \sqrt{r_c}.
-   $$
+$$
+w_c^{\mathrm{sqrt}} = \sqrt{r_c}.
+$$
 
 2. **Logarithmic weighting**
 
-   $$
-   w_c^{\mathrm{log}} = \log(1 + r_c).
-   $$
+$$
+w_c^{\mathrm{log}} = \log(1 + r_c).
+$$
 
 3. **Capped inverse-frequency weighting**
 
-   $$
-   w_c^{\mathrm{cap}} = \min(r_c, w_{\max}), \qquad w_{\max}=20.
-   $$
+$$
+w_c^{\mathrm{cap}} = \min(r_c, w_{\max}), \qquad w_{\max}=20.
+$$
 
 All three vectors are passed to `BCEWithLogitsLoss` as `pos_weight`. Square-root and logarithmic transformations compress large ratios smoothly, while the capped variant preserves the original ratio up to 20 and clips every larger value.
 
@@ -288,7 +287,7 @@ During the first 10 epochs, all three smoothing techniques exceed the reused BCE
 We also implemented binary focal loss, adapted to the multi-label setting. For every example-label pair, the unreduced BCE loss is first computed. The loss is then multiplied by a focusing factor:
 
 $$
-\operatorname{FL}(p_t) = (1-p_t)^\gamma\operatorname{BCE}(p_t),
+FL(p_t) = (1-p_t)^\gamma BCE(p_t),
 $$
 
 where $p_t$ is the predicted probability of the correct binary class and $\gamma \geq 0$ is the focusing parameter. Easy, confidently classified examples receive less weight, allowing training to focus on difficult decisions. When $\gamma=0$, focal loss reduces to ordinary BCE; increasing $\gamma$ suppresses easy examples more strongly.
