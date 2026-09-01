@@ -55,9 +55,9 @@ def run_job(params):
 #############################################
 
 SEARCH_SPACE = {
-    "lr": [3e-5, 2e-5, 1e-5],
-    "batch_size": [8, 16, 32],
-    "warmup_ratio": [0.0, 0.05, 0.1],
+    "lr": [1.5e-5, 2e-5, 2.5e-5],#3
+    "batch_size": [12, 16, 20],#16
+    "warmup_ratio": [0.0, 0.05, 0.1],#
     "weight_decay": [0.0, 0.001, 0.01],
     "label_smoothing": [0.0, 0.05, 0.1],
     "classifier_dropout": [0.1, 0.2, 0.3]
@@ -79,7 +79,7 @@ def sequential_search():
             "batch_size": 16,
             "warmup_ratio": 0.1,
             "weight_decay": 0.01,
-            "label_smoothing": 0.0,
+            "label_smoothing": 0.05,
             "classifier_dropout": 0.3
         }
         score = run_job(params)
@@ -96,7 +96,7 @@ def sequential_search():
         if score > best_score:
             best_score = score
             best.update(params)
-
+    return
     # 3) warmup ratio
     print("\n=== Schritt 3: Warmup Ratio ===")
     for wr in SEARCH_SPACE["warmup_ratio"]:
@@ -146,9 +146,4 @@ def sequential_search():
         json.dump(best, f, indent=4)
 
 
-#############################################
-# Main
-#############################################
-
-if __name__ == "__main__":
-    sequential_search()
+sequential_search()
