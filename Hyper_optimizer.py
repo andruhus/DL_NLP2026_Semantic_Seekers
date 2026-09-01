@@ -55,8 +55,8 @@ def run_job(params):
 #############################################
 
 SEARCH_SPACE = {
-    "lr": [1.5e-5, 2e-5, 2.5e-5],#3
-    "batch_size": [12, 16, 20],#16
+    "lr": [1e-5, 2e-5, 3e-5],#3
+    "batch_size": [8, 16, 32],#16
     "warmup_ratio": [0.0, 0.05, 0.1],#
     "weight_decay": [0.0, 0.001, 0.01],
     "label_smoothing": [0.0, 0.05, 0.1],
@@ -78,8 +78,8 @@ def sequential_search():
             "lr": lr,
             "batch_size": 16,
             "warmup_ratio": 0.1,
-            "weight_decay": 0.0,
-            "label_smoothing": 0.0,
+            "weight_decay": 0.01,
+            "label_smoothing": 0.05,
             "classifier_dropout": 0.3
         }
         score = run_job(params)
