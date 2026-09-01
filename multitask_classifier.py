@@ -280,7 +280,7 @@ def train_multitask(args):
     ###
     ### Pretrained Model laden
     ###
-    if args.allnli=True:
+    if args.allnli==True:
         logging.info("Loading pretrained AllNLI model...")
         pretrained = torch.load("models/pretrain-allnli.pt", map_location="cpu")
         full_state = pretrained["model"]
