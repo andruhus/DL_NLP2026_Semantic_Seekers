@@ -78,7 +78,7 @@ def sequential_search():
             "lr": lr,
             "batch_size": 16,
             "warmup_ratio": 0.1,
-            "weight_decay": 0.0,
+            "weight_decay": 0.01,
             "label_smoothing": 0.0,
             "classifier_dropout": 0.3
         }
@@ -87,20 +87,29 @@ def sequential_search():
             best_score = score
             best.update(params)
 
-    # 2) Batch Size + Warmup Ratio
-    print("\n=== Schritt 2: Batch Size + Warmup Ratio ===")
+    # 2) Batch Size
+    print("\n=== Schritt 2: Batch Size ===")
     for bs in SEARCH_SPACE["batch_size"]:
-        for wr in SEARCH_SPACE["warmup_ratio"]:
-            params = best.copy()
-            params["batch_size"] = bs
-            params["warmup_ratio"] = wr
-            score = run_job(params)
-            if score > best_score:
-                best_score = score
-                best.update(params)
+        params = best.copy()
+        params["batch_size"] = bs
+        score = run_job(params)
+        if score > best_score:
+            best_score = score
+            best.update(params)
 
-    # 3) Weight Decay
-    print("\n=== Schritt 3: Weight Decay ===")
+    # 3) warmup ratio
+    print("\n=== Schritt 3: Warmup Ratio ===")
+    for wr in SEARCH_SPACE["warmup_ratio"]:
+        params = best.copy()
+        params["warmup_ratio"] = wr
+        score = run_job(params)
+        if score > best_score:
+            best_score = score
+            best.update(params)
+
+
+    # 4) Weight Decay
+    print("\n=== Schritt 4: Weight Decay ===")
     for wd in SEARCH_SPACE["weight_decay"]:
         params = best.copy()
         params["weight_decay"] = wd
@@ -109,8 +118,8 @@ def sequential_search():
             best_score = score
             best.update(params)
 
-    # 4) Classifier Dropout
-    print("\n=== Schritt 4: Classifier Dropout ===")
+    # 5) Classifier Dropout
+    print("\n=== Schritt 5: Classifier Dropout ===")
     for dp in SEARCH_SPACE["classifier_dropout"]:
         params = best.copy()
         params["classifier_dropout"] = dp
@@ -119,8 +128,8 @@ def sequential_search():
             best_score = score
             best.update(params)
 
-    # 5) Label Smoothing
-    print("\n=== Schritt 5: Label Smoothing ===")
+    # 6) Label Smoothing
+    print("\n=== Schritt 6: Label Smoothing ===")
     for ls in SEARCH_SPACE["label_smoothing"]:
         params = best.copy()
         params["label_smoothing"] = ls
