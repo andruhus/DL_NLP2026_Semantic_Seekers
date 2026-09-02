@@ -499,8 +499,8 @@ def get_args():
     args, _ = parser.parse_known_args()
 
     # Dataset paths
-    parser.add_argument("--sst_train", type=str, default="data/sst-sentiment-train.csv")
-    parser.add_argument("--sst_dev", type=str, default="data/sst-sentiment-dev.csv")
+    parser.add_argument("--sst_train", type=str, default="data/yelp-train-small.csv")
+    parser.add_argument("--sst_dev", type=str, default="data/yelp-dev-small.csv")
     parser.add_argument("--sst_test", type=str, default="data/sst-sentiment-test-student.csv")
 
     parser.add_argument("--quora_train", type=str, default="data/quora-paraphrase-train.csv")
