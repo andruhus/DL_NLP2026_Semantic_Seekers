@@ -26,6 +26,7 @@ The custom `AdamW` receives the scheduler through `lr_sched` and uses `alpha = l
 - Default batch size: `8`
 - Random seed: `11711`
 - Checkpoint criterion: highest penalized development BLEU
+- BLEU protocol: displayed reference/input statistics use conventional prediction-to-reference scoring; penalized BLEU preserves the legacy reversed scoring direction
 - Tie handling: the earlier checkpoint wins
 - `compare` order: constant, step, cosine, linear, inverse square root, metric dependent
 - Each run resets the seed and initializes a fresh BART model

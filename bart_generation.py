@@ -209,7 +209,7 @@ def evaluate_model(model, test_data, device, tokenizer, batch_size=8):
     references = test_data["sentence2"].tolist()
 
     model.train()
-    # Calculate BLEU against references and against the original input.
+    # Display conventional hypothesis-to-reference BLEU statistics.
     reference_bleu = bleu.corpus_score(predictions, [references]).score
     input_bleu = bleu.corpus_score(predictions, [inputs]).score
 
@@ -218,9 +218,10 @@ def evaluate_model(model, test_data, device, tokenizer, batch_size=8):
         f"Input BLEU: {input_bleu}",
     )
 
-    # Penalize predictions that are too similar to the input and rescale to 0-100.
-    # A perfect target prediction yields a penalized score of roughly 52.
-    penalized_bleu = reference_bleu * (100 - input_bleu) / 52
+    # Preserve the legacy reversed direction for the penalized metric.
+    legacy_reference_bleu = bleu.corpus_score(references, [predictions]).score
+    legacy_input_bleu = bleu.corpus_score(inputs, [predictions]).score
+    penalized_bleu = legacy_reference_bleu * (100 - legacy_input_bleu) / 52
     print(f"Penalized BLEU Score: {penalized_bleu}")
 
     return {
