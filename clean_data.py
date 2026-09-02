@@ -5,7 +5,7 @@ VALID_LABELS = {0, 1, 2, 3, 4}
 
 def is_valid(row):
     try:
-        label = int(row["label"])
+        label = int(row["sentiment"])
         return label in VALID_LABELS
     except:
         return False
@@ -42,4 +42,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
