@@ -19,7 +19,8 @@ def run_job(params):
         "--weight_decay", str(params["weight_decay"]),
         "--label_smoothing", str(params["label_smoothing"]),
         "--classifier_dropout", str(params["classifier_dropout"]),
-        "--use_gpu"
+        "--use_gpu",
+        "--local_files_only"
     ]
 
     print("\n>>> Starte Job:", " ".join(cmd))
@@ -36,7 +37,10 @@ def run_job(params):
 
     match = re.findall(r"dev :: ([0-9.]+)", content)
     if match:
-        return float(match[-1])
+        dev_accs = [float(m) for m in match]
+        best_dev = max(dev_accs)
+        print(f"✓ Beste Dev-Accuracy im Lauf: {best_dev}")
+        return best_dev
     return -1.0
 
 
@@ -46,10 +50,10 @@ def run_job(params):
 
 SEARCH_SPACE = {
     "lr": [1e-5, 2e-5, 3e-5],
-    "batch_size": [8, 16, 32],
+    "batch_size": [12, 16, 20],
     "warmup_ratio": [0.0, 0.05, 0.1],
-    "weight_decay": [0.0, 0.001, 0.01],
-    "label_smoothing": [0.0, 0.05, 0.1],
+    "weight_decay": [0.0, 0.001, 0.005],
+    "label_smoothing": [0.0, 0.05, 0.01],
     "classifier_dropout": [0.1, 0.2, 0.3]
 }
 
@@ -76,8 +80,8 @@ def sequential_search(
                 "lr": lr,
                 "batch_size": 16,
                 "warmup_ratio": 0.1,
-                "weight_decay": 0.01,
-                "label_smoothing": 0.05,
+                "weight_decay": 0.00,
+                "label_smoothing": 0.00,
                 "classifier_dropout": 0.3
             }
             score = run_job(params)
@@ -90,8 +94,8 @@ def sequential_search(
             "lr": 2e-5,
             "batch_size": 16,
             "warmup_ratio": 0.1,
-            "weight_decay": 0.01,
-            "label_smoothing": 0.05,
+            "weight_decay": 0.00,
+            "label_smoothing": 0.00,
             "classifier_dropout": 0.3
         }
 
@@ -164,9 +168,9 @@ def sequential_search(
 
 sequential_search(
     do_lr=False,
-    do_batch=False,
+    do_batch=True,
     do_warmup=True,
-    do_weight_decay=True,
-    do_dropout=True,
-    do_label_smoothing=True
+    do_weight_decay=False,
+    do_dropout=False,
+    do_label_smoothing=False
 )
