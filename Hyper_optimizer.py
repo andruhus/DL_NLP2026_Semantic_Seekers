@@ -168,9 +168,9 @@ def sequential_search(
 
 sequential_search(
     do_lr=False,
-    do_batch=True,
-    do_warmup=True,
-    do_weight_decay=False,
-    do_dropout=False,
+    do_batch=False,
+    do_warmup=False,
+    do_weight_decay=True,
+    do_dropout=True,
     do_label_smoothing=False
 )
