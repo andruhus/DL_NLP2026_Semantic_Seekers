@@ -25,6 +25,7 @@ def run_job(params):
         "--label_smoothing", str(params["label_smoothing"]),
         "--classifier_dropout", str(params["classifier_dropout"]),
         "--use_gpu"
+        "--local_files_only"
     ]
 
     print("\n>>> Starte Job:", " ".join(cmd))
@@ -55,11 +56,11 @@ def run_job(params):
 #############################################
 
 SEARCH_SPACE = {
-    "lr": [1e-5, 2e-5, 3e-5],#3
-    "batch_size": [8, 16, 32],#16
+    #"lr": [1e-5, 2e-5, 3e-5],#2
+    #"batch_size": [8, 16, 32],#16
     "warmup_ratio": [0.0, 0.05, 0.1],#
-    "weight_decay": [0.0, 0.001, 0.01],
-    "label_smoothing": [0.0, 0.05, 0.1],
+    "weight_decay": [0.0, 0.001, 0.005],
+    "label_smoothing": [0.0, 0.05, 0.01],
     "classifier_dropout": [0.1, 0.2, 0.3]
 }
 
@@ -67,40 +68,39 @@ SEARCH_SPACE = {
 # Sequential Hyperparameter Optimization
 #############################################
 
-def sequential_search():
+def sequential_search(LR=True,BATCH=True):
     best = {}
     best_score = -1
-
-    # 1) LR + Epochs
-    print("\n=== Schritt 1: Learning Rate ===")
-    for lr in SEARCH_SPACE["lr"]:
-        params = {
-            "lr": lr,
-            "batch_size": 16,
-            "warmup_ratio": 0.1,
-            "weight_decay": 0.01,
-            "label_smoothing": 0.05,
-            "classifier_dropout": 0.3
-        }
-        score = run_job(params)
-        if score > best_score:
-            best_score = score
-            best.update(params)
-
-    # 2) Batch Size
-    print("\n=== Schritt 2: Batch Size ===")
-    for bs in SEARCH_SPACE["batch_size"]:
-        params = best.copy()
-        params["batch_size"] = bs
-        score = run_job(params)
-        if score > best_score:
-            best_score = score
-            best.update(params)
-    return
+    params = {
+        "lr": 2e-5,
+        "batch_size": 16,
+        "warmup_ratio": 0.1,
+        "weight_decay": 0.00,
+        "label_smoothing": 0.00,
+        "classifier_dropout": 0.3
+    }
+    if LR:
+        # 1) LR + Epochs
+        print("\n=== Schritt 1: Learning Rate ===")
+        for lr in SEARCH_SPACE["lr"]:
+            params["lr"] = lr
+            score = run_job(params)
+            if score > best_score:
+                best_score = score
+                best.update(params)
+    if BATCH:
+        # 2) Batch Size
+        print("\n=== Schritt 2: Batch Size ===")
+        for bs in SEARCH_SPACE["batch_size"]:
+            params = best.copy()
+            params["batch_size"] = bs
+            score = run_job(params)
+            if score > best_score:
+                best_score = score
+                best.update(params)
     # 3) warmup ratio
     print("\n=== Schritt 3: Warmup Ratio ===")
     for wr in SEARCH_SPACE["warmup_ratio"]:
-        params = best.copy()
         params["warmup_ratio"] = wr
         score = run_job(params)
         if score > best_score:
@@ -146,4 +146,4 @@ def sequential_search():
         json.dump(best, f, indent=4)
 
 
-sequential_search()
+sequential_search(False,False)
