@@ -22,17 +22,11 @@ Our work focuses on improving the QQP paraphrase classifier in three steps. Firs
 
 The final selected QQP model reaches a development accuracy of **0.868**.
 
----
 
 ## Loss Function
 For each label $y \in \{0,1\}$, model logit $z$, and sigmoid probability $\sigma(z)$, the loss is:
 
-$$
-\mathcal{L}
-=
-- y \log \sigma(z)
-- (1-y)\log(1-\sigma(z)).
-$$
+$$\mathcal{L}=- y \log \sigma(z)- (1-y)\log(1-\sigma(z)).$$
 
 The implementation uses binary cross entropy with logits combining the sigmoid transformation and binary cross-entropy loss in a numerically stable way.
 
