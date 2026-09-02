@@ -225,8 +225,8 @@ def evaluate_model(model, test_data, device, tokenizer, batch_size=8):
     print(f"Penalized BLEU Score: {penalized_bleu}")
 
     return {
-        "reference_bleu": reference_bleu,
-        "input_bleu": input_bleu,
+        "reference_bleu": legacy_reference_bleu,
+        "input_bleu": legacy_input_bleu,
         "penalized_bleu": penalized_bleu,
     }
 

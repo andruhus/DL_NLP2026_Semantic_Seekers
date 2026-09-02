@@ -157,5 +157,5 @@ def print_info(sort_col):
     print(sorted.to_string(index=False))
 
 if __name__ == "__main__":
-    print_info("dev_reference_bleu")
+    print_info("dev_penalized_bleu")
     # plot_training_metrics([30,25,16])
