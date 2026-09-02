@@ -598,23 +598,26 @@ def get_args():
     )
 
     # Hyperparameters
-    parser.add_argument("--batch_size", help="sst: 64 can fit a 12GB GPU", type=int, default=64)
+    parser.add_argument("--batch_size", help="sst: 64 can fit a 12GB GPU", type=int, default=16)
     parser.add_argument("--hidden_dropout_prob", type=float, default=0.3)
     parser.add_argument(
         "--lr",
         type=float,
         help="learning rate, default lr for 'pretrain': 1e-3, 'finetune': 1e-5",
-        default=1e-3 if args.option == "pretrain" else 1e-5,
+        default=2e-05 if args.option == "pretrain" else 2e-05,
     )
     parser.add_argument("--local_files_only", action="store_true")
     ###
     ###
     ###
-    parser.add_argument("--label_smoothing", type=float, default=0.3)
-    parser.add_argument("--weight_decay", type=float, default=0.01)
+    parser.add_argument("--label_smoothing", type=float, default=0.0)
+    parser.add_argument("--weight_decay", type=float, default=0.0)
     parser.add_argument("--warmup_ratio", type=float, default=0.1)
     parser.add_argument("--classifier_dropout", type=float, default=0.3)
     parser.add_argument("--allnli", action="store_true")
+    parser.add_argument("--yelp", action="store_true")
+
+
 
 
     ###
