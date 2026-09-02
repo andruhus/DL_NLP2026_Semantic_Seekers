@@ -9,11 +9,6 @@ from datetime import datetime
 #############################################
 
 def run_job(params):
-    """
-    Runs your training script with given hyperparameters.
-    Returns the dev accuracy parsed from the log output.
-    """
-
     cmd = [
         "python", "multitask_classifier.py",
         "--task", "sst",
@@ -36,17 +31,12 @@ def run_job(params):
         process = subprocess.Popen(cmd, stdout=f, stderr=f)
         process.wait()
 
-    # Parse dev accuracy
     with open(logfile, "r") as f:
         content = f.read()
 
     match = re.findall(r"dev :: ([0-9.]+)", content)
     if match:
-        dev_acc = float(match[-1])
-        print(f"✓ Dev-Accuracy gefunden: {dev_acc}")
-        return dev_acc
-
-    print("⚠ Keine Dev-Accuracy gefunden!")
+        return float(match[-1])
     return -1.0
 
 
@@ -55,9 +45,9 @@ def run_job(params):
 #############################################
 
 SEARCH_SPACE = {
-    "lr": [1.5e-5, 2e-5, 2.5e-5],#3
-    "batch_size": [12, 16, 20],#16
-    "warmup_ratio": [0.0, 0.05, 0.1],#
+    "lr": [1e-5, 2e-5, 3e-5],
+    "batch_size": [8, 16, 32],
+    "warmup_ratio": [0.0, 0.05, 0.1],
     "weight_decay": [0.0, 0.001, 0.01],
     "label_smoothing": [0.0, 0.05, 0.1],
     "classifier_dropout": [0.1, 0.2, 0.3]
@@ -67,76 +57,98 @@ SEARCH_SPACE = {
 # Sequential Hyperparameter Optimization
 #############################################
 
-def sequential_search():
+def sequential_search(
+    do_lr=True,
+    do_batch=True,
+    do_warmup=True,
+    do_weight_decay=True,
+    do_dropout=True,
+    do_label_smoothing=True
+):
     best = {}
     best_score = -1
 
-    # 1) LR + Epochs
-    print("\n=== Schritt 1: Learning Rate ===")
-    for lr in SEARCH_SPACE["lr"]:
-        params = {
-            "lr": lr,
+    # 1) LR
+    if do_lr:
+        print("\n=== Schritt 1: Learning Rate ===")
+        for lr in SEARCH_SPACE["lr"]:
+            params = {
+                "lr": lr,
+                "batch_size": 16,
+                "warmup_ratio": 0.1,
+                "weight_decay": 0.01,
+                "label_smoothing": 0.05,
+                "classifier_dropout": 0.3
+            }
+            score = run_job(params)
+            if score > best_score:
+                best_score = score
+                best = params.copy()
+    else:
+        # Default wie im Original
+        best = {
+            "lr": 2e-5,
             "batch_size": 16,
             "warmup_ratio": 0.1,
-            "weight_decay": 0.0,
-            "label_smoothing": 0.0,
+            "weight_decay": 0.01,
+            "label_smoothing": 0.05,
             "classifier_dropout": 0.3
         }
-        score = run_job(params)
-        if score > best_score:
-            best_score = score
-            best.update(params)
 
     # 2) Batch Size
-    print("\n=== Schritt 2: Batch Size ===")
-    for bs in SEARCH_SPACE["batch_size"]:
-        params = best.copy()
-        params["batch_size"] = bs
-        score = run_job(params)
-        if score > best_score:
-            best_score = score
-            best.update(params)
-    return
-    # 3) warmup ratio
-    print("\n=== Schritt 3: Warmup Ratio ===")
-    for wr in SEARCH_SPACE["warmup_ratio"]:
-        params = best.copy()
-        params["warmup_ratio"] = wr
-        score = run_job(params)
-        if score > best_score:
-            best_score = score
-            best.update(params)
+    if do_batch:
+        print("\n=== Schritt 2: Batch Size ===")
+        for bs in SEARCH_SPACE["batch_size"]:
+            params = best.copy()
+            params["batch_size"] = bs
+            score = run_job(params)
+            if score > best_score:
+                best_score = score
+                best = params.copy()
 
+    # 3) Warmup Ratio
+    if do_warmup:
+        print("\n=== Schritt 3: Warmup Ratio ===")
+        for wr in SEARCH_SPACE["warmup_ratio"]:
+            params = best.copy()
+            params["warmup_ratio"] = wr
+            score = run_job(params)
+            if score > best_score:
+                best_score = score
+                best = params.copy()
 
     # 4) Weight Decay
-    print("\n=== Schritt 4: Weight Decay ===")
-    for wd in SEARCH_SPACE["weight_decay"]:
-        params = best.copy()
-        params["weight_decay"] = wd
-        score = run_job(params)
-        if score > best_score:
-            best_score = score
-            best.update(params)
+    if do_weight_decay:
+        print("\n=== Schritt 4: Weight Decay ===")
+        for wd in SEARCH_SPACE["weight_decay"]:
+            params = best.copy()
+            params["weight_decay"] = wd
+            score = run_job(params)
+            if score > best_score:
+                best_score = score
+                best = params.copy()
 
-    # 5) Classifier Dropout
-    print("\n=== Schritt 5: Classifier Dropout ===")
-    for dp in SEARCH_SPACE["classifier_dropout"]:
-        params = best.copy()
-        params["classifier_dropout"] = dp
-        score = run_job(params)
-        if score > best_score:
-            best_score = score
-            best.update(params)
+    # 5) Dropout
+    if do_dropout:
+        print("\n=== Schritt 5: Classifier Dropout ===")
+        for dp in SEARCH_SPACE["classifier_dropout"]:
+            params = best.copy()
+            params["classifier_dropout"] = dp
+            score = run_job(params)
+            if score > best_score:
+                best_score = score
+                best = params.copy()
 
     # 6) Label Smoothing
-    print("\n=== Schritt 6: Label Smoothing ===")
-    for ls in SEARCH_SPACE["label_smoothing"]:
-        params = best.copy()
-        params["label_smoothing"] = ls
-        score = run_job(params)
-        if score > best_score:
-            best_score = score
-            best.update(params)
+    if do_label_smoothing:
+        print("\n=== Schritt 6: Label Smoothing ===")
+        for ls in SEARCH_SPACE["label_smoothing"]:
+            params = best.copy()
+            params["label_smoothing"] = ls
+            score = run_job(params)
+            if score > best_score:
+                best_score = score
+                best = params.copy()
 
     print("\n\n=== BESTE KONFIGURATION GEFUNDEN ===")
     print(json.dumps(best, indent=4))
@@ -146,4 +158,15 @@ def sequential_search():
         json.dump(best, f, indent=4)
 
 
-sequential_search()
+#############################################
+# Run
+#############################################
+
+sequential_search(
+    do_lr=False,
+    do_batch=False,
+    do_warmup=True,
+    do_weight_decay=True,
+    do_dropout=True,
+    do_label_smoothing=True
+)
