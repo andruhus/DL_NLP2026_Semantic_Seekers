@@ -25,7 +25,7 @@ def run_job(params):
         "--label_smoothing", str(params["label_smoothing"]),
         "--classifier_dropout", str(params["classifier_dropout"]),
         "--use_gpu"
-        "--local_files_only"
+        " --local_files_only"
     ]
 
     print("\n>>> Starte Job:", " ".join(cmd))
