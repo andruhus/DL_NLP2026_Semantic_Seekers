@@ -18,14 +18,14 @@ def run_job(params):
         "python", "multitask_classifier.py",
         "--task", "sst",
         "--option", "finetune",
-        "--lr", str(params["lr"]),
-        "--batch_size", str(params["batch_size"]),
+        "--lr", "2e-5",
+        "--batch_size", "16",
         "--warmup_ratio", str(params["warmup_ratio"]),
         "--weight_decay", str(params["weight_decay"]),
         "--label_smoothing", str(params["label_smoothing"]),
         "--classifier_dropout", str(params["classifier_dropout"]),
-        "--use_gpu"
-        " --local_files_only"
+        "--use_gpu",
+        "--local_files_only"
     ]
 
     print("\n>>> Starte Job:", " ".join(cmd))
@@ -55,10 +55,11 @@ def run_job(params):
 # Hyperparameter Search Space
 #############################################
 
+
 SEARCH_SPACE = {
-    #"lr": [1e-5, 2e-5, 3e-5],#2
-    #"batch_size": [8, 16, 32],#16
-    "warmup_ratio": [0.0, 0.05, 0.1],#
+    "lr": [2e-5],
+    "batch_size": [16],
+    "warmup_ratio": [0.0, 0.05, 0.1],
     "weight_decay": [0.0, 0.001, 0.005],
     "label_smoothing": [0.0, 0.05, 0.01],
     "classifier_dropout": [0.1, 0.2, 0.3]
@@ -69,8 +70,6 @@ SEARCH_SPACE = {
 #############################################
 
 def sequential_search(LR=True,BATCH=True):
-    best = {}
-    best_score = -1
     params = {
         "lr": 2e-5,
         "batch_size": 16,
@@ -79,6 +78,9 @@ def sequential_search(LR=True,BATCH=True):
         "label_smoothing": 0.00,
         "classifier_dropout": 0.3
     }
+    best = params.copy()
+    best_score = -1
+
     if LR:
         # 1) LR + Epochs
         print("\n=== Schritt 1: Learning Rate ===")
@@ -107,7 +109,7 @@ def sequential_search(LR=True,BATCH=True):
             best_score = score
             best.update(params)
 
-
+    return
     # 4) Weight Decay
     print("\n=== Schritt 4: Weight Decay ===")
     for wd in SEARCH_SPACE["weight_decay"]:
@@ -117,7 +119,7 @@ def sequential_search(LR=True,BATCH=True):
         if score > best_score:
             best_score = score
             best.update(params)
-
+    return
     # 5) Classifier Dropout
     print("\n=== Schritt 5: Classifier Dropout ===")
     for dp in SEARCH_SPACE["classifier_dropout"]:
