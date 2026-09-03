@@ -68,3 +68,10 @@ id,scheduler_type,lr,min_lr,decay_epochs,step_size,gamma,total_steps,inverse_war
 67,Constant learning rate,0.0005,0.0,,,,,None,0.008217166374816681,0.007865363483509177,0.01580100012464088
 68,Constant learning rate,1e-05,0.0,,,,,None,48.1364711499116,88.2865682627019,10.843139786325166
 69,Constant learning rate,5e-05,0.0,,,,,None,45.85482942440713,80.53568142312453,17.164096311633532
+70,Constant learning rate,2e-05,0.0,,,,,None,46.2204,79.9772,17.7973
+71,Constant learning rate,3e-05,0.0,,,,,None,46.5307,81.7639,16.3180
+72,Constant learning rate,4e-05,0.0,,,,,None,45.1790,80.6597,16.8034
+73,Constant learning rate,7e-05,0.0,,,,,None,44.4819,76.9212,19.7421
+74,Constant learning rate,9e-05,0.0,,,,,None,42.6154,73.2415,21.9293
+75,Constant learning rate,0.00011,0.0,,,,,None,42.8679,74.3334,21.1591
+76,Constant learning rate,0.000125,0.0,,,,,None,44.3238,75.5372,20.8516
