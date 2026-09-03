@@ -49,6 +49,8 @@ $$
 
 It provides no warmup or decay, making it the control condition for determining whether changing the learning rate over time improves generation.
 
+**Plot description.** The horizontal line remains at $2\times10^{-5}$ throughout all five epochs, showing that every optimizer update uses the same learning rate.
+
 ![Constant learning-rate schedule](paraphrase_generation/figure/constant_learning_rate.png)
 
 ##### Methodology
@@ -77,6 +79,8 @@ $$
 $$
 
 For the default experiment, $\gamma=0.5$ and the decay interval is one epoch, so $s=308$. The rate is therefore halved at the end of each epoch.
+
+**Plot description.** The staircase curve holds the learning rate constant within each epoch and drops it abruptly by half at every epoch boundary, from $2\times10^{-5}$ initially to $1.25\times10^{-6}$ in the fifth epoch.
 
 ![Step-decay learning-rate schedule](paraphrase_generation/figure/step_decay.png)
 
@@ -111,6 +115,8 @@ $$
 
 The gradual early decrease preserves relatively large updates for exploration, while the flatter end of the cosine curve permits conservative refinement near the end of training.
 
+**Plot description.** The curve starts flat near $2\times10^{-5}$, decreases most rapidly around the middle of training, and flattens again as it approaches zero at the end of epoch 5.
+
 ![Cosine-decay learning-rate schedule](paraphrase_generation/figure/cosine_decay.png)
 
 ##### Methodology
@@ -142,6 +148,8 @@ $$
 
 Unlike step decay, this schedule has no abrupt changes; unlike cosine decay, it assigns a constant rate of decrease throughout training.
 
+**Plot description.** The straight descending line shows an equal learning-rate reduction per optimizer update, moving uniformly from $2\times10^{-5}$ at initialization to zero after five epochs.
+
 ![Linear-decay learning-rate schedule](paraphrase_generation/figure/linear_decay.png)
 
 ##### Methodology
@@ -170,11 +178,12 @@ $$
 \alpha_t=\max\left(
 \alpha_{\min},
 \alpha_0\min\left(\frac{u}{w},\sqrt{\frac{w}{u}}\right)
-
 \right).
 $$
 
 The rate increases linearly during the first $w$ updates, reaches the peak $\alpha_0$ at $u=w$, and then decreases proportionally to $1/\sqrt{u}$. The default $w=100$ corresponds to approximately 0.325 training epochs.
+
+**Plot description.** The learning rate rises steeply from near zero to $2\times10^{-5}$ during the first 100 updates, marked by the dashed line, and then follows a long, gradually flattening decay to approximately $5\times10^{-6}$.
 
 ![Inverse-square-root learning-rate schedule](paraphrase_generation/figure/inverse_square_root.png)
 
@@ -210,6 +219,8 @@ $$
 $$
 
 An improvement resets the bad-epoch count to zero, and a reduction also starts a new patience window. With the defaults $f=0.5$ and $p=1$, the rate is halved after two consecutive non-improving evaluations. Because this schedule depends on observed development scores, its figure uses an illustrative trajectory: improvement after epochs 1 and 2 followed by two non-improving evaluations, causing the lower rate to be used in epoch 5.
+
+**Plot description.** In the illustrative trajectory, the learning rate remains at $2\times10^{-5}$ for the first four epochs. Two consecutive evaluations without improvement exhaust the patience, so epoch 5 uses the reduced rate of $1\times10^{-5}$.
 
 ![Metric-dependent learning-rate schedule](paraphrase_generation/figure/metric_dependent.png)
 

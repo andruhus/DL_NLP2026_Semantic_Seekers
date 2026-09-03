@@ -28,7 +28,7 @@ def save_update_plot(rates, title, filename, *, mark_warmup=False):
     updates = np.arange(len(rates))
     epochs = updates / STEPS_PER_EPOCH
 
-    fig, ax = plt.subplots(figsize=(7.2, 4.2))
+    fig, ax = plt.subplots(figsize=(5.4, 3.15))
     ax.plot(epochs, rates, linewidth=2.4)
     if mark_warmup:
         warmup_epoch = WARMUP_STEPS / STEPS_PER_EPOCH
@@ -49,7 +49,7 @@ def save_update_plot(rates, title, filename, *, mark_warmup=False):
     ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     ax.grid(alpha=0.3)
     fig.tight_layout()
-    fig.savefig(FIGURE_DIR / filename, dpi=180, bbox_inches="tight")
+    fig.savefig(FIGURE_DIR / filename, dpi=120, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -115,7 +115,7 @@ def plot_metric_dependent_schedule():
                 bad_epochs = 0
 
     epochs = np.arange(1, EPOCHS + 1)
-    fig, ax = plt.subplots(figsize=(7.2, 4.2))
+    fig, ax = plt.subplots(figsize=(5.4, 3.15))
     ax.step(epochs, learning_rates, where="mid", linewidth=2.4)
     ax.scatter(epochs, learning_rates, s=34, zorder=3)
     ax.annotate(
@@ -137,7 +137,7 @@ def plot_metric_dependent_schedule():
     fig.tight_layout()
     fig.savefig(
         FIGURE_DIR / "metric_dependent.png",
-        dpi=180,
+        dpi=120,
         bbox_inches="tight",
     )
     plt.close(fig)
