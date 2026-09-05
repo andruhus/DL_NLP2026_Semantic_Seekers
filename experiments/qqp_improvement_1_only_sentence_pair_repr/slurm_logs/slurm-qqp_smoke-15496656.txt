@@ -1,0 +1,54 @@
+Job started at: Tue Aug 25 11:40:39 CEST 2026
+Node: ggpu159
+Branch: feat/qqp-improvement-1
+Commit: 0329208 Modified embedding vectors implemented
+?? run_qqp_smoke.sh
+CUDA: True
+GPU: NVIDIA A100-SXM4-80GB MIG 1g.10gb
+VRAM GB: 9.5
+Loaded 7898 train examples from data/sst-sentiment-train.csv
+Loaded 135134 train examples from data/quora-paraphrase-train.csv
+Loaded 5719 train examples from data/sts-similarity-train.csv
+Loaded 2730 train examples from data/etpc-paraphrase-train.csv
+Loaded 1974 train examples from data/sst-sentiment-dev.csv
+Loaded 33783 train examples from data/quora-paraphrase-dev.csv
+Loaded 1430 train examples from data/sts-similarity-dev.csv
+Loaded 273 train examples from data/etpc-paraphrase-dev.csv
+------------------------------
+    BERT Model Configuration
+------------------------------
+{'batch_size': 8,
+ 'epochs': 1,
+ 'filepath': 'models/finetune-1-1e-05-qqp.pt',
+ 'hidden_dropout_prob': 0.3,
+ 'local_files_only': False,
+ 'lr': 1e-05,
+ 'option': 'finetune',
+ 'seed': 11711,
+ 'task': 'qqp',
+ 'use_gpu': True}
+------------------------------
+Paraphrase detection accuracy: 0.858
+Paraphrase detection accuracy: 0.823
+Epoch 01 (qqp): train loss :: 0.461, train :: 0.858, dev :: 0.823
+Saving the model to models/finetune-1-1e-05-qqp.pt.
+Loaded model to test from models/finetune-1-1e-05-qqp.pt
+Loaded 1975 test examples from data/sst-sentiment-test-student.csv
+Loaded 33783 test examples from data/quora-paraphrase-test-student.csv
+Loaded 1430 test examples from data/sts-similarity-test-student.csv
+Loaded 585 test examples from data/etpc-paraphrase-detection-test-student.csv
+Loaded 1974 dev examples from data/sst-sentiment-dev.csv
+Loaded 33783 dev examples from data/quora-paraphrase-dev.csv
+Loaded 1430 dev examples from data/sts-similarity-dev.csv
+Loaded 273 dev examples from data/etpc-paraphrase-dev.csv
+Paraphrase detection accuracy: 0.823
+dev paraphrase acc :: 0.823
+Job ended at: Tue Aug 25 13:08:07 CEST 2026
+============ Job Information ===================================================
+Submitted: 2026-08-25T11:39:10
+Started: 2026-08-25T11:40:11
+Ended: 2026-08-25T13:08:08
+Elapsed: 88 min, Limit: 120 min, Difference: 32 min
+CPUs: 4, Nodes: 1
+Estimated credit Consumption: 2.93 core-hours
+================================================================================
