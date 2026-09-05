@@ -28,7 +28,21 @@ from optimizer import AdamW
 from tokenizer import BertTokenizer
 
 
+# =============================================================================
+# STS (Part 2) — Uwaish
+# -----------------------------------------------------------------------------
+# Helpers for the semantic textual similarity task: triplet datasets and loaders
+# for contrastive pretraining, TF-IDF hard-negative mining, and two auxiliary
+# losses (AnglE, SMART). None of this is used by SST / QQP / ETPC.
+#
+# Triplet caches are built on the login node rather than here — this file's own
+# `datasets` import resolves to the project's datasets.py, which shadows the
+# HuggingFace package. See the README for the cache-building snippet.
+# =============================================================================
+
+
 class NLITripletDataset(torch.utils.data.Dataset):
+    """Anchor / positive / hard-negative triplets for contrastive pretraining."""
     def __init__(self, triplets, args):
         self.triplets = triplets
         self.tokenizer = BertTokenizer.from_pretrained(
@@ -177,6 +191,9 @@ def smart_loss(emb1, emb2, cos_clean, sigma=1e-5, eta=1e-3):
     return F.mse_loss(cos_pert, cos_clean)
 
 
+# ========================= end STS (Part 2) helpers ==========================
+
+
 TQDM_DISABLE = True
 
 
@@ -222,6 +239,8 @@ class MultitaskBERT(nn.Module):
         self.paraphrase_classifier = nn.Linear(BERT_HIDDEN_SIZE * 2, 1)
         self.similarity_regressor = nn.Linear(BERT_HIDDEN_SIZE * 2, 1)
         self.paraphrase_type_classifier = nn.Linear(BERT_HIDDEN_SIZE * 2, 26)
+        # --- STS (Part 2): cross-attention interaction layer -----------------
+        # Off unless --cross_attn is passed, so other tasks build an identical model.
         self.use_cross_attn = getattr(config, 'cross_attn', False)
         if self.use_cross_attn:
             self.cross_attn_layer = nn.MultiheadAttention(
@@ -241,6 +260,8 @@ class MultitaskBERT(nn.Module):
         # (e.g., by adding other layers).
         output = self.bert(input_ids, attention_mask)
         return output['pooler_output']
+
+    # --- STS (Part 2): pooling and pair encoding -----------------------------
 
     def encode(self, input_ids, attention_mask):
         hidden = self.bert(input_ids, attention_mask)['last_hidden_state']  # [B, L, 768]
@@ -265,6 +286,8 @@ class MultitaskBERT(nn.Module):
         emb1 = (h1_cross * mask1).sum(dim=1) / mask1.sum(dim=1)
         emb2 = (h2_cross * mask2).sum(dim=1) / mask2.sum(dim=1)
         return emb1, emb2
+
+    # ----------------------- end STS (Part 2) methods ------------------------
 
     def predict_sentiment(self, input_ids, attention_mask):
         """
@@ -374,6 +397,7 @@ def train_multitask(args):
 
     nli_dataloader = None
     if args.task == "sts" or args.task == "multitask":
+        # --- STS (Part 2): symmetry augmentation -----------------------------
         if args.sts_symmetry:
             # STS similarity is symmetric: sim(A,B) == sim(B,A). Doubles training pairs.
             sts_train_data = sts_train_data + [
@@ -437,6 +461,7 @@ def train_multitask(args):
 
     model = MultitaskBERT(config)
 
+    # --- STS (Part 2): optional encoder warm-start ---------------------------
     # Optionally warm-start the shared BERT encoder from an existing checkpoint
     # (e.g. a teammate's QQP-trained model). Only encoder weights are taken —
     # task heads and any architecture-specific layers are left at their init.
@@ -461,9 +486,12 @@ def train_multitask(args):
     model = model.to(device)
 
     lr = args.lr
-    optimizer = AdamW(model.parameters(), lr=lr, weight_decay=args.weight_decay)
+    # getattr keeps this safe if the --weight_decay flag is dropped during a merge:
+    # this is a shared line, and a bare args.weight_decay would break every task, not just STS.
+    optimizer = AdamW(model.parameters(), lr=lr, weight_decay=getattr(args, 'weight_decay', 0.0))
     best_dev_acc = float("-inf")
 
+    # --- STS (Part 2): optional LR warmup + cosine decay ---------------------
     scheduler = None
     if args.warmup_ratio > 0 and sts_train_dataloader is not None:
         total_steps = len(sts_train_dataloader) * args.epochs
@@ -476,6 +504,12 @@ def train_multitask(args):
             return max(0.0, 0.5 * (1.0 + math.cos(math.pi * progress)))
 
         scheduler = LambdaLR(optimizer, lr_lambda)
+
+    # =========================================================================
+    # STS (Part 2): transfer pretraining phases.
+    # All are no-ops unless the corresponding --*_pretrain_epochs flag is set,
+    # and all are additionally gated on args.task == "sts".
+    # =========================================================================
 
     def _triplet_pretrain(triplets, tag, n_epochs):
         """Contrastive pretraining with explicit hard negatives.
@@ -555,6 +589,8 @@ def train_multitask(args):
                 pt_loss += loss.item()
                 pt_batches += 1
             print(f"Quora pretrain epoch {pt_epoch+1:02}: loss :: {pt_loss/max(1,pt_batches):.3f}")
+
+    # ==================== end STS (Part 2) pretraining =======================
 
     # Run for the specified number of epochs
     for epoch in range(args.epochs):
@@ -898,44 +934,77 @@ def get_args():
     # Hyperparameters
     parser.add_argument("--batch_size", help="sst: 64 can fit a 12GB GPU", type=int, default=64)
     parser.add_argument("--hidden_dropout_prob", type=float, default=0.3)
-    parser.add_argument("--mnrl_weight", type=float, default=0.5)
-    parser.add_argument("--simcse_only", action="store_true", default=False)
-    parser.add_argument("--nli_simcse", action="store_true", default=False)
-    parser.add_argument("--cosent", action="store_true", default=False)
-    parser.add_argument("--cosent_weight", type=float, default=1.0)
-    parser.add_argument("--cosent_tau", type=float, default=0.05)
-    parser.add_argument("--mnrl_tau", type=float, default=0.05)
+    # =========================================================================
+    # STS (Part 2) — Uwaish.  Flags below affect the STS task only; every one
+    # defaults to a no-op so SST / QQP / ETPC runs are unchanged.
+    # Best configuration and full results are documented in the README.
+    # =========================================================================
+
+    # --- Loss composition ----------------------------------------------------
+    parser.add_argument("--mnrl_weight", type=float, default=0.5,
+                        help="weight of the MNRL contrastive term (best: 0.5)")
+    parser.add_argument("--mnrl_tau", type=float, default=0.05,
+                        help="MNRL temperature (best: 0.05; 0.01 diverges)")
+    parser.add_argument("--cosent", action="store_true", default=False,
+                        help="select the MSE + cosine + MNRL loss branch")
+    parser.add_argument("--cosent_weight", type=float, default=1.0,
+                        help="CoSENT ranking-loss weight (0.0 disables; found redundant)")
+    parser.add_argument("--cosent_tau", type=float, default=0.05,
+                        help="CoSENT temperature (0.05 overflows; use 0.5 if enabled)")
+    parser.add_argument("--angle_weight", type=float, default=0.0,
+                        help="AnglE loss weight (evaluated, no gain)")
+    parser.add_argument("--angle_tau", type=float, default=1.0)
+    parser.add_argument("--smart_weight", type=float, default=0.0,
+                        help="SMART adversarial smoothness weight (evaluated, no effect)")
+    parser.add_argument("--smart_sigma", type=float, default=1e-5,
+                        help="SMART noise scale for the initial perturbation")
+    parser.add_argument("--smart_eta", type=float, default=1e-3,
+                        help="SMART step size, as a FRACTION of embedding norm")
+    parser.add_argument("--simcse_only", action="store_true", default=False,
+                        help="unsupervised SimCSE only (evaluated, much worse)")
+    parser.add_argument("--nli_simcse", action="store_true", default=False,
+                        help="legacy flag from the original NLI attempt; superseded "
+                             "by --nli_pretrain_epochs")
+
+    # --- Architecture --------------------------------------------------------
+    parser.add_argument("--cross_attn", action="store_true", default=False,
+                        help="cross-attention interaction layer before pooling "
+                             "(largest architectural gain)")
+    parser.add_argument("--cross_attn_dropout", type=float, default=0.1,
+                        help="dropout inside the cross-attention layer")
+
+    # --- Data augmentation and transfer pretraining --------------------------
+    parser.add_argument("--sts_symmetry", action="store_true", default=False,
+                        help="append reversed pairs: sim(A,B)==sim(B,A) doubles the "
+                             "train set and halves time-to-peak")
+    parser.add_argument("--nli_pretrain_epochs", type=int, default=0,
+                        help="SNLI triplet contrastive pretraining epochs (best gain; "
+                             "requires data/nli_cache/snli_triplets.json)")
+    parser.add_argument("--paws_pretrain_epochs", type=int, default=0,
+                        help="PAWS hard-negative pretraining epochs")
+    parser.add_argument("--quora_pretrain_epochs", type=int, default=0,
+                        help="MNRL pretraining epochs on Quora positive pairs")
+    parser.add_argument("--mine_hard_negatives", type=int, default=0,
+                        help="TF-IDF-mined STS hard-negative pretraining epochs")
+
+    # --- Optimisation --------------------------------------------------------
     parser.add_argument("--warmup_ratio", type=float, default=0.0,
                         help="fraction of STS steps used for linear LR warmup (0=disabled)")
-    parser.add_argument("--filepath", type=str, default=None,
-                        help="explicit model save path (overrides auto-generated name)")
-    parser.add_argument("--cross_attn", action="store_true", default=False,
-                        help="add cross-attention interaction layer before pooling")
-    parser.add_argument("--sts_symmetry", action="store_true", default=False,
-                        help="augment STS train set with reversed sentence pairs")
     parser.add_argument("--grad_clip", type=float, default=0.0,
                         help="max grad norm for STS steps (0=disabled)")
     parser.add_argument("--weight_decay", type=float, default=0.0,
-                        help="decoupled weight decay for AdamW (scaled by lr — see Exp 22)")
+                        help="decoupled weight decay for AdamW. NOTE: optimizer.py scales "
+                             "this by lr, so conventional values are inert here")
+
+    # --- Checkpoint plumbing (useful to all tasks, not STS-specific) ---------
     parser.add_argument("--init_checkpoint", type=str, default=None,
-                        help="warm-start the BERT encoder from an existing checkpoint")
-    parser.add_argument("--nli_pretrain_epochs", type=int, default=0,
-                        help="epochs of SNLI triplet contrastive pretraining (Exp 8)")
-    parser.add_argument("--paws_pretrain_epochs", type=int, default=0,
-                        help="epochs of PAWS hard-negative pretraining (Exp 23)")
-    parser.add_argument("--mine_hard_negatives", type=int, default=0,
-                        help="epochs of TF-IDF-mined STS hard-negative pretraining (Exp 12)")
-    parser.add_argument("--angle_weight", type=float, default=0.0,
-                        help="AnglE loss weight (Exp 14)")
-    parser.add_argument("--angle_tau", type=float, default=1.0)
-    parser.add_argument("--smart_weight", type=float, default=0.0,
-                        help="SMART adversarial smoothness weight (Exp 15)")
-    parser.add_argument("--smart_sigma", type=float, default=1e-5)
-    parser.add_argument("--smart_eta", type=float, default=1e-3)
-    parser.add_argument("--quora_pretrain_epochs", type=int, default=0,
-                        help="epochs of MNRL pretraining on Quora positive pairs before STS")
-    parser.add_argument("--cross_attn_dropout", type=float, default=0.1,
-                        help="dropout inside the cross-attention layer")
+                        help="warm-start the BERT encoder from an existing checkpoint; "
+                             "only bert.* tensors are loaded")
+    parser.add_argument("--filepath", type=str, default=None,
+                        help="explicit model save path. Set this when running jobs in "
+                             "parallel, or they overwrite each other's checkpoints")
+    # ======================= end STS (Part 2) flags ==========================
+
     parser.add_argument(
         "--lr",
         type=float,
