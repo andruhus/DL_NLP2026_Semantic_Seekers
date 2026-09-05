@@ -28,6 +28,7 @@ STEP_GAMMAS=(0.5)
 WARMUP_STEPS=(100)
 METRIC_FACTORS=(0.5)
 METRIC_PATIENCES=(1)
+METRIC_THRESHOLDS=(1e-8)
 POSITIONAL_ARGS=()
 
 while (( $# > 0 )); do
@@ -48,7 +49,7 @@ while (( $# > 0 )); do
             BATCH_SIZE="$2"
             shift 2
             ;;
-        --learning_rate|--min_lr|--step_decay_epochs|--step_gamma|--warmup_steps|--metric_factor|--metric_patience)
+        --learning_rate|--min_lr|--step_decay_epochs|--step_gamma|--warmup_steps|--metric_factor|--metric_patience|--metric_threshold)
             OPTION="$1"
             VALUES=()
             shift
@@ -68,6 +69,7 @@ while (( $# > 0 )); do
                 --warmup_steps) WARMUP_STEPS=("${VALUES[@]}") ;;
                 --metric_factor) METRIC_FACTORS=("${VALUES[@]}") ;;
                 --metric_patience) METRIC_PATIENCES=("${VALUES[@]}") ;;
+                --metric_threshold) METRIC_THRESHOLDS=("${VALUES[@]}") ;;
             esac
             ;;
         *)
@@ -123,6 +125,7 @@ echo "Step-decay gammas: ${STEP_GAMMAS[*]}"
 echo "Inverse-sqrt warmup steps: ${WARMUP_STEPS[*]}"
 echo "Metric factors: ${METRIC_FACTORS[*]}"
 echo "Metric patiences: ${METRIC_PATIENCES[*]}"
+echo "Metric thresholds: ${METRIC_THRESHOLDS[*]}"
 echo "Use GPU: ${USE_GPU}"
 
 python --version
@@ -146,6 +149,7 @@ BART_ARGS=(
     --warmup_steps "${WARMUP_STEPS[@]}"
     --metric_factor "${METRIC_FACTORS[@]}"
     --metric_patience "${METRIC_PATIENCES[@]}"
+    --metric_threshold "${METRIC_THRESHOLDS[@]}"
 )
 if [[ "${USE_GPU}" == true ]]; then
     BART_ARGS+=(--use_gpu)

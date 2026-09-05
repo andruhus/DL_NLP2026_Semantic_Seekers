@@ -269,6 +269,7 @@ def get_args():
     parser.add_argument("--warmup_steps", type=int, nargs="+", default=[100])
     parser.add_argument("--metric_factor", type=float, nargs="+", default=[0.5])
     parser.add_argument("--metric_patience", type=int, nargs="+", default=[1])
+    parser.add_argument("--metric_threshold", type=float, nargs="+", default=[1e-8])
     args = parser.parse_args()
 
     if args.epochs < 1:
@@ -303,6 +304,11 @@ def get_args():
         parser.error("--metric_factor values must be in the interval (0, 1)")
     if any(value < 0 for value in args.metric_patience):
         parser.error("--metric_patience values cannot be negative")
+    if any(
+        not math.isfinite(value) or value < 0.0
+        for value in args.metric_threshold
+    ):
+        parser.error("--metric_threshold values must be finite and non-negative")
     return args
 
 
@@ -317,6 +323,7 @@ def create_experiments(
     warmup_steps,
     metric_factors,
     metric_patiences,
+    metric_thresholds,
 ):
     """Create one experiment for every relevant scheduler-parameter combination."""
     selected_modes = (
@@ -409,20 +416,26 @@ def create_experiments(
             )
 
     if "metric" in selected_modes:
-        for learning_rate, min_lr, factor, patience in product(
-            learning_rates, min_lrs, metric_factors, metric_patiences,
+        for learning_rate, min_lr, factor, patience, threshold in product(
+            learning_rates,
+            min_lrs,
+            metric_factors,
+            metric_patiences,
+            metric_thresholds,
         ):
             experiments.append(
                 (
                     "Metric dependent "
                     f"(lr={learning_rate:g}, min_lr={min_lr:g}, "
-                    f"factor={factor:g}, patience={patience}, threshold=1e-08)",
+                    f"factor={factor:g}, patience={patience}, "
+                    f"threshold={threshold:g})",
                     "metric",
                     MetricDependent(
                         learning_rate,
                         factor=factor,
                         patience=patience,
                         min_lr=min_lr,
+                        threshold=threshold,
                     ),
                 )
             )
@@ -511,6 +524,7 @@ def finetune_paraphrase_generation(args):
         args.warmup_steps,
         args.metric_factor,
         args.metric_patience,
+        args.metric_threshold,
     )
 
     print(f"Loaded {len(train_dataset)} training samples.")
