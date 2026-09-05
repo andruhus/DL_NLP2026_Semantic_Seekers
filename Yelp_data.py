@@ -1,64 +1,43 @@
 import pandas as pd
-import tarfile
+import zipfile
 import urllib.request
 from sklearn.model_selection import train_test_split
 
 # ---------------------------------------------------------
-# 1. Yelp Review Full Dataset herunterladen
+# 1. SST-5 Augmented Dataset herunterladen
 # ---------------------------------------------------------
 
-url = "https://s3.amazonaws.com/fast-ai-nlp/yelp_review_full_csv.tgz"
-filename = "data/yelp_review_full_csv.tgz"
+url = "https://huggingface.co/datasets/SetFit/sst5/resolve/main/data.zip"
+filename = "data/sst5_augmented.zip"
 
-print("Downloading Yelp Review Full Dataset...")
+print("Downloading SST-5 Augmented Dataset...")
 urllib.request.urlretrieve(url, filename)
 
-print("Extracting...")
-with tarfile.open(filename, "r:gz") as tar:
-    tar.extractall(path="data/")
+print("Extracting ZIP...")
+with zipfile.ZipFile(filename, "r") as zip_ref:
+    zip_ref.extractall("data/sst5_augmented/")
 
-# Jetzt liegen train.csv und test.csv im Ordner yelp_review_full_csv/
+# Die extrahierten Dateien liegen nun in data/sst5_augmented/data/
 
 # ---------------------------------------------------------
 # 2. CSVs laden
 # ---------------------------------------------------------
 
-train_df = pd.read_csv("data/yelp_review_full_csv/train.csv", header=None, names=["sentiment", "sentence"])
-test_df  = pd.read_csv("data/yelp_review_full_csv/test.csv",  header=None, names=["sentiment", "sentence"])
+train_df = pd.read_csv("data/sst5_augmented/data/train.csv")
+
+# SetFit hat Format: sentence, label
+train_df = train_df.rename(columns={"label": "sentiment"})
 
 # IDs hinzufügen
 train_df["id"] = range(len(train_df))
-test_df["id"]  = range(len(test_df))
 
 # Spalten sortieren
 train_df = train_df[["id", "sentence", "sentiment"]]
 test_df  = test_df[["id", "sentence", "sentiment"]]
 
 # ---------------------------------------------------------
-# 3. Train → 80% train, 20% dev
+# 3. Original DEV/TEST laden (diese dürfen NICHT ins Training!)
 # ---------------------------------------------------------
 
-train_split, dev_split = train_test_split(
-    train_df,
-    test_size=0.20,
-    random_state=42,
-    shuffle=True
-)
-
-# ---------------------------------------------------------
-# 4. Kleine Splits (je 5%)
-# ---------------------------------------------------------
-
-train_small = test_df.sample(frac=0.05, random_state=42)
-dev_small   = dev_split.sample(frac=0.05, random_state=42)
-
-# ---------------------------------------------------------
-# 5. CSV-Dateien speichern
-# ---------------------------------------------------------
-
-train_split.to_csv("data/yelp-train.csv", index=False)
-dev_split.to_csv("data/yelp-dev.csv", index=False)
-train_small.to_csv("data/yelp-train-small.csv", index=False)
-dev_small.to_csv("data/yelp-dev-small.csv", index=False)
-
-print("Fertig! Alle CSV-Dateien wurden erzeugt.")
+dev_original  = pd.read_csv("data/sst-sentiment-dev.csv")
+test_original = pd.read_csv("data/sst-sentiment-test-student.csv")
