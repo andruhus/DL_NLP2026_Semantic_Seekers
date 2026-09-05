@@ -111,7 +111,6 @@ class MultitaskBERT(nn.Module):
         Returns a combined embedding: [CLS ; mean ; max]
         """
         outputs = self.bert(input_ids, attention_mask)
-        last_hidden = outputs.last_hidden_state  # (batch, seq_len, hidden)
         last_hidden = outputs["last_hidden_state"]  # (batch, seq_len, hidden)
 
         cls = last_hidden[:, 0]  # CLS token
