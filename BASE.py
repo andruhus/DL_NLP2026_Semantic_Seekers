@@ -94,7 +94,7 @@ class MultitaskBERT(nn.Module):
             elif config.option == "finetune":
                 param.requires_grad = True
         self.sentiment_classifier = nn.Sequential(
-            nn.Linear(BERT_HIDDEN_SIZE, 512),
+            nn.Linear(3*BERT_HIDDEN_SIZE, 512),
             nn.GELU(),
             nn.Dropout(0.3),
             nn.Linear(512, 128),
@@ -107,15 +107,27 @@ class MultitaskBERT(nn.Module):
         self.paraphrase_type_classifier = nn.Linear(BERT_HIDDEN_SIZE * 2, 26)
 
     def forward(self, input_ids, attention_mask):
-        """Takes a batch of sentences and produces embeddings for them."""
+        """
+        Returns a combined embedding: [CLS ; mean ; max]
+        """
+        outputs = self.bert(input_ids, attention_mask)
+        last_hidden = outputs.last_hidden_state  # (batch, seq_len, hidden)
+        last_hidden = outputs["last_hidden_state"]  # (batch, seq_len, hidden)
 
-        # The final BERT embedding is the hidden state of [CLS] token (the first token).
-        # See BertModel.forward() for more details.
-        # Here, you can start by just returning the embeddings straight from BERT.
-        # When thinking of improvements, you can later try modifying this
-        # (e.g., by adding other layers).
-        output = self.bert(input_ids, attention_mask)
-        return output['pooler_output']
+        cls = last_hidden[:, 0]  # CLS token
+
+        # Mean pooling (mask-aware)
+        mask = attention_mask.unsqueeze(-1)  # (batch, seq_len, 1)
+        mean = (last_hidden * mask).sum(dim=1) / mask.sum(dim=1)
+
+        # Max pooling (mask-aware)
+        masked_hidden = last_hidden.masked_fill(mask == 0, -1e9)
+        max_pool = masked_hidden.max(dim=1).values
+
+        # Concatenate CLS + Mean + Max
+        combined = torch.cat([cls, mean, max_pool], dim=1)  # (batch, 3*hidden)
+
+        return combined
 
     def predict_sentiment(self, input_ids, attention_mask):
         """
@@ -628,7 +640,7 @@ def get_args():
 
 if __name__ == "__main__":
     args = get_args()
-    args.filepath = f"models/GELUimClassi{args.option}-{args.epochs}-{args.lr}-{args.task}.pt"  # save path
+    args.filepath = f"models/pooling{args.option}-{args.epochs}-{args.lr}-{args.task}.pt"  # save path
     # Logging aktivieren
     logfile = setup_logging(args.filepath)
     seed_everything(args.seed)  # fix the seed for reproducibility
