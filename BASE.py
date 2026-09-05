@@ -93,7 +93,15 @@ class MultitaskBERT(nn.Module):
                 param.requires_grad = False
             elif config.option == "finetune":
                 param.requires_grad = True
-        self.sentiment_classifier = nn.Linear(BERT_HIDDEN_SIZE, N_SENTIMENT_CLASSES)
+        self.sentiment_classifier = nn.Sequential(
+            nn.Linear(BERT_HIDDEN_SIZE, 512),
+            nn.GELU(),
+            nn.Dropout(0.3),
+            nn.Linear(512, 128),
+            nn.GELU(),
+            nn.Dropout(0.3),
+            nn.Linear(128, N_SENTIMENT_CLASSES)
+        )
         self.paraphrase_classifier = nn.Linear(BERT_HIDDEN_SIZE * 2, 1)
         self.similarity_regressor = nn.Linear(BERT_HIDDEN_SIZE * 2, 1)
         self.paraphrase_type_classifier = nn.Linear(BERT_HIDDEN_SIZE * 2, 26)
@@ -620,7 +628,7 @@ def get_args():
 
 if __name__ == "__main__":
     args = get_args()
-    args.filepath = f"models/BASEmitparametern{args.option}-{args.epochs}-{args.lr}-{args.task}.pt"  # save path
+    args.filepath = f"models/GELUimClassi{args.option}-{args.epochs}-{args.lr}-{args.task}.pt"  # save path
     # Logging aktivieren
     logfile = setup_logging(args.filepath)
     seed_everything(args.seed)  # fix the seed for reproducibility
