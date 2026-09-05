@@ -1,4 +1,4 @@
-# packages in environment at /user/simon.pummer/u28397/.conda/envs/dnlp:
+dsbufskdfjbksjfn# packages in environment at /user/simon.pummer/u28397/.conda/envs/dnlp:
 #
 # Name                    Version                   Build  Channel
 _openmp_mutex             4.5                  7_kmp_llvm    conda-forge
