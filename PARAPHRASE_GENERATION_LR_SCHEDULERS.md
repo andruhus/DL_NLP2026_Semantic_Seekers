@@ -384,59 +384,35 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 ### Output Exploration
 
-The two models below generated paraphrases for the **same development example**. Shared input and reference details are shown once so their outputs can be compared directly.
+Both models receive the same source and ETPC annotations.
 
-#### Shared Example
-
-- **Development row:** 9 (zero-based)
-- **ETPC ID:** `30eafe3b-1353-421b-8b6a-7d96f2edc1b1`
-
-**Source sentence**
+**Source**
 
 > Peterson was arrested near Torrey Pines Golf Course in La Jolla on April 18, the day DNA testing identified the bodies.
 
-**Reference paraphrase**
+**Reference**
 
 > Peterson, 30, was arrested in La Jolla April 18 after the two bodies were identified through DNA tests.
 
-**Input metadata**
+**Annotations decoded.** These are ETPC labels, not BART token IDs. The [ETPC type definitions](https://github.com/venelink/ETPC/blob/master/Corpus/paraphrase_types.xml) map the requested types to:
 
-- **Paraphrase-type IDs:** `[6, 6, 11, 14, 25, 25, 25, 29]`
-- **Segment locations:**
+- `6`: contextual same-polarity substitution — equivalent wording in context.
+- `11`: synthetic/analytic substitution — a compact expression versus a more explicit construction.
+- `14`: diathesis alternation — changing grammatical voice or argument structure.
+- `25`: addition/deletion — adding or removing material.
+- `29`: identity — retaining wording unchanged.
 
-```text
-[25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 11, 11,
- 11, 0, 6, 6, 14, 14, 14, 14, 14, 25]
-```
+Repeated type IDs represent multiple annotations of the same type. The segment list assigns a label to each original source token, as described in the [course specification, p. 14](docs/SS26_dnlp_ProjectDescription.pdf#page=14): “on April 18” carries `11`, “the day” carries `6`, and “DNA testing identified the bodies” carries `14`. The comma has `0` (no assigned type); the remaining tokens carry `25`. These labels are supplied to guide generation, not predicted outputs.
 
-The model input concatenates the source sentence, segment locations, and type IDs with ` </s> ` separators. Both models receive this same input.
-
-#### Model 99 — Higher Penalized BLEU
-
-**Configuration:** metric-dependent decay; LR `9e-5`, minimum LR `0`, factor `0.5`, patience `1`, threshold `3`.
-
-**Generated paraphrase** (the added word is highlighted):
+**Model 99** (added word highlighted)
 
 > Peterson was arrested near Torrey Pines Golf Course in La Jolla on April 18, the **same** day DNA testing identified the bodies.
 
-#### Model 78 — Higher Reference BLEU
-
-**Configuration:** metric-dependent decay; LR `2e-5`, minimum LR `0`, factor `0.1`, patience `0`, threshold `4`.
-
-**Generated paraphrase** (identical to the source):
+**Model 78** (copies the source)
 
 > Peterson was arrested near Torrey Pines Golf Course in La Jolla on April 18, the day DNA testing identified the bodies.
-
-#### Development-Set Scores
-
-These are checkpoint-selected scores over the development set, **not scores for this single example**.
-
-| Model ID | Reference BLEU | Input BLEU | Penalized BLEU |
-| ---: | ---: | ---: | ---: |
-| 99 | 42.6154 | 73.2415 | 21.9293 |
-| 78 | 48.6880 | 91.7971 | 7.6805 |
 
 #### Observations
 
 1. Both outputs closely copy the source: Model 99 adds only “same”, while Model 78 reproduces the source exactly. A higher development-set penalized BLEU does not guarantee substantial rewriting on every example.
-2. The reference includes information absent from the source, such as Peterson’s age (“30”). That detail cannot be inferred from the supplied input alone; its omission is not necessarily a generation error, and the example by itself does not establish data leakage.
+2. The reference includes information absent from the source, such as Peterson’s age (“30”). That detail cannot be inferred from the supplied input alone. This explains why data leakage had a profound effect on the 
