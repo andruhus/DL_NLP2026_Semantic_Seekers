@@ -629,7 +629,7 @@ def get_args():
 
 if __name__ == "__main__":
     args = get_args()
-    args.filepath = f"models/warmup0.2{args.option}-{args.epochs}-{args.lr}-{args.task}.pt"  # save path
+    args.filepath = f"models/warmup0{args.option}-{args.epochs}-{args.lr}-{args.task}.pt"  # save path
     # Logging aktivieren
     logfile = setup_logging(args.filepath)
     seed_everything(args.seed)  # fix the seed for reproducibility
