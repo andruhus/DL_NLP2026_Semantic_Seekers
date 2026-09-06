@@ -1,5 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=train-multitask_classifier
+#SBATCH --qos=2h
 #SBATCH -t 00:10:00                  # estimated time # TODO: adapt to your needs
 #SBATCH -p grete:shared              # the partition you are training on (i.e., which nodes), for nodes see sinfo -p grete:shared --format=%N,%G
 #SBATCH -G A100:1                    # take 1 GPU, see https://docs.hpc.gwdg.de/compute_partitions/gpu_partitions/index.html for more options
@@ -31,4 +32,4 @@ echo "Latest Commit: $(git rev-parse --short HEAD)"
 echo -e "Uncommitted Changes: $(git status --porcelain | wc -l)\n"
 
 # Run the script:
-python -u multitask_classifier.py --task sst --option finetune --lr 2e-05 --batch_size 16 --warmup_ratio 0.1 --weight_decay 0 --label_smoothing 0.01 --classifier_dropout 0.3 --use_gpu --local_files_only > output.log 2> error.log
+python -u multitask_classifier.py --task sst --option finetune --lr 2e-05 --batch_size 16 --warmup_ratio 0.1 --weight_decay 0.001 --label_smoothing 0.0 --classifier_dropout 0.3 --use_gpu --local_files_only > output.log 2> error.log
