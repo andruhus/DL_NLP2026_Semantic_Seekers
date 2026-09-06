@@ -31,6 +31,7 @@ def _validate_ids(ids, training_results):
 def plot_training_metrics(
     ids: int | str | Iterable[int | str],
     show: bool = True,
+    baseline: bool = False,
 ):
     """Plot learning rate and development BLEU metrics for one or more IDs.
 
@@ -38,13 +39,27 @@ def plot_training_metrics(
         ids: One experiment ID or an iterable of experiment IDs from
             ``run_5epoch_results.csv``.
         show: Whether to display the Matplotlib figure immediately.
+        baseline: Include the constant 2e-5 run, found in the summary CSV,
+            as a dashed baseline. It is not duplicated if already requested.
 
     Returns:
         A tuple containing the Matplotlib figure and its 2-by-3 axes array.
     """
     training_results = pd.read_csv(TRAINING_RESULTS_PATH)
     summary_results = pd.read_csv(RESULTS_PATH).set_index("id")
-    ids = _validate_ids(ids, training_results)
+    ids = list(dict.fromkeys(_validate_ids(ids, training_results)))
+    baseline_id = None
+    if baseline:
+        candidates = summary_results.index[
+            (summary_results["scheduler_type"] == "Constant learning rate")
+            & (summary_results["lr"] == 2e-5)
+        ].tolist()
+        if len(candidates) != 1:
+            raise ValueError("Expected exactly one constant 2e-5 baseline in the summary CSV.")
+        baseline_id = int(candidates[0])
+        if baseline_id not in ids:
+            ids.append(baseline_id)
+        _validate_ids(ids, training_results)
     missing_metadata_ids = sorted(set(ids) - set(summary_results.index))
     if missing_metadata_ids:
         raise ValueError(
@@ -57,6 +72,8 @@ def plot_training_metrics(
         experiment_id: color_cycle[index % len(color_cycle)]
         for index, experiment_id in enumerate(ids)
     }
+    if baseline_id is not None:
+        id_colors[baseline_id] = "black"
     plots = (
         (axes[0, 0], "next_lr", "Next learning rate"),
         (axes[0, 1], "dev_reference_bleu", "Reference BLEU"),
@@ -65,16 +82,19 @@ def plot_training_metrics(
         (axes[1, 2], "loss", "Training loss"),
     )
 
-    for experiment_id in ids:
+    for index, experiment_id in enumerate(ids):
         experiment_rows = training_results[
             training_results["id"] == experiment_id
-        ].sort_values("epoch")
-        label = f"ID {experiment_id}"
+        ].sort_values(by=["epoch"])
+        is_baseline = experiment_id == baseline_id
+        label = f"Baseline (ID {experiment_id})" if is_baseline else f"ID {experiment_id}"
         for axis, column, title in plots:
             axis.plot(
                 experiment_rows["epoch"],
                 experiment_rows[column],
-                marker="o",
+                marker="x" if is_baseline else ("o", "s", "^")[index % 3],
+                markerfacecolor="none",
+                linestyle="--" if is_baseline else ("-", ":", "-.")[index % 3],
                 color=id_colors[experiment_id],
                 label=label,
             )
@@ -97,44 +117,54 @@ def plot_training_metrics(
     parameter_sections = []
     for experiment_id in ids:
         metadata = summary_results.loc[experiment_id]
-        parameter_lines = []
-        for column in parameter_columns:
+        scheduler_type = str(metadata["scheduler_type"])
+        parameter_values = []
+        for column in parameter_columns[1:]:
             value = metadata[column]
             if pd.notna(value):
-                formatted_value = (
-                    str(value) if column == "scheduler_type" else f"{value:g}"
+                display_column = (
+                    "factor"
+                    if column == "gamma" and scheduler_type == "Metric dependent"
+                    else column
                 )
-                parameter_lines.append(f"{column}: {formatted_value}")
-        parameter_sections.append((experiment_id, parameter_lines))
+                parameter_values.append(f"{display_column}={value:g}")
+        compact_lines = [
+            "; ".join(parameter_values[index:index + 2])
+            for index in range(0, len(parameter_values), 2)
+        ]
+        parameter_sections.append(
+            (experiment_id, [scheduler_type, *compact_lines])
+        )
 
     parameter_axis = axes[1, 1]
     parameter_axis.set_title("Experiment parameters")
     parameter_axis.axis("off")
-    line_height = 0.05
-    text_y = 1.0
-    for experiment_id, parameter_lines in parameter_sections:
+    section_height = 1.0 / len(parameter_sections)
+    for index, (experiment_id, parameter_lines) in enumerate(parameter_sections):
+        text_y = 1.0 - index * section_height
         parameter_axis.text(
             0.0,
             text_y,
-            f"ID {experiment_id}",
+            f"Baseline (ID {experiment_id})" if experiment_id == baseline_id else f"ID {experiment_id}",
             color=id_colors[experiment_id],
             transform=parameter_axis.transAxes,
             verticalalignment="top",
-            fontsize=9,
+            fontsize=8,
+            fontweight="bold",
         )
-        text_y -= line_height
         parameter_axis.text(
             0.0,
-            text_y,
+            text_y - 0.06,
             "\n".join(parameter_lines),
             transform=parameter_axis.transAxes,
             verticalalignment="top",
-            fontsize=9,
+            fontsize=7.5,
+            linespacing=1.0,
         )
-        text_y -= line_height * (len(parameter_lines) + 1)
 
     for axis, _, _ in plots:
         axis.set_xlabel("Epoch")
+        axis.set_xticks(sorted(training_results.loc[training_results["id"].isin(ids), "epoch"].unique()))
         axis.legend()
 
     figure.suptitle("Training metrics by experiment ID")

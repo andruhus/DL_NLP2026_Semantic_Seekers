@@ -93,6 +93,10 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 67 | 5e-4 | 0.0082 | 0.0079 | 0.0158 |
 | 64 | 1e-3 | 0.0042 | 0.0040 | 0.0081 |
 
+**Training dynamics.** IDs 74 and 65 are compared with the constant `2e-5` baseline (ID 70, dashed black line).
+
+![Constant learning-rate top-two runs compared with baseline](paraphrase_generation/figure/constant_training_comparison.png)
+
 ##### Discussion
 
 #### Step Decay
@@ -159,6 +163,10 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 8 | 1e-3 | 1e-7 | 3 | 924 | 0.2 | 0.0042 | 0.0040 | 0.0081 |
 | 9 | 1e-3 | 1e-7 | 3 | 924 | 0.1 | 0.0042 | 0.0040 | 0.0081 |
 
+**Training dynamics.** IDs 16 and 17 are compared with the constant `2e-5` baseline (ID 70, dashed black line).
+
+![Step-decay top-two runs compared with baseline](paraphrase_generation/figure/step_training_comparison.png)
+
 ##### Discussion
 
 #### Cosine Decay
@@ -209,6 +217,10 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 41 | 1e-5 | 2e-6 | 1540 | 48.5021 | 91.2907 | 8.1234 |
 | 40 | 1e-5 | 1e-6 | 1540 | 48.6739 | 92.6041 | 6.9228 |
 
+**Training dynamics.** IDs 46 and 51 are compared with the constant `2e-5` baseline (ID 70, dashed black line).
+
+![Cosine-decay top-two runs compared with baseline](paraphrase_generation/figure/cosine_training_comparison.png)
+
 ##### Discussion
 
 #### Linear Decay
@@ -258,6 +270,10 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 31 | 2e-5 | 1e-6 | 1540 | 48.1090 | 88.4786 | 10.6593 |
 | 28 | 1e-5 | 1e-6 | 1540 | 48.8003 | 91.3644 | 8.1042 |
 | 29 | 1e-5 | 2e-6 | 1540 | 48.4397 | 91.3266 | 8.0796 |
+
+**Training dynamics.** IDs 38 and 39 are compared with the constant `2e-5` baseline (ID 70, dashed black line).
+
+![Linear-decay top-two runs compared with baseline](paraphrase_generation/figure/linear_training_comparison.png)
 
 ##### Discussion
 
@@ -311,6 +327,10 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 56 | 5e-5 | 2e-6 | 1540 | 0 | 48.6748 | 95.9534 | 3.7878 |
 | 52 | 2e-5 | 2e-6 | 1540 | 0 | 48.7384 | 97.0412 | 2.7732 |
 | 53 | 2e-5 | 2e-6 | 1540 | 2 | 48.9237 | 97.8553 | 2.0178 |
+
+**Training dynamics.** IDs 54 and 63 are compared with the constant `2e-5` baseline (ID 70, dashed black line).
+
+![Inverse-square-root top-two runs compared with baseline](paraphrase_generation/figure/inverse_sqrt_training_comparison.png)
 
 ##### Discussion
 
@@ -379,6 +399,10 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 86 | 2e-5 | 0 | 0.5 | 0 | 4 | 47.9820 | 88.3039 | 10.7923 |
 | 82 | 2e-5 | 0 | 0.2 | 0 | 4 | 48.3951 | 90.1885 | 9.1313 |
 | 78 | 2e-5 | 0 | 0.1 | 0 | 4 | 48.6880 | 91.7971 | 7.6805 |
+
+**Training dynamics.** IDs 91 and 95 are compared with the constant `2e-5` baseline (ID 70, dashed black line).
+
+![Metric-dependent top-two runs compared with baseline](paraphrase_generation/figure/metric_training_comparison.png)
 
 ##### Discussion
 

@@ -1,10 +1,16 @@
 """Generate learning-rate scheduler figures for the experiment report."""
 
+import csv
 import math
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+
+if __package__:
+    from .exp_result_explorer import plot_training_metrics
+else:
+    from exp_result_explorer import plot_training_metrics
 
 
 INITIAL_LR = 2e-5
@@ -21,6 +27,15 @@ METRIC_FACTOR = 0.5
 METRIC_PATIENCE = 1
 
 FIGURE_DIR = Path(__file__).resolve().parent / "figure"
+RESULTS_PATH = Path(__file__).resolve().parent / "run_5epoch_results.csv"
+SCHEDULER_COMPARISONS = (
+    ("Constant learning rate", "Constant learning rate", "constant_training_comparison.png"),
+    ("Step decay", "Step decay", "step_training_comparison.png"),
+    ("Cosine decay", "Cosine decay", "cosine_training_comparison.png"),
+    ("Linear decay", "Linear decay", "linear_training_comparison.png"),
+    ("Inverse square root", "Inverse-square-root decay", "inverse_sqrt_training_comparison.png"),
+    ("Metric dependent", "Metric-dependent decay", "metric_training_comparison.png"),
+)
 
 
 def save_update_plot(rates, title, filename, *, mark_warmup=False):
@@ -143,10 +158,40 @@ def plot_metric_dependent_schedule():
     plt.close(fig)
 
 
+def plot_scheduler_comparisons():
+    """Compare each scheduler's top two runs with the constant 2e-5 baseline."""
+    with RESULTS_PATH.open(newline="", encoding="utf-8") as source:
+        results = list(csv.DictReader(source))
+
+    selected_ids = {}
+    for scheduler_type, title, filename in SCHEDULER_COMPARISONS:
+        scheduler_results = [
+            row for row in results if row["scheduler_type"] == scheduler_type
+        ]
+        scheduler_results.sort(
+            key=lambda row: (-float(row["dev_penalized_bleu"]), int(row["id"]))
+        )
+        if len(scheduler_results) < 2:
+            raise ValueError(f"Expected at least two results for {scheduler_type}.")
+        best_ids = [int(row["id"]) for row in scheduler_results[:2]]
+        selected_ids[scheduler_type] = best_ids
+
+        figure, _ = plot_training_metrics(best_ids, show=False, baseline=True)
+        figure.suptitle(f"{title}: top two runs vs. constant 2e-5 baseline")
+        figure.tight_layout(rect=(0, 0, 1, 0.95))
+        figure.savefig(FIGURE_DIR / filename, dpi=120, bbox_inches="tight")
+        plt.close(figure)
+    return selected_ids
+
+
+
 def main():
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
     plot_update_based_schedules()
     plot_metric_dependent_schedule()
+    selected_ids = plot_scheduler_comparisons()
+    for scheduler_type, ids in selected_ids.items():
+        print(f"{scheduler_type}: selected IDs {ids[0]} and {ids[1]}")
     print(f"Saved scheduler plots to {FIGURE_DIR}")
 
 
