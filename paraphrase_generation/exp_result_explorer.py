@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from decimal import Decimal
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -90,6 +91,8 @@ def plot_training_metrics(
         "gamma",
         "total_steps",
         "inverse_warm_up_step",
+        "patience",
+        "threshold",
     )
     parameter_sections = []
     for experiment_id in ids:
@@ -140,6 +143,12 @@ def plot_training_metrics(
         plt.show()
     return figure, axes
 
+def _format_scientific(value):
+    if pd.isna(value):
+        return ""
+    return format(Decimal(str(value)).normalize(), "e")
+
+
 def print_info(sort_col):
     results = pd.read_csv(RESULTS_PATH)
     sorted = results.sort_values(
@@ -154,10 +163,17 @@ def print_info(sort_col):
         "dev_input_bleu",
         "dev_penalized_bleu",
     ]]
-    print(sorted.to_string(index=False))
+    display_results = sorted.copy()
+    display_results["lr"] = [
+        _format_scientific(value) for value in display_results["lr"]
+    ]
+    display_results["min_lr"] = [
+        _format_scientific(value) for value in display_results["min_lr"]
+    ]
+    print(display_results.to_string(index=False))
 
 if __name__ == "__main__":
-    # col = "dev_penalized_bleu"
-    col = "dev_reference_bleu"
-    print_info(col)
-    # plot_training_metrics([30,25,16])
+    col = "dev_penalized_bleu"
+    # col = "dev_reference_bleu"
+    # print_info(col)
+    plot_training_metrics([25,70,65])
