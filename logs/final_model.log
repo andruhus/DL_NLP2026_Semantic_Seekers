@@ -1,0 +1,35 @@
+2026-09-06 19:42:05 - Logfile gestartet für Modell: models/warmup0.2finetune-10-2e-05-sst.pt
+2026-09-06 19:42:07 - ------------------------------
+2026-09-06 19:42:07 -     BERT Model Configuration
+2026-09-06 19:42:07 - ------------------------------
+2026-09-06 19:42:07 - {'allnli': False,
+ 'batch_size': 16,
+ 'classifier_dropout': 0.3,
+ 'epochs': 10,
+ 'filepath': 'models/warmup0.2finetune-10-2e-05-sst.pt',
+ 'hidden_dropout_prob': 0.3,
+ 'label_smoothing': 0.0,
+ 'local_files_only': True,
+ 'lr': 2e-05,
+ 'option': 'finetune',
+ 'seed': 11711,
+ 'task': 'sst',
+ 'use_gpu': True,
+ 'warmup_ratio': 0.1,
+ 'weight_decay': 0.0,
+ 'yelp': False}
+2026-09-06 19:42:07 - ------------------------------
+2026-09-06 19:42:45 - Epoch 01 (sst): train loss :: 1.431, train :: 0.493, dev :: 0.464
+2026-09-06 19:42:47 - Saving the model to models/warmup0.2finetune-10-2e-05-sst.pt.
+2026-09-06 19:43:19 - Epoch 02 (sst): train loss :: 1.108, train :: 0.623, dev :: 0.513
+2026-09-06 19:43:21 - Saving the model to models/warmup0.2finetune-10-2e-05-sst.pt.
+2026-09-06 19:43:54 - Epoch 03 (sst): train loss :: 0.889, train :: 0.752, dev :: 0.510
+2026-09-06 19:44:27 - Epoch 04 (sst): train loss :: 0.671, train :: 0.871, dev :: 0.528
+2026-09-06 19:44:29 - Saving the model to models/warmup0.2finetune-10-2e-05-sst.pt.
+2026-09-06 19:45:02 - Epoch 05 (sst): train loss :: 0.493, train :: 0.903, dev :: 0.527
+2026-09-06 19:45:34 - Epoch 06 (sst): train loss :: 0.345, train :: 0.950, dev :: 0.517
+2026-09-06 19:46:07 - Epoch 07 (sst): train loss :: 0.249, train :: 0.953, dev :: 0.527
+2026-09-06 19:46:40 - Epoch 08 (sst): train loss :: 0.190, train :: 0.974, dev :: 0.512
+2026-09-06 19:47:13 - Epoch 09 (sst): train loss :: 0.154, train :: 0.980, dev :: 0.518
+2026-09-06 19:47:46 - Epoch 10 (sst): train loss :: 0.124, train :: 0.982, dev :: 0.514
+2026-09-06 19:47:48 - Loaded model to test from models/warmup0.2finetune-10-2e-05-sst.pt
