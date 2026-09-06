@@ -60,13 +60,8 @@ def plot_training_metrics(
         if baseline_id not in ids:
             ids.append(baseline_id)
         _validate_ids(ids, training_results)
-    missing_metadata_ids = sorted(set(ids) - set(summary_results.index))
-    if missing_metadata_ids:
-        raise ValueError(
-            f"No experiment metadata found for IDs: {missing_metadata_ids}"
-        )
 
-    figure, axes = plt.subplots(2, 3, figsize=(18, 8), sharex=True)
+    figure, axes = plt.subplots(3, 2, figsize=(18, 8), sharex=True)
     color_cycle = plt.rcParams["axes.prop_cycle"].by_key()["color"]
     id_colors = {
         experiment_id: color_cycle[index % len(color_cycle)]
@@ -76,10 +71,10 @@ def plot_training_metrics(
         id_colors[baseline_id] = "black"
     plots = (
         (axes[0, 0], "next_lr", "Next learning rate"),
-        (axes[0, 1], "dev_reference_bleu", "Reference BLEU"),
-        (axes[0, 2], "dev_input_bleu", "Input BLEU"),
+        (axes[2, 0], "dev_reference_bleu", "Reference BLEU"),
+        (axes[2, 1], "dev_input_bleu", "Input BLEU"),
         (axes[1, 0], "dev_penalized_bleu", "Penalized BLEU"),
-        (axes[1, 2], "loss", "Training loss"),
+        (axes[0, 1], "loss", "Training loss"),
     )
 
     for index, experiment_id in enumerate(ids):
