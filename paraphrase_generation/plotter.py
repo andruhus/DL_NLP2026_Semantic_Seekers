@@ -179,7 +179,7 @@ def plot_scheduler_comparisons():
         figure, _ = plot_training_metrics(best_ids, show=False, baseline=True)
         figure.suptitle(f"{title}: top two runs vs. constant 2e-5 baseline")
         figure.tight_layout(rect=(0, 0, 1, 0.95))
-        figure.savefig(FIGURE_DIR / filename, dpi=120, bbox_inches="tight")
+        figure.savefig(FIGURE_DIR / filename, dpi=600, bbox_inches="tight")
         plt.close(figure)
     return selected_ids
 
