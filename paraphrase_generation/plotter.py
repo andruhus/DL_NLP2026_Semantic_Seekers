@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 if __package__:
-    from .exp_result_explorer import plot_training_metrics
+    from .exp_result_explorer import plot_training_metrics, scatter_plot_losses
 else:
-    from exp_result_explorer import plot_training_metrics
+    from exp_result_explorer import plot_training_metrics, scatter_plot_losses
 
 
 INITIAL_LR = 2e-5
@@ -192,6 +192,15 @@ def main():
     selected_ids = plot_scheduler_comparisons()
     for scheduler_type, ids in selected_ids.items():
         print(f"{scheduler_type}: selected IDs {ids[0]} and {ids[1]}")
+
+    loss_bleu_figure, _ = scatter_plot_losses(show=False)
+    loss_bleu_figure.savefig(
+        FIGURE_DIR / "loss_bleu_scatter.png",
+        dpi=600,
+        bbox_inches="tight",
+    )
+    plt.close(loss_bleu_figure)
+    print(f"Saved loss/BLEU scatter plot to {FIGURE_DIR / 'loss_bleu_scatter.png'}")
     print(f"Saved scheduler plots to {FIGURE_DIR}")
 
 
