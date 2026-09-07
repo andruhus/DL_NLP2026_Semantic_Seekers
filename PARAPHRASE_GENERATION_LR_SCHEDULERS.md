@@ -1,18 +1,17 @@
 # ETPC BART Generation: Learning-Rate Scheduler Experiments
 
-## Task, Baseline, and Contribution
+## Task description
 
 ETPC paraphrase generation is formulated as a conditional sequence-to-sequence task. Given `sentence1`, its marked segment location, and the requested paraphrase-type IDs, the model generates `sentence2`. Following the course-provided generation setup, the baseline fine-tunes `facebook/bart-large` with token-level sequence-generation loss and the project's `AdamW` implementation. The repository setup already downloads this checkpoint, and `bart_generation.py` uses the corresponding Hugging Face tokenizer and conditional-generation model. This extension retains the provided model, input representation, objective, optimizer, and decoding procedure; it changes only how the optimizer learning rate evolves during fine-tuning.
 
-A constant learning rate applies the same update scale throughout training, although different stages of BART fine-tuning may benefit from different behavior. Large early updates can disrupt useful pretrained representations, while an unchanged rate late in training can prevent stable refinement around a promising solution. We therefore compare the constant-rate baseline with step, cosine, linear, inverse-square-root, and development-metric-dependent schedules.
-
 The original ETPC training CSV contains all 273 development examples. Before tokenization, the pipeline normalizes ETPC `id` values and removes these overlapping rows, leaving 2,457 training examples and 273 non-overlapping held-out development examples. Every comparison run uses this same cleaned split and initializes a fresh `facebook/bart-large` model with the same random seed.
 
-## Research Questions and Hypotheses
+## Improvement idea
 
-1. **Final held-out performance:** Does a non-constant learning-rate schedule improve checkpoint-selected penalized development BLEU over the constant-rate baseline under the same training budget?
-2. **Generation quality and novelty:** Can a schedule improve reference BLEU while controlling input BLEU, rather than increasing the penalized score through only one side of its quality-versus-copying tradeoff?
-3. **Training efficiency and stability:** Does warmup, smooth decay, or metric-dependent reduction reach a strong held-out score earlier or avoid damaging updates more effectively than a fixed learning rate?
+What if instead we used an adaptive learning rate scheduler. 
+
+
+### Learning rate scheduler types
 
 | Method | Change from baseline | Hypothesis |
 | --- | --- | --- |
@@ -29,7 +28,88 @@ The previously reported penalized development BLEU of approximately 39 was infla
 
 After removing every training row whose normalized ETPC `id` occurs in the development set, the training split contains 2,457 examples and the development split remains at 273 genuinely held-out examples. Under this corrected protocol, the constant-learning-rate baseline achieves a penalized development BLEU of approximately 17. The decrease from 39 to 17 should therefore not be interpreted as a model regression: it is the result of eliminating leakage and measuring generalization on a non-overlapping split. All scheduler comparisons use 17—not the leaked score of 39—as the valid baseline.
 
-## Learning schedulers
+## Methodology
+
+#### Methodology
+
+Run the parameter grid recorded below: **13 experiments**, five epochs each. Space-separated option values form a Cartesian product.
+
+```sh
+sbatch run_bart_generation.sh 5 constant \
+    --batch_size 8 \
+    --learning_rate 1e-3 1e-4 2e-4 5e-4 1e-5 5e-5 2e-5 3e-5 4e-5 7e-5 9e-5 1.1e-4 1.25e-4 \
+    --min_lr 0 \
+    --use_gpu
+```
+
+#### Methodology
+
+Run the parameter grid recorded below: **27 experiments**, five epochs each. Space-separated option values form a Cartesian product.
+
+```sh
+sbatch run_bart_generation.sh 5 step \
+    --batch_size 8 \
+    --learning_rate 1e-3 1e-4 1e-5 \
+    --min_lr 1e-7 \
+    --step_decay_epochs 1 2 3 \
+    --step_gamma 0.5 0.2 0.1 \
+    --use_gpu
+```
+
+#### Methodology
+
+Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
+
+```sh
+sbatch run_bart_generation.sh 5 cosine \
+    --batch_size 8 \
+    --learning_rate 1e-5 2e-5 5e-5 1e-4 \
+    --min_lr 1e-6 2e-6 5e-6 \
+    --use_gpu
+```
+
+#### Methodology
+
+Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
+
+```sh
+sbatch run_bart_generation.sh 5 linear \
+    --batch_size 8 \
+    --learning_rate 1e-5 2e-5 5e-5 1e-4 \
+    --min_lr 1e-6 2e-6 5e-6 \
+    --use_gpu
+```
+
+#### Methodology
+
+Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
+
+```sh
+sbatch run_bart_generation.sh 5 inverse_sqrt \
+    --batch_size 8 \
+    --learning_rate 2e-5 5e-5 1e-4 \
+    --min_lr 2e-6 5e-6 \
+    --warmup_steps 0 2 \
+    --use_gpu
+```
+
+#### Methodology
+
+Run the parameter grid recorded below: **24 experiments**, five epochs each. Space-separated option values form a Cartesian product.
+
+```sh
+sbatch run_bart_generation.sh 5 metric \
+    --batch_size 8 \
+    --learning_rate 2e-5 9e-5 \
+    --min_lr 0 \
+    --metric_factor 0.1 0.2 0.5 \
+    --metric_patience 0 1 \
+    --metric_threshold 3 4 \
+    --use_gpu
+```
+
+
+## Results
 
 The plots use the default initial learning rate $\alpha_0=2\times10^{-5}$, minimum learning rate $\alpha_{\min}=0$, five epochs, and batch size 8. With 2,457 cleaned training examples, there are $\lceil2457/8\rceil=308$ optimizer updates per epoch and $T=1540$ updates in total. They can be regenerated with:
 
@@ -46,32 +126,6 @@ mkdir -p slurm_files
 Each command runs its experiments sequentially within one job. The wrapper requests two hours by default; for larger grids, choose a cluster-permitted wall-time override using `sbatch --time=...` before the script name. Run grids separately and archive their outputs before the next job, since runs share output locations and reruns can overwrite checkpoints. Table IDs are persistent CSV identifiers, not the per-job checkpoint indices.
 
 ### Constant Learning Rate
-
-#### Idea
-
-The baseline uses the same learning rate for every optimizer update $t$:
-
-$$
-\alpha_t=\alpha_0.
-$$
-
-It provides no warmup or decay, making it the control condition for determining whether changing the learning rate over time improves generation.
-
-**Plot description.** The horizontal line remains at $2\times10^{-5}$ throughout all five epochs, showing that every optimizer update uses the same learning rate.
-
-![Constant learning-rate schedule](paraphrase_generation/figure/constant_learning_rate.png)
-
-#### Methodology
-
-Run the parameter grid recorded below: **13 experiments**, five epochs each. Space-separated option values form a Cartesian product.
-
-```sh
-sbatch run_bart_generation.sh 5 constant \
-    --batch_size 8 \
-    --learning_rate 1e-3 1e-4 2e-4 5e-4 1e-5 5e-5 2e-5 3e-5 4e-5 7e-5 9e-5 1.1e-4 1.25e-4 \
-    --min_lr 0 \
-    --use_gpu
-```
 
 #### Results
 
@@ -98,36 +152,6 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 ![Constant learning-rate top-two runs compared with baseline](paraphrase_generation/figure/constant_training_comparison.png)
 
 ### Step Decay
-
-#### Idea
-
-Step decay multiplies the learning rate by $\gamma$ after every $s$ optimizer updates, subject to a lower bound:
-
-$$
-\alpha_t=\max\left(\alpha_{\min},\alpha_0\gamma^{\left\lfloor t/s\right\rfloor}\right).
-$$
-
-For the default experiment, $\gamma=0.5$ and the decay interval is one epoch, so $s=308$. The rate is therefore halved at the end of each epoch.
-
-**Plot description.** The staircase curve holds the learning rate constant within each epoch and drops it abruptly by half at every epoch boundary, from $2\times10^{-5}$ initially to $1.25\times10^{-6}$ in the fifth epoch.
-
-![Step-decay learning-rate schedule](paraphrase_generation/figure/step_decay.png)
-
-#### Methodology
-
-Run the parameter grid recorded below: **27 experiments**, five epochs each. Space-separated option values form a Cartesian product.
-
-```sh
-sbatch run_bart_generation.sh 5 step \
-    --batch_size 8 \
-    --learning_rate 1e-3 1e-4 1e-5 \
-    --min_lr 1e-7 \
-    --step_decay_epochs 1 2 3 \
-    --step_gamma 0.5 0.2 0.1 \
-    --use_gpu
-```
-
-#### Results
 
 Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Step decay`. Sorted by descending penalized BLEU (ties by ascending ID). BLEU scores are rounded to four decimal places.
 
@@ -167,35 +191,6 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 ### Cosine Decay
 
-#### Idea
-
-Cosine decay changes the learning rate smoothly from $\alpha_0$ to $\alpha_{\min}$ over the complete budget of $T$ optimizer updates:
-
-$$
-\alpha_t=\alpha_{\min}+\frac{\alpha_0-\alpha_{\min}}{2}
-\left(1+\cos\left(\pi\frac{\min(t,T)}{T}\right)\right).
-$$
-
-The gradual early decrease preserves relatively large updates for exploration, while the flatter end of the cosine curve permits conservative refinement near the end of training.
-
-**Plot description.** The curve starts flat near $2\times10^{-5}$, decreases most rapidly around the middle of training, and flattens again as it approaches zero at the end of epoch 5.
-
-![Cosine-decay learning-rate schedule](paraphrase_generation/figure/cosine_decay.png)
-
-#### Methodology
-
-Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
-
-```sh
-sbatch run_bart_generation.sh 5 cosine \
-    --batch_size 8 \
-    --learning_rate 1e-5 2e-5 5e-5 1e-4 \
-    --min_lr 1e-6 2e-6 5e-6 \
-    --use_gpu
-```
-
-#### Results
-
 Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Cosine decay`. Sorted by descending penalized BLEU (ties by ascending ID). BLEU scores are rounded to four decimal places.
 
 | ID | LR | Min LR | Total updates | Dev reference BLEU | Dev input BLEU | Dev penalized BLEU |
@@ -218,35 +213,6 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 ![Cosine-decay top-two runs compared with baseline](paraphrase_generation/figure/cosine_training_comparison.png)
 
 ### Linear Decay
-
-#### Idea
-
-Linear decay decreases the learning rate by the same amount at every optimizer update until it reaches $\alpha_{\min}$ at update $T$:
-
-$$
-\alpha_t=\alpha_{\min}+(\alpha_0-\alpha_{\min})
-\left(1-\frac{\min(t,T)}{T}\right).
-$$
-
-Unlike step decay, this schedule has no abrupt changes; unlike cosine decay, it assigns a constant rate of decrease throughout training.
-
-**Plot description.** The straight descending line shows an equal learning-rate reduction per optimizer update, moving uniformly from $2\times10^{-5}$ at initialization to zero after five epochs.
-
-![Linear-decay learning-rate schedule](paraphrase_generation/figure/linear_decay.png)
-
-#### Methodology
-
-Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
-
-```sh
-sbatch run_bart_generation.sh 5 linear \
-    --batch_size 8 \
-    --learning_rate 1e-5 2e-5 5e-5 1e-4 \
-    --min_lr 1e-6 2e-6 5e-6 \
-    --use_gpu
-```
-
-#### Results
 
 Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Linear decay`. Sorted by descending penalized BLEU (ties by ascending ID). BLEU scores are rounded to four decimal places.
 
@@ -271,38 +237,6 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 ### Inverse-Square-Root Decay
 
-#### Idea
-
-Let $u=t+1$ be the one-based optimizer-update number and $w$ the number of warmup updates. With warmup enabled, the implemented schedule is
-
-$$
-\alpha_t=\max\left(
-\alpha_{\min},
-\alpha_0\min\left(\frac{u}{w},\sqrt{\frac{w}{u}}\right)
-\right).
-$$
-
-The rate increases linearly during the first $w$ updates, reaches the peak $\alpha_0$ at $u=w$, and then decreases proportionally to $1/\sqrt{u}$. The default $w=100$ corresponds to approximately 0.325 training epochs.
-
-**Plot description.** The learning rate rises steeply from near zero to $2\times10^{-5}$ during the first 100 updates, marked by the dashed line, and then follows a long, gradually flattening decay to approximately $5\times10^{-6}$.
-
-![Inverse-square-root learning-rate schedule](paraphrase_generation/figure/inverse_square_root.png)
-
-#### Methodology
-
-Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
-
-```sh
-sbatch run_bart_generation.sh 5 inverse_sqrt \
-    --batch_size 8 \
-    --learning_rate 2e-5 5e-5 1e-4 \
-    --min_lr 2e-6 5e-6 \
-    --warmup_steps 0 2 \
-    --use_gpu
-```
-
-#### Results
-
 Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Inverse square root`. Sorted by descending penalized BLEU (ties by ascending ID). BLEU scores are rounded to four decimal places.
 
 | ID | LR | Min LR | Total updates | Warmup updates | Dev reference BLEU | Dev input BLEU | Dev penalized BLEU |
@@ -326,40 +260,6 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 ### Metric-Dependent Decay
 
-#### Idea
-
-The metric-dependent scheduler changes the learning rate only after development evaluation. Let $k$ index evaluations, $b_k$ be the number of consecutive evaluations without a sufficient improvement in penalized development BLEU, $p$ be the patience, and $f\in(0,1)$ be the reduction factor. The update is
-
-$$
-\alpha_{k+1}=
-\begin{cases}
-\max(\alpha_{\min},f\alpha_k), & b_k>p,\\
-\alpha_k, & b_k\le p.
-\end{cases}
-$$
-
-An improvement resets the bad-epoch count to zero, and a reduction also starts a new patience window. With the defaults $f=0.5$ and $p=1$, the rate is halved after two consecutive non-improving evaluations. Because this schedule depends on observed development scores, its figure uses an illustrative trajectory: improvement after epochs 1 and 2 followed by two non-improving evaluations, causing the lower rate to be used in epoch 5.
-
-**Plot description.** In the illustrative trajectory, the learning rate remains at $2\times10^{-5}$ for the first four epochs. Two consecutive evaluations without improvement exhaust the patience, so epoch 5 uses the reduced rate of $1\times10^{-5}$.
-
-![Metric-dependent learning-rate schedule](paraphrase_generation/figure/metric_dependent.png)
-
-#### Methodology
-
-Run the parameter grid recorded below: **24 experiments**, five epochs each. Space-separated option values form a Cartesian product.
-
-```sh
-sbatch run_bart_generation.sh 5 metric \
-    --batch_size 8 \
-    --learning_rate 2e-5 9e-5 \
-    --min_lr 0 \
-    --metric_factor 0.1 0.2 0.5 \
-    --metric_patience 0 1 \
-    --metric_threshold 3 4 \
-    --use_gpu
-```
-
-### Results
 
 Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Metric dependent`. Sorted by descending penalized BLEU (ties by ascending ID). BLEU scores are rounded to four decimal places.
 
@@ -434,4 +334,10 @@ We can observe the following:
 Because the reference contain the information, not present in the inputs, the model don't have any better strategy, rather than just copypasting the input.
 
 We are in the pitfall, where to increase the $Reference BLEU$ means to basically copypaste the input. Slightly to deviate from the input sentence, decreases $Reference BLEU$ slightly, but double or tripples the $(1 - Input BLEU)$ component, increasing $Penalty BLEU$, by that. 
+
+A related limitation is discussed by Jin et al. (2022), who note that, in text style transfer, “simply copying the input can result in high BLEU scores.” This supports the general concern that BLEU can reward copying, although it does not establish the specific changes in PenaltyBLEU described here. (Jin et al., 2022)
+
+## References
+
+Jin, D., Jin, Z., Hu, Z., Vechtomova, O., & Mihalcea, R. (2022). Deep learning for text style transfer: A survey. Computational Linguistics, 48(1), 155–205. https://doi.org/10.1162/coli_a_00426
 
