@@ -400,17 +400,17 @@ The question arises: why did we fail? The obvious reason is that we didn't have 
 
 ### Output Exploration
 
-Both models receive the same source and ETPC annotations.
+Let's try reading into the outputs. The following example was taken from `etpc_dev_dataset` (entry 9). 
 
-**Source**
+**Input:**
 
 > Peterson was arrested near Torrey Pines Golf Course in La Jolla on April 18, the day DNA testing identified the bodies.
 
-**Reference**
+**Reference:**
 
 > Peterson, 30, was arrested in La Jolla April 18 after the two bodies were identified through DNA tests.
 
-**Annotations decoded.** These are ETPC labels, not BART token IDs. The [ETPC type definitions](https://github.com/venelink/ETPC/blob/master/Corpus/paraphrase_types.xml) map the requested types to:
+**Annotations:** [ETPC type definitions](https://github.com/venelink/ETPC/blob/master/Corpus/paraphrase_types.xml)
 
 - `6`: contextual same-polarity substitution — equivalent wording in context.
 - `11`: synthetic/analytic substitution — a compact expression versus a more explicit construction.
@@ -418,19 +418,16 @@ Both models receive the same source and ETPC annotations.
 - `25`: addition/deletion — adding or removing material.
 - `29`: identity — retaining wording unchanged.
 
-Repeated type IDs represent multiple annotations of the same type. The segment list assigns a label to each original source token, as described in the [course specification, p. 14](docs/SS26_dnlp_ProjectDescription.pdf#page=14): “on April 18” carries `11`, “the day” carries `6`, and “DNA testing identified the bodies” carries `14`. The comma has `0` (no assigned type); the remaining tokens carry `25`. These labels are supplied to guide generation, not predicted outputs.
-
-**Model baseline** (added word highlighted)
+**Model baseline:** (added word highlighted)
 
 > Peterson was arrested near Torrey Pines Golf Course in La Jolla on April 18, the **same** day DNA testing identified the bodies.
 
-**Model 33 (it outperformed the baseline a bit)**
+**Model 33:** (it outperformed the baseline a bit)
 > Peterson was arrested near Torrey Pines Golf Course in La Jolla on April 18, the **same** day DNA testing identified the bodies.
 
-#### Observations
-
-1. Both outputs closely copy the source: Model 99 adds only “same”, while Model 78 reproduces the source exactly. A higher development-set penalized BLEU does not guarantee substantial rewriting on every example.
-2. The reference includes information absent from the source, such as Peterson’s age (“30”). That detail cannot be inferred from the supplied input alone. This explains why data leakage had a profound effect on the 
+We can observe the following:
+1. Both outputs closely copy the source: they add only “same”, to the input.
+2. The reference includes information absent from the source, such as Peterson’s age (“30”). That detail cannot be inferred from the supplied input alone. This explains why data leakage had a profound effect on the $Reference BLEU$ as well as $Penalty BLEU$
 
 ### Conflicting metrics:
 
