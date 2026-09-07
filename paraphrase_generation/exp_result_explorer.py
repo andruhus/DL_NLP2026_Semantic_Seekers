@@ -1,8 +1,9 @@
 from collections.abc import Iterable
 from decimal import Decimal
 from pathlib import Path
-
+from matplotlib.colors import BoundaryNorm
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 pd.set_option("display.max_rows", 200)
@@ -173,6 +174,107 @@ def _format_scientific(value):
         return ""
     return format(Decimal(str(value)).normalize(), "e")
 
+def scatter_plot_losses(show=True):
+    df = pd.read_csv(TRAINING_RESULTS_PATH)
+    ref_lim = 46.5
+    pen_lim = 10
+    df = df[df["dev_reference_bleu"] >= ref_lim]
+    df = df[df["dev_penalized_bleu"] >= pen_lim]
+    df = df[df["loss"] <= 2.5]
+    figure, (ref_axis, pen_axis) = plt.subplots(
+        1, 2,
+        figsize=(14, 5),
+    )
+
+    epochs = np.arange(1, 6)
+    cmap = plt.get_cmap("viridis", len(epochs))
+    norm = BoundaryNorm(
+        boundaries=np.arange(0.5, 5.6, 1.0),
+        ncolors=len(epochs),
+    )
+
+    ref_scatter = ref_axis.scatter(
+        df["loss"],
+        df["dev_reference_bleu"],
+        c=df["epoch"],
+        cmap=cmap,
+        norm=norm,
+        s=70,
+    )
+
+    pen_axis.scatter(
+        df["loss"],
+        df["dev_penalized_bleu"],
+        c=df["epoch"],
+        cmap=cmap,
+        norm=norm,
+        s=70,
+    )
+
+    centroids = df.groupby("epoch")[[
+        "loss",
+        "dev_reference_bleu",
+        "dev_penalized_bleu",
+    ]].mean()
+    centroid_epochs = centroids.index.to_numpy()
+    ref_axis.scatter(
+        centroids["loss"],
+        centroids["dev_reference_bleu"],
+        c=centroid_epochs,
+        cmap=cmap,
+        norm=norm,
+        s=180,
+        marker="x",
+        zorder=3,
+        label="Epoch centroid",
+    )
+    pen_axis.scatter(
+        centroids["loss"],
+        centroids["dev_penalized_bleu"],
+        c=centroid_epochs,
+        cmap=cmap,
+        norm=norm,
+        s=180,
+        marker="x",
+        zorder=3,
+        label="Epoch centroid",
+    )
+
+    ref_axis.set(
+        title="Reference BLEU vs. Training Loss",
+        xlabel="Training loss",
+        ylabel="Reference BLEU",
+        xlim=(0, 2.5),
+        ylim=(ref_lim-1, 49),
+    )
+
+    pen_axis.set(
+        title="Penalized BLEU vs. Training Loss",
+        xlabel="Training loss",
+        ylabel="Penalized BLEU",
+        xlim=(0, 2.5),
+        ylim=(pen_lim -1, 25),
+    )
+
+    for axis in (ref_axis, pen_axis):
+        axis.set_xticks(np.arange(0, 2.6, 0.5))
+        axis.grid(alpha=0.3)
+        axis.legend()
+
+    figure.colorbar(
+        ref_scatter,
+        ax=(ref_axis, pen_axis),
+        ticks=epochs,
+        label="Epoch",
+    )
+    figure.tight_layout()
+
+    if show:
+        plt.show()
+
+    return figure, (ref_axis, pen_axis)
+
+
 
 def print_info(sort_col):
     results = pd.read_csv(RESULTS_PATH)
@@ -199,6 +301,7 @@ def print_info(sort_col):
 
 if __name__ == "__main__":
     # col = "dev_penalized_bleu"
-    col = "dev_reference_bleu"
-    print_info(col)
+    # col = "dev_reference_bleu"
+    # print_info(col)
     # plot_training_metrics([25,70,65])
+    scatter_plot_losses()
