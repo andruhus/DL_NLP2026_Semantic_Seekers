@@ -396,6 +396,8 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 ## Discussions
 
+The question arises: why did we fail? The obvious reason is that we didn't have enough epochs to schedule meaningfully. Had we had 50 epochs, this could have ad an impackt. However this doesn't explain the whole picture. For example, why do we get significantly worse $Reference BLEU$ after improving $Penalty BLEU$
+
 ### Output Exploration
 
 Both models receive the same source and ETPC annotations.
@@ -423,7 +425,7 @@ Repeated type IDs represent multiple annotations of the same type. The segment l
 > Peterson was arrested near Torrey Pines Golf Course in La Jolla on April 18, the **same** day DNA testing identified the bodies.
 
 **Model 33 (it outperformed the baseline a bit)**
-> 
+> Peterson was arrested near Torrey Pines Golf Course in La Jolla on April 18, the **same** day DNA testing identified the bodies.
 
 #### Observations
 
