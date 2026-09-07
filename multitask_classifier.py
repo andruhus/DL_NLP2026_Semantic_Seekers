@@ -279,7 +279,7 @@ def train_multitask(args):
 
     ###
     ### Pretrained Model laden
-    ###
+
     if args.allnli==True:
         logging.info("Loading pretrained AllNLI model...")
         pretrained = torch.load("models/pretrain-allnli.pt", map_location="cpu")
@@ -293,15 +293,14 @@ def train_multitask(args):
 
         model.bert.load_state_dict(bert_state)
 
-    ###
-    ###
-    ###
+
+
+
 
     lr = args.lr
     optimizer = AdamW(model.parameters(), lr=lr, weight_decay=args.weight_decay)
-###
-### Hier kommt learning rate scheduler
-###
+
+#learning rate scheduler
     # Anzahl Trainingsschritte berechnen
     total_steps = args.epochs * len(sst_train_dataloader)
 
@@ -314,9 +313,7 @@ def train_multitask(args):
         num_warmup_steps=warmup_steps,
         num_training_steps=total_steps
     )
-###
-###
-###
+
     best_dev_acc = float("-inf")
 
     # Run for the specified number of epochs
@@ -607,22 +604,17 @@ def get_args():
         default=2e-05 if args.option == "pretrain" else 2e-05,
     )
     parser.add_argument("--local_files_only", action="store_true")
-    ###
-    ###
-    ###
+
     parser.add_argument("--label_smoothing", type=float, default=0.0)
     parser.add_argument("--weight_decay", type=float, default=0.0)
     parser.add_argument("--warmup_ratio", type=float, default=0.1)
     parser.add_argument("--classifier_dropout", type=float, default=0.3)
     parser.add_argument("--allnli", action="store_true")
-    parser.add_argument("--yelp", action="store_true")
 
 
 
 
-    ###
-    ###
-    ###
+   
     args = parser.parse_args()
     return args
 
