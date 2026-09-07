@@ -1,0 +1,37 @@
+2026-09-07 08:07:36 - Logfile gestartet für Modell: models/weightdecay0.01finetune-10-2e-05-sst.pt
+2026-09-07 08:07:37 - ------------------------------
+2026-09-07 08:07:37 -     BERT Model Configuration
+2026-09-07 08:07:37 - ------------------------------
+2026-09-07 08:07:37 - {'allnli': False,
+ 'batch_size': 16,
+ 'classifier_dropout': 0.3,
+ 'epochs': 10,
+ 'filepath': 'models/weightdecay0.01finetune-10-2e-05-sst.pt',
+ 'hidden_dropout_prob': 0.3,
+ 'label_smoothing': 0.0,
+ 'local_files_only': True,
+ 'lr': 2e-05,
+ 'option': 'finetune',
+ 'seed': 11711,
+ 'task': 'sst',
+ 'use_gpu': True,
+ 'warmup_ratio': 0.1,
+ 'weight_decay': 0.05,
+ 'yelp': False}
+2026-09-07 08:07:37 - ------------------------------
+2026-09-07 08:08:13 - Epoch 01 (sst): train loss :: 1.432, train :: 0.510, dev :: 0.474
+2026-09-07 08:08:15 - Saving the model to models/weightdecay0.01finetune-10-2e-05-sst.pt.
+2026-09-07 08:08:48 - Epoch 02 (sst): train loss :: 1.108, train :: 0.606, dev :: 0.503
+2026-09-07 08:08:50 - Saving the model to models/weightdecay0.01finetune-10-2e-05-sst.pt.
+2026-09-07 08:09:23 - Epoch 03 (sst): train loss :: 0.876, train :: 0.785, dev :: 0.509
+2026-09-07 08:09:25 - Saving the model to models/weightdecay0.01finetune-10-2e-05-sst.pt.
+2026-09-07 08:09:58 - Epoch 04 (sst): train loss :: 0.660, train :: 0.864, dev :: 0.514
+2026-09-07 08:10:00 - Saving the model to models/weightdecay0.01finetune-10-2e-05-sst.pt.
+2026-09-07 08:10:34 - Epoch 05 (sst): train loss :: 0.475, train :: 0.873, dev :: 0.517
+2026-09-07 08:10:36 - Saving the model to models/weightdecay0.01finetune-10-2e-05-sst.pt.
+2026-09-07 08:11:09 - Epoch 06 (sst): train loss :: 0.346, train :: 0.943, dev :: 0.502
+2026-09-07 08:11:42 - Epoch 07 (sst): train loss :: 0.244, train :: 0.955, dev :: 0.516
+2026-09-07 08:12:15 - Epoch 08 (sst): train loss :: 0.183, train :: 0.978, dev :: 0.508
+2026-09-07 08:12:48 - Epoch 09 (sst): train loss :: 0.140, train :: 0.976, dev :: 0.514
+2026-09-07 08:13:22 - Epoch 10 (sst): train loss :: 0.113, train :: 0.983, dev :: 0.517
+2026-09-07 08:13:25 - Loaded model to test from models/weightdecay0.01finetune-10-2e-05-sst.pt
