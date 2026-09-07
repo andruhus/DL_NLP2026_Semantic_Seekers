@@ -1,0 +1,100 @@
+Job started at: Sat Aug 29 00:20:29 CEST 2026
+Node: ggpu102
+SLURM_SUBMIT_DIR: [removed]
+Working directory after cd: [removed]
+Branch: feat/qqp-ppdetect-impr-1and2-mlphead-dropout
+Commit: aa4f462 Second Improvement Step for QQP Paraphrase Detection: Adding a Layer in classif. head projecting concat. vectors back to hiddensize dim and dropout. Besides, added early stopping that can be activated by arg usage, e.g. `--early_stopping --patience 2`
+Git status:
+?? experiments/
+?? slurm_scripts/
+CUDA: True
+GPU: NVIDIA A100-SXM4-40GB MIG 1g.10gb
+VRAM GB: 9.75
+Cleaning old QQP outputs...
+Loaded 7898 train examples from data/sst-sentiment-train.csv
+Loaded 135134 train examples from data/quora-paraphrase-train.csv
+Loaded 5719 train examples from data/sts-similarity-train.csv
+Loaded 2730 train examples from data/etpc-paraphrase-train.csv
+Loaded 1974 train examples from data/sst-sentiment-dev.csv
+Loaded 33783 train examples from data/quora-paraphrase-dev.csv
+Loaded 1430 train examples from data/sts-similarity-dev.csv
+Loaded 273 train examples from data/etpc-paraphrase-dev.csv
+------------------------------
+    BERT Model Configuration
+------------------------------
+{'batch_size': 8,
+ 'early_stopping': True,
+ 'epochs': 7,
+ 'filepath': 'models/finetune-7-1e-05-qqp.pt',
+ 'hidden_dropout_prob': 0.1,
+ 'local_files_only': True,
+ 'lr': 1e-05,
+ 'option': 'finetune',
+ 'patience': 2,
+ 'seed': 11711,
+ 'task': 'qqp',
+ 'use_gpu': True}
+------------------------------
+Paraphrase detection accuracy: 0.864
+Paraphrase detection accuracy: 0.830
+Epoch 01 (qqp): train loss :: 0.440, train :: 0.864, dev :: 0.830
+Saving the model to models/finetune-7-1e-05-qqp.pt.
+Best dev :: 0.830, epochs without improvement :: 0
+Paraphrase detection accuracy: 0.927
+Paraphrase detection accuracy: 0.857
+Epoch 02 (qqp): train loss :: 0.305, train :: 0.927, dev :: 0.857
+Saving the model to models/finetune-7-1e-05-qqp.pt.
+Best dev :: 0.857, epochs without improvement :: 0
+Paraphrase detection accuracy: 0.954
+Paraphrase detection accuracy: 0.858
+Epoch 03 (qqp): train loss :: 0.218, train :: 0.954, dev :: 0.858
+Saving the model to models/finetune-7-1e-05-qqp.pt.
+Best dev :: 0.858, epochs without improvement :: 0
+Paraphrase detection accuracy: 0.972
+Paraphrase detection accuracy: 0.858
+Epoch 04 (qqp): train loss :: 0.153, train :: 0.972, dev :: 0.858
+Saving the model to models/finetune-7-1e-05-qqp.pt.
+Best dev :: 0.858, epochs without improvement :: 0
+Paraphrase detection accuracy: 0.986
+Paraphrase detection accuracy: 0.865
+Epoch 05 (qqp): train loss :: 0.110, train :: 0.986, dev :: 0.865
+Saving the model to models/finetune-7-1e-05-qqp.pt.
+Best dev :: 0.865, epochs without improvement :: 0
+Paraphrase detection accuracy: 0.991
+Paraphrase detection accuracy: 0.868
+Epoch 06 (qqp): train loss :: 0.083, train :: 0.991, dev :: 0.868
+Saving the model to models/finetune-7-1e-05-qqp.pt.
+Best dev :: 0.868, epochs without improvement :: 0
+Paraphrase detection accuracy: 0.993
+Paraphrase detection accuracy: 0.866
+Epoch 07 (qqp): train loss :: 0.066, train :: 0.993, dev :: 0.866
+Best dev :: 0.868, epochs without improvement :: 1
+Loaded model to test from models/finetune-7-1e-05-qqp.pt
+Loaded 1975 test examples from data/sst-sentiment-test-student.csv
+Loaded 33783 test examples from data/quora-paraphrase-test-student.csv
+Loaded 1430 test examples from data/sts-similarity-test-student.csv
+Loaded 585 test examples from data/etpc-paraphrase-detection-test-student.csv
+Loaded 1974 dev examples from data/sst-sentiment-dev.csv
+Loaded 33783 dev examples from data/quora-paraphrase-dev.csv
+Loaded 1430 dev examples from data/sts-similarity-dev.csv
+Loaded 273 dev examples from data/etpc-paraphrase-dev.csv
+Paraphrase detection accuracy: 0.868
+dev paraphrase acc :: 0.868
+Training finished at: Sat Aug 29 08:03:36 CEST 2026
+Artifacts copied at: Sat Aug 29 08:03:38 CEST 2026
+Prediction files:
+total 2.7M
+-rw-r----- 1 [user] UYST 1.4M Aug 29 08:03 quora_mlp_head_dropout01_7ep_es_job15591323_dev.csv
+-rw-r----- 1 [user] UYST 1.4M Aug 29 08:03 quora_mlp_head_dropout01_7ep_es_job15591323_test.csv
+Checkpoint files:
+total 1.3G
+-rw-r----- 1 [user] UYST 1.3G Aug 29 08:03 qqp_mlp_head_dropout01_7ep_es_job15591323.pt
+Job ended at: Sat Aug 29 08:03:38 CEST 2026
+============ Job Information ===================================================
+Submitted: 2026-08-29T00:16:03
+Started: 2026-08-29T00:19:43
+Ended: 2026-08-29T08:03:38
+Elapsed: 464 min, Limit: 600 min, Difference: 136 min
+CPUs: 4, Nodes: 1
+Estimated credit Consumption: 1160.00 core-hours
+================================================================================

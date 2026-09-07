@@ -104,6 +104,14 @@ class MultitaskBERT(nn.Module):
         )
 
         self.paraphrase_classifier = nn.Linear(BERT_HIDDEN_SIZE * 2, 1)
+        self.sentiment_classifier = nn.Linear(BERT_HIDDEN_SIZE, N_SENTIMENT_CLASSES)
+        self.paraphrase_classifier = nn.Sequential(
+            nn.Dropout(config.hidden_dropout_prob),
+            nn.Linear(BERT_HIDDEN_SIZE * 4, BERT_HIDDEN_SIZE),
+            nn.ReLU(),
+            nn.Dropout(config.hidden_dropout_prob),
+            nn.Linear(BERT_HIDDEN_SIZE, 1)
+        )
         self.similarity_regressor = nn.Linear(BERT_HIDDEN_SIZE * 2, 1)
         self.paraphrase_type_classifier = nn.Linear(BERT_HIDDEN_SIZE * 2, 26)
 
@@ -138,7 +146,13 @@ class MultitaskBERT(nn.Module):
         """
         emb1 = self.forward(input_ids_1, attention_mask_1)
         emb2 = self.forward(input_ids_2, attention_mask_2)
-        return self.paraphrase_classifier(torch.cat([emb1, emb2], dim=1))
+
+        difference = torch.abs(emb1 - emb2)
+        product = emb1 * emb2
+
+        combined = torch.cat([emb1, emb2, difference, product], dim=1)
+
+        return self.paraphrase_classifier(combined)
 
     def predict_similarity(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
         """
@@ -315,6 +329,7 @@ def train_multitask(args):
     )
 
     best_dev_acc = float("-inf")
+    epochs_without_improvement = 0
 
     # Run for the specified number of epochs
     for epoch in range(args.epochs):
@@ -452,8 +467,20 @@ def train_multitask(args):
 
         if dev_acc > best_dev_acc:
             best_dev_acc = dev_acc
+            epochs_without_improvement = 0
             save_model(model, optimizer, args, config, args.filepath)
+        else:
+            epochs_without_improvement += 1
+        print(
+            f"Best dev :: {best_dev_acc:.3f}, "
+            f"epochs without improvement :: {epochs_without_improvement}",
+            flush=True,
+        )
+        if args.early_stopping and epochs_without_improvement >= args.patience:
+            print("Early stopping triggered.", flush=True)
+            break
 
+        
 
 def test_model(args):
     with torch.no_grad():
@@ -610,11 +637,9 @@ def get_args():
     parser.add_argument("--warmup_ratio", type=float, default=0.1)
     parser.add_argument("--classifier_dropout", type=float, default=0.3)
     parser.add_argument("--allnli", action="store_true")
+    parser.add_argument("--early_stopping", action="store_true")
+    parser.add_argument("--patience", type=int, default=2)
 
-
-
-
-   
     args = parser.parse_args()
     return args
 
