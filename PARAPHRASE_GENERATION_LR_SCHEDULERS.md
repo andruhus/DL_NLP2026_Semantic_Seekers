@@ -440,3 +440,8 @@ Repeated type IDs represent multiple annotations of the same type. The segment l
 
 1. Both outputs closely copy the source: Model 99 adds only “same”, while Model 78 reproduces the source exactly. A higher development-set penalized BLEU does not guarantee substantial rewriting on every example.
 2. The reference includes information absent from the source, such as Peterson’s age (“30”). That detail cannot be inferred from the supplied input alone. This explains why data leakage had a profound effect on the 
+
+### Conflicting metrics:
+
+We are in the pitfall, where to increase the Reference BLEU means to basically copypaste the input. Slightly to deviate from the input sentence, decreases Reference BLEU slightly, but double or tripples the (1 - Input BLEU) component, increasing Penalty BLEU, by that. 
+
