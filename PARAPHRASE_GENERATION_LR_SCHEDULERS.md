@@ -29,7 +29,7 @@ The previously reported penalized development BLEU of approximately 39 was infla
 
 After removing every training row whose normalized ETPC `id` occurs in the development set, the training split contains 2,457 examples and the development split remains at 273 genuinely held-out examples. Under this corrected protocol, the constant-learning-rate baseline achieves a penalized development BLEU of approximately 17. The decrease from 39 to 17 should therefore not be interpreted as a model regression: it is the result of eliminating leakage and measuring generalization on a non-overlapping split. All scheduler comparisons use 17—not the leaked score of 39—as the valid baseline.
 
-### Learning schedulers
+## Learning schedulers
 
 The plots use the default initial learning rate $\alpha_0=2\times10^{-5}$, minimum learning rate $\alpha_{\min}=0$, five epochs, and batch size 8. With 2,457 cleaned training examples, there are $\lceil2457/8\rceil=308$ optimizer updates per epoch and $T=1540$ updates in total. They can be regenerated with:
 
@@ -45,9 +45,9 @@ mkdir -p slurm_files
 
 Each command runs its experiments sequentially within one job. The wrapper requests two hours by default; for larger grids, choose a cluster-permitted wall-time override using `sbatch --time=...` before the script name. Run grids separately and archive their outputs before the next job, since runs share output locations and reruns can overwrite checkpoints. Table IDs are persistent CSV identifiers, not the per-job checkpoint indices.
 
-#### Constant Learning Rate
+### Constant Learning Rate
 
-##### Idea
+#### Idea
 
 The baseline uses the same learning rate for every optimizer update $t$:
 
@@ -61,7 +61,7 @@ It provides no warmup or decay, making it the control condition for determining 
 
 ![Constant learning-rate schedule](paraphrase_generation/figure/constant_learning_rate.png)
 
-##### Methodology
+#### Methodology
 
 Run the parameter grid recorded below: **13 experiments**, five epochs each. Space-separated option values form a Cartesian product.
 
@@ -73,7 +73,7 @@ sbatch run_bart_generation.sh 5 constant \
     --use_gpu
 ```
 
-##### Results
+#### Results
 
 Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Constant learning rate`. Sorted by descending penalized BLEU (ties by ascending ID). BLEU scores are rounded to four decimal places.
 
@@ -97,11 +97,9 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 ![Constant learning-rate top-two runs compared with baseline](paraphrase_generation/figure/constant_training_comparison.png)
 
-##### Discussion
+### Step Decay
 
-#### Step Decay
-
-##### Idea
+#### Idea
 
 Step decay multiplies the learning rate by $\gamma$ after every $s$ optimizer updates, subject to a lower bound:
 
@@ -115,7 +113,7 @@ For the default experiment, $\gamma=0.5$ and the decay interval is one epoch, so
 
 ![Step-decay learning-rate schedule](paraphrase_generation/figure/step_decay.png)
 
-##### Methodology
+#### Methodology
 
 Run the parameter grid recorded below: **27 experiments**, five epochs each. Space-separated option values form a Cartesian product.
 
@@ -129,7 +127,7 @@ sbatch run_bart_generation.sh 5 step \
     --use_gpu
 ```
 
-##### Results
+#### Results
 
 Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Step decay`. Sorted by descending penalized BLEU (ties by ascending ID). BLEU scores are rounded to four decimal places.
 
@@ -167,11 +165,9 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 ![Step-decay top-two runs compared with baseline](paraphrase_generation/figure/step_training_comparison.png)
 
-##### Discussion
+### Cosine Decay
 
-#### Cosine Decay
-
-##### Idea
+#### Idea
 
 Cosine decay changes the learning rate smoothly from $\alpha_0$ to $\alpha_{\min}$ over the complete budget of $T$ optimizer updates:
 
@@ -186,7 +182,7 @@ The gradual early decrease preserves relatively large updates for exploration, w
 
 ![Cosine-decay learning-rate schedule](paraphrase_generation/figure/cosine_decay.png)
 
-##### Methodology
+#### Methodology
 
 Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
 
@@ -198,7 +194,7 @@ sbatch run_bart_generation.sh 5 cosine \
     --use_gpu
 ```
 
-##### Results
+#### Results
 
 Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Cosine decay`. Sorted by descending penalized BLEU (ties by ascending ID). BLEU scores are rounded to four decimal places.
 
@@ -221,11 +217,9 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 ![Cosine-decay top-two runs compared with baseline](paraphrase_generation/figure/cosine_training_comparison.png)
 
-##### Discussion
+### Linear Decay
 
-#### Linear Decay
-
-##### Idea
+#### Idea
 
 Linear decay decreases the learning rate by the same amount at every optimizer update until it reaches $\alpha_{\min}$ at update $T$:
 
@@ -240,7 +234,7 @@ Unlike step decay, this schedule has no abrupt changes; unlike cosine decay, it 
 
 ![Linear-decay learning-rate schedule](paraphrase_generation/figure/linear_decay.png)
 
-##### Methodology
+#### Methodology
 
 Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
 
@@ -252,7 +246,7 @@ sbatch run_bart_generation.sh 5 linear \
     --use_gpu
 ```
 
-##### Results
+#### Results
 
 Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Linear decay`. Sorted by descending penalized BLEU (ties by ascending ID). BLEU scores are rounded to four decimal places.
 
@@ -275,11 +269,9 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 ![Linear-decay top-two runs compared with baseline](paraphrase_generation/figure/linear_training_comparison.png)
 
-##### Discussion
+### Inverse-Square-Root Decay
 
-#### Inverse-Square-Root Decay
-
-##### Idea
+#### Idea
 
 Let $u=t+1$ be the one-based optimizer-update number and $w$ the number of warmup updates. With warmup enabled, the implemented schedule is
 
@@ -296,7 +288,7 @@ The rate increases linearly during the first $w$ updates, reaches the peak $\alp
 
 ![Inverse-square-root learning-rate schedule](paraphrase_generation/figure/inverse_square_root.png)
 
-##### Methodology
+#### Methodology
 
 Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
 
@@ -309,7 +301,7 @@ sbatch run_bart_generation.sh 5 inverse_sqrt \
     --use_gpu
 ```
 
-##### Results
+#### Results
 
 Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Inverse square root`. Sorted by descending penalized BLEU (ties by ascending ID). BLEU scores are rounded to four decimal places.
 
@@ -332,11 +324,9 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 ![Inverse-square-root top-two runs compared with baseline](paraphrase_generation/figure/inverse_sqrt_training_comparison.png)
 
-##### Discussion
+### Metric-Dependent Decay
 
-#### Metric-Dependent Decay
-
-##### Idea
+#### Idea
 
 The metric-dependent scheduler changes the learning rate only after development evaluation. Let $k$ index evaluations, $b_k$ be the number of consecutive evaluations without a sufficient improvement in penalized development BLEU, $p$ be the patience, and $f\in(0,1)$ be the reduction factor. The update is
 
@@ -354,7 +344,7 @@ An improvement resets the bad-epoch count to zero, and a reduction also starts a
 
 ![Metric-dependent learning-rate schedule](paraphrase_generation/figure/metric_dependent.png)
 
-##### Methodology
+#### Methodology
 
 Run the parameter grid recorded below: **24 experiments**, five epochs each. Space-separated option values form a Cartesian product.
 
@@ -369,7 +359,7 @@ sbatch run_bart_generation.sh 5 metric \
     --use_gpu
 ```
 
-##### Results
+### Results
 
 Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Metric dependent`. Sorted by descending penalized BLEU (ties by ascending ID). BLEU scores are rounded to four decimal places.
 
@@ -404,7 +394,7 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 ![Metric-dependent top-two runs compared with baseline](paraphrase_generation/figure/metric_training_comparison.png)
 
-##### Discussion
+## Discussions
 
 ### Output Exploration
 
@@ -428,13 +418,12 @@ Both models receive the same source and ETPC annotations.
 
 Repeated type IDs represent multiple annotations of the same type. The segment list assigns a label to each original source token, as described in the [course specification, p. 14](docs/SS26_dnlp_ProjectDescription.pdf#page=14): “on April 18” carries `11`, “the day” carries `6`, and “DNA testing identified the bodies” carries `14`. The comma has `0` (no assigned type); the remaining tokens carry `25`. These labels are supplied to guide generation, not predicted outputs.
 
-**Model 99** (added word highlighted)
+**Model baseline** (added word highlighted)
 
 > Peterson was arrested near Torrey Pines Golf Course in La Jolla on April 18, the **same** day DNA testing identified the bodies.
 
-**Model 78** (copies the source)
-
-> Peterson was arrested near Torrey Pines Golf Course in La Jolla on April 18, the day DNA testing identified the bodies.
+**Model 33 (it outperformed the baseline a bit)**
+> 
 
 #### Observations
 
@@ -443,5 +432,7 @@ Repeated type IDs represent multiple annotations of the same type. The segment l
 
 ### Conflicting metrics:
 
-We are in the pitfall, where to increase the Reference BLEU means to basically copypaste the input. Slightly to deviate from the input sentence, decreases Reference BLEU slightly, but double or tripples the (1 - Input BLEU) component, increasing Penalty BLEU, by that. 
+Because the reference contain the information, not present in the inputs, the model don't have any better strategy, rather than just copypasting the input.
+
+We are in the pitfall, where to increase the $Reference BLEU$ means to basically copypaste the input. Slightly to deviate from the input sentence, decreases $Reference BLEU$ slightly, but double or tripples the $(1 - Input BLEU)$ component, increasing $Penalty BLEU$, by that. 
 
