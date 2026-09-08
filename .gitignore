@@ -6,7 +6,15 @@
 *output*
 logdir
 models
-slurm_files
+# Experiment artefacts: logs stay local, figures ship (README embeds them)
+experiments/*
+!experiments/figures/
+experiments/figures/*
+!experiments/figures/*.png
+!experiments/make_figures.py
+
+# Cached SNLI/PAWS triplets (~100 MB) — rebuilt via the README snippet
+data/nli_cache/
 
 # Personal / local files
 claude.md
