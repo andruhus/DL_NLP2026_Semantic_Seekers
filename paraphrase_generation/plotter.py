@@ -43,7 +43,7 @@ SELECTED_COMPARISON_IDS = {
     "Constant learning rate": (74, 65),
     "Step decay": (16, 17),
     "Cosine decay": (46, 51),
-    "Linear decay": (38, 39),
+    "Linear decay": (38, 33),
     "Inverse square root": (54, 63),
     "Metric dependent": (91, 95),
 }
