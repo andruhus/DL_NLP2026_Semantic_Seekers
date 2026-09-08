@@ -1,16 +1,3 @@
-This is an example of a well-written README file from a group that did that project last year. 
-<b> Why is that README good? </b>
-- They clearly explained how to set up and re-run their experiments.
-- They gave a good summary of how they worked on the project in the Methodology section
-- They did and described their hyperparameter optimization properly.
-- For each experiment, they wrote down their motivation for doing that experiment and their expectations and described the outcome of the experiment. 
-
-<b> Note: </b> 
-Although this example is already quite good, that doesn't mean that you should just copy and paste this template. The project last year was a bit different from the current project and last year the groups didn't have a README template. 
-
-
-
-
 # DNLP SS23 Final Project - Multitask BERT
 
   
@@ -27,9 +14,6 @@ Member C <br/>
 
 </div>
 
-  
-
-## (Introduction)
 
   
 
@@ -40,7 +24,6 @@ Member C <br/>
 matplotlib
 pathlib
 tabulate
-matplotlib.pyplot
 
 
 
@@ -51,20 +34,16 @@ matplotlib.pyplot
 
 
 
-### [Sentiment Classification on Stanford Sentiment Treebank (SST)](https://paperswithcode.com/sota/sentiment-analysis-on-sst-5-fine-grained)
-
-  
-
---description--
-
-  
+### [Sentiment Classification on Stanford Sentiment Treebank (SST-5)](https://paperswithcode.com/sota/sentiment-analysis-on-sst-5-fine-grained)
 
 
+## Introduction  
+The Stanford Sentiment Treebank (SST‑5) represents a fine‑grained and challenging benchmark in sentiment analysis. Unlike binary or ternary sentiment datasets, SST‑5 requires the model to distinguish between five nuanced sentiment categories, ranging from *highly negative* to *highly positive*. This fine granularity increases the complexity of the task substantially, as the model must capture subtle emotional cues, contextual dependencies, and linguistic ambiguity within short movie review snippets.
 
-  
+For this project, the SST‑5 task serves as the central evaluation ground for all architectural adjustments and hyperparameter experiments. The dataset’s structure makes it particularly suitable for investigating overfitting behavior, classifier expressiveness, and the impact of regularization techniques. Since SST‑5 is relatively small and highly subjective in its labeling, the model’s ability to generalize beyond the training data becomes a critical factor. This motivates the exploration of both non‑hyperparameter‑regulated adjustments**, such as changes in classifier architecture or pooling strategies, and hyperparameter‑regulated adjustments, such as label smoothing or warmup scheduling.
 
+Overall, the SST‑5 task provides a controlled yet demanding environment in which improvements to the model architecture, training dynamics, and regularization can be evaluated systematically. It highlights the strengths and weaknesses of each adjustment and offers a clear reference point for comparing different stages of model development.
 
-  
 
 ## Methodology
 ### Starting Point and evaluation
@@ -89,7 +68,7 @@ For comparing the results, namely the training accuracy of the train- and dev-da
 Logfiles for initial experimentation are located in logs/old_logs. Here the optimal hyperparameters where not yet determined.
 Logfiles that build the basis for the following discussion are located in /logs.
 ---
-### **1. Non Hyperparameter Adjustments**
+### **1. Non-hyperparameter regulated adjustments**
 ### Complexer Classifier
 #### Idea
 The Classifier of the baseline only consists of one layer.
@@ -151,7 +130,7 @@ Here weight decay is introduced in the model, which penalizes big parameter upda
 The expectation here is obviously reduced overfitting.
 Overall accuracy might increase as well, since the learning process is more controlled.
 
-### Warumup Ratio
+### Warumup Ratio (paper needed)
 #### Idea
 This adjustment also can possibly control the learning process.
 Here learning rates increase linearly in the beginning of the training.
@@ -166,13 +145,26 @@ The model may converge in later epochs, but find a better optimum in the end.
 
 ## Experiments
 
-  --expectation vs reality--
 ### AllNLI Dataset
 Unfortunately pretraining on this Dataset did not improve the model performance.
 This result has to be relativiced, since model performance did not recover when the bert-uncased model was chosen as the model prestate again.
 Since the original code had to be adjusted in different files, the error could not be found. Reasonable discussion is therefore not possible.
 
 Since the original code had to be adjusted in multiple files
+
+### 1.1 Hyperparameter Optimization
+
+### 1.2 ReLU Classifier
+
+### 1.3 GELU Classifier
+
+### 1.4 Expressive Pooling
+
+### 2.1 Label Smoothing
+
+### 2.2 Weight Decay
+
+### 2.3 Warmup Ratio
 
 
 ## Results
@@ -190,24 +182,42 @@ For the search following order was followed and the Hyper_optimizer.py file was 
 - weight decay does not improve performance. so it is set as 0
 - Finale Hyperparameter: --lr 2e-05 --batch_size 16 --warmup_ratio 0.1 --weight_decay 0.0 --label_smoothing 0.0 --classifier_dropout 0.3
 
---tablemit den Resluts und hyperparams--
-| Model name | Parameters  | Accuracy |
-| -------------- | ----------------------------------------- | -------- |
-| data2Vec | State-of-the-art single task model  | 92.4%  |
-| Baseline | | 87.0%  |
-| Tagging  | `--additional_input`  | 86.6%  |
-| Synthetic Data | `--sst_train data/ids-sst-train-syn3.csv` | 86.5%  |
-| SophiaH  | `--optimizer sophiah` | 85.3%  |
-
---> Hyperparameter opti
+| Model / Variant                          | DEV-Accuracy |
+|------------------------------------------|--------------|
+| **1.0 Base after Task 1**                | 0.519        |
+| **1.1 Base (optimized hyperparameters)** | 0.523        |
+| **1.2 Classifier – ReLU**                | 0.523        |
+| **1.3 Classifier – GELU**                | 0.528        |
+| **1.4 Expressive Pooling**               | 0.525        |
+| **2.1 Label Smoothing**                  | 0.516        |
+| **2.2 Weight Decay**                     | 0.517        |
+| **2.3 Warmup Ratio**                     | 0.528        |
+All results were obtained using optimal hyperparameters.  
+For the *1.x models*, this refers to tuning **learning rate** and **batch size**.  
+For the *2.x models*, all hyperparameters were set to their optimal values except for the specific parameter being investigated; if adjusting that parameter did not improve performance, the baseline optimal configuration was retained.
 
 ## Vizualizations
+|                                                                   |            | |
+|-------------------------------------------------------------------|------------|-|
+| **1. Non-hyperparameter regulated adjustments**                   |||
+| Plot 1.0: Base after Task1 -> Base with optimized hyperparameters |||
+| ![0Base_afterTask1](./figures/0_Task1_to_opt_hyper.png)           |||
+| Plot 1.1: Base with optimized hyperparameters -> Classifier RELU  |||
+| ![0Base_afterTask1](./figures/1_Classifier_RELU.png)              |            ||
+| Plot 1.2: Classifier RELU -> Classifier GELU                      |||
+| ![2_RELU_GELU](figures/2_RELU_GELU.png)                           |||
+| Plot 1.3: Classifier GELU -> Extendet Pooling                     |||
+| ![3_pooling](figures/3_pooling.png)                               |||
+| **2. Hyperparameter regulated adjustments**                       |||
+| Plot 2.1: Label smoothing (0 vs 0.01)                             |||
+| ![4_smoothing](figures/smoothing.png)                             |||
+| Plot 2.2 Weight decay (0 vs 0.05)                                 |||
+| ![6_weight_decay](figures/weight_decay_0.05.png)                  |||
+| Plot 2.3: Warmup ratio (0 vs 0.2)                                 |||
+| ![5_warmup](figures/warmup_ratio_0.0.png)                         |||
 
 
-![0Base_afterTask1](./logs/0Base_afterTask1.log)
 
-
-**Plot 0: Base_afterTask1.log**
 ## Contributors
 
   
@@ -229,4 +239,5 @@ For the search following order was followed and the Hyper_optimizer.py file was 
 
 
 ## AI-Usage Card
+A personal AI usage card can be found in the repository.
 ## References
