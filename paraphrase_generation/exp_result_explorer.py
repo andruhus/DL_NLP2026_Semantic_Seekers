@@ -1,8 +1,8 @@
 from collections.abc import Iterable
 from decimal import Decimal
 from pathlib import Path
-from matplotlib.colors import BoundaryNorm
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import numpy as np
 import pandas as pd
 
@@ -176,11 +176,14 @@ def _format_scientific(value):
 
 def scatter_plot_losses(show=True):
     df = pd.read_csv(TRAINING_RESULTS_PATH)
+    # ref_lim = 40
+    # pen_lim = 0
     ref_lim = 46.5
     pen_lim = 10
     df = df[df["dev_reference_bleu"] >= ref_lim]
     df = df[df["dev_penalized_bleu"] >= pen_lim]
     df = df[df["loss"] <= 2.5]
+    print(len(df))
     figure, (ref_axis, pen_axis) = plt.subplots(
         1, 2,
         figsize=(14, 5),
@@ -188,27 +191,40 @@ def scatter_plot_losses(show=True):
 
     epochs = np.arange(1, 6)
     cmap = plt.get_cmap("viridis", len(epochs))
-    norm = BoundaryNorm(
-        boundaries=np.arange(0.5, 5.6, 1.0),
-        ncolors=len(epochs),
-    )
+    epoch_handles = []
+    for epoch in epochs:
+        color = cmap(epoch - 1)
+        epoch_data = df[df["epoch"] == epoch]
+        label = f"Epoch {epoch}"
+        ref_axis.scatter(
+            epoch_data["loss"],
+            epoch_data["dev_reference_bleu"],
+            color=color,
+            s=40,
+            alpha=0.45,
+            label=label,
+        )
+        pen_axis.scatter(
+            epoch_data["loss"],
+            epoch_data["dev_penalized_bleu"],
+            color=color,
+            s=40,
+            alpha=0.45,
+            label=label,
+        )
+        epoch_handles.append(
+            Line2D([], [], marker="o", color=color, linestyle="None", label=label)
+        )
 
-    ref_scatter = ref_axis.scatter(
-        df["loss"],
-        df["dev_reference_bleu"],
-        c=df["epoch"],
-        cmap=cmap,
-        norm=norm,
-        s=70,
-    )
-
-    pen_axis.scatter(
-        df["loss"],
-        df["dev_penalized_bleu"],
-        c=df["epoch"],
-        cmap=cmap,
-        norm=norm,
-        s=70,
+    centroid_handle = Line2D(
+        [],
+        [],
+        marker="x",
+        color="black",
+        linestyle="None",
+        markersize=10,
+        markeredgewidth=2,
+        label="Epoch centroid",
     )
 
     centroids = df.groupby("epoch")[[
@@ -216,28 +232,22 @@ def scatter_plot_losses(show=True):
         "dev_reference_bleu",
         "dev_penalized_bleu",
     ]].mean()
-    centroid_epochs = centroids.index.to_numpy()
+    centroid_colors = [cmap(epoch - 1) for epoch in centroids.index]
     ref_axis.scatter(
         centroids["loss"],
         centroids["dev_reference_bleu"],
-        c=centroid_epochs,
-        cmap=cmap,
-        norm=norm,
+        color=centroid_colors,
         s=180,
         marker="x",
         zorder=3,
-        label="Epoch centroid",
     )
     pen_axis.scatter(
         centroids["loss"],
         centroids["dev_penalized_bleu"],
-        c=centroid_epochs,
-        cmap=cmap,
-        norm=norm,
+        color=centroid_colors,
         s=180,
         marker="x",
         zorder=3,
-        label="Epoch centroid",
     )
 
     ref_axis.set(
@@ -253,20 +263,14 @@ def scatter_plot_losses(show=True):
         xlabel="Training loss",
         ylabel="Penalized BLEU",
         xlim=(0, 2.5),
-        ylim=(pen_lim -1, 25),
+        ylim=(pen_lim - 1, 25),
     )
 
     for axis in (ref_axis, pen_axis):
         axis.set_xticks(np.arange(0, 2.6, 0.5))
         axis.grid(alpha=0.3)
-        axis.legend()
+        axis.legend(handles=[*epoch_handles, centroid_handle])
 
-    figure.colorbar(
-        ref_scatter,
-        ax=(ref_axis, pen_axis),
-        ticks=epochs,
-        label="Epoch",
-    )
     figure.tight_layout()
 
     if show:
@@ -302,6 +306,6 @@ def print_info(sort_col):
 if __name__ == "__main__":
     col = "dev_penalized_bleu"
     # col = "dev_reference_bleu"
-    print_info(col)
+    # print_info(col)
     # plot_training_metrics([25,70,65])
-    # scatter_plot_losses()
+    scatter_plot_losses()
