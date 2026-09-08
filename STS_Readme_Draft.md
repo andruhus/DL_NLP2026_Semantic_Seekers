@@ -42,7 +42,7 @@ pip install matplotlib   # figure generation only — not used at training time
 ```
 
 Neither is imported by `multitask_classifier.py` during training. `datasets` is used once
-offline to build a triplet cache (below), and `matplotlib` only by `experiments/make_figures.py`.
+offline to build a triplet cache (below), and `matplotlib` only by `figures/make_sts_figures.py`.
 
 ### One-time data preparation (STS improvements only)
 
@@ -96,7 +96,7 @@ On the Grete cluster:
 
 ```sh
 sbatch --partition=grete:shared --gres=gpu:A100:1 --time=01:00:00 --mem=16G \
-  --cpus-per-task=4 --output=experiments/slurm_files/sts_best.out \
+  --cpus-per-task=4 --output=slurm_files/sts_best.out \
   --wrap="source activate dnlp && python -u multitask_classifier.py <args as above>"
 ```
 
@@ -742,8 +742,8 @@ same configuration with dropout 0.1. Every run afterwards passes
 ## Visualizations
 
 All figures are generated from the raw SLURM training logs by
-`python experiments/make_figures.py` (requires `matplotlib`); no values are entered by hand.
-Sources live in `experiments/slurm_files/`, output in `experiments/figures/`.
+`python figures/make_sts_figures.py` (requires `matplotlib`); no values are entered by hand.
+Sources live in `slurm_files/`, output in `figures/sts/`.
 
 > **Note on validation loss.** `evaluation.py` computes Pearson correlation only, so
 > per-epoch *dev loss* was never logged and cannot be reconstructed without re-running all
@@ -752,7 +752,7 @@ Sources live in `experiments/slurm_files/`, output in `experiments/figures/`.
 
 ### Overall progression
 
-![Dev performance per epoch](experiments/figures/v1_dev_progression.png)
+![Dev performance per epoch](figures/sts/v1_dev_progression.png)
 
 Each improvement stage, one curve, ★ marking the saved checkpoint. The bi-encoder stages
 (grey) plateau below the 0.811 target; cross-attention (blue) crosses it at epoch 3 and
@@ -761,7 +761,7 @@ configuration's best**.
 
 ### Does improvement A converge faster than improvement B?
 
-![Convergence speed](experiments/figures/v2_convergence_speed.png)
+![Convergence speed](figures/sts/v2_convergence_speed.png)
 
 Epochs required to first reach each dev-r level. To reach **r ≥ 0.80**: MNRL needs 6
 epochs, cross-attention 3, symmetry augmentation 2, SNLI pretraining **1**. Only SNLI ever
@@ -774,14 +774,14 @@ symmetry augmentation buys the first without the second.
 
 ### Overfitting dynamics
 
-![Overfitting](experiments/figures/v3_overfitting_dynamics.png)
+![Overfitting](figures/sts/v3_overfitting_dynamics.png)
 
 Left: train (solid) vs dev (dashed). Right: the gap, which grows monotonically for every
 variant. No intervention prevented this — only more training data changed the picture.
 
 ### Training loss
 
-![Training loss](experiments/figures/v4_training_loss.png)
+![Training loss](figures/sts/v4_training_loss.png)
 
 Restricted to four runs sharing an **identical loss composition**
 (`MSE + 0.5·cosine + 0.5·MNRL`); loss is not comparable across runs with different terms,
@@ -790,7 +790,7 @@ descends faster.
 
 ### Failure modes are visible during training
 
-![Failure modes](experiments/figures/v5_failure_modes.png)
+![Failure modes](figures/sts/v5_failure_modes.png)
 
 Left: SimCSE's training loss falls to 0.005 while **dev r declines** — the model is
 solving the pretext task without learning semantics. Middle: CoSENT at τ = 0.05 versus
@@ -799,14 +799,14 @@ converges.
 
 ### Is a difference real, or is it the seed?
 
-![Seed variance](experiments/figures/v6_seed_variance.png)
+![Seed variance](figures/sts/v6_seed_variance.png)
 
 The same configuration under three seeds. The shaded band is the full spread — 0.004 — and
 is the reference for every "within noise" claim in this README.
 
 ### Which transfer source, and why?
 
-![Transfer sources](experiments/figures/v8_transfer_sources.png)
+![Transfer sources](figures/sts/v8_transfer_sources.png)
 
 Left: dev curves during fine-tuning, ordered exactly by data volume. Right: performance
 after **one** epoch versus best. SNLI reaches 0.842 after a single fine-tuning epoch —
@@ -815,7 +815,7 @@ downstream.
 
 ### Regularisation: a null result, visualised
 
-![Regularisation](experiments/figures/v9_regularisation.png)
+![Regularisation](figures/sts/v9_regularisation.png)
 
 Five regularisation settings and the unregularised baseline. Four curves are visually
 inseparable. Only λ = 20 (red) moves — and it lowers *both* train and dev r. The right
@@ -823,7 +823,7 @@ panel shows why: nothing but λ = 20 changes the training fit at all.
 
 ### Error analysis
 
-![Error analysis](experiments/figures/v7_error_analysis.png)
+![Error analysis](figures/sts/v7_error_analysis.png)
 
 The model **compresses the output range**: predicted σ = 1.16 against gold σ = 1.47, with
 a fitted slope of 0.67. Error is worst on the *most dissimilar* pairs (MAE 0.93 in the 0–1
@@ -846,7 +846,7 @@ negatives), plus CoSENT, AnglE and SMART auxiliary losses. Built the offline tri
 caching pipeline, the checkpoint warm-start mechanism (`--init_checkpoint`), and the
 LR-scheduler/gradient-clipping/weight-decay controls. Ran and analysed 43 training jobs
 across 27 configurations, established the seed-variance noise floor, produced all figures
-(`experiments/make_figures.py`), and wrote the STS sections of this README. Raised STS dev
+(`figures/make_sts_figures.py`), and wrote the STS sections of this README. Raised STS dev
 Pearson r from **0.379 → 0.849**.
 
 *(Other members' contributions belong in the root README.)*

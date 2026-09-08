@@ -7,7 +7,7 @@ Follows the project guideline for the Visualizations section: plot metrics
 Every number is parsed from the SLURM logs in experiments/slurm_files/, so
 nothing here is hand-entered.
 
-Run from the repository root:  python docs/make_figures.py
+Run from the repository root:  python figures/make_sts_figures.py
 """
 import csv, os, re
 import numpy as np
@@ -15,7 +15,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-LOGS, OUT = "experiments/slurm_files", "experiments/figures"
+LOGS, OUT = "slurm_files", "figures/sts"
 os.makedirs(OUT, exist_ok=True)
 
 plt.rcParams.update({
