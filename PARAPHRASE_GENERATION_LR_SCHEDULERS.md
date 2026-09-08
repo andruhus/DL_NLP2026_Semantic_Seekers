@@ -6,16 +6,44 @@ ETPC paraphrase generation is formulated as a conditional sequence-to-sequence t
 
 The original ETPC training CSV contains all 273 development examples. Before tokenization, the pipeline normalizes ETPC `id` values and removes these overlapping rows, leaving 2,457 training examples and 273 non-overlapping held-out development examples. Every comparison run uses this same cleaned split and initializes a fresh `facebook/bart-large` model with the same random seed.
 
+### Ref BLEU vs Pen BLEU
+
+To measure the quality of our generation we use **BLEU-Score**
+
+
+
+For a source input $x$ (`sentence1`), the reference $r$ and the suggestion $h$, we calculate:
+
+$$
+B_{\mathrm{ref}} = \operatorname{BLEU}(h, r), \qquad
+B_{\mathrm{input}} = \operatorname{BLEU}(h, x).
+$$
+
+$B_{\mathrm{ref}}$ shows us how similar the suggestion is to the refenrence and $B_{\mathrm{input}}$ - to the input.
+
+
+
+To balance these metrics, we calculate:
+
+$$
+B_{\mathrm{pen}} = \frac{B_{\mathrm{ref}}\bigl(100 - B_{\mathrm{input}}\bigr)}{52}.
+$$
+
+SacreBLEU reports this corpus-level score on a $0$--$100$ scale. A larger reference BLEU indicates stronger lexical agreement with the target paraphrase.
+
+The factor $1/52$ is a project-specific scaling constant; it changes the magnitude of the score, not the ranking when the other terms are fixed. 
+
+In our experiments we'll track the values for $B_{\mathrm{ref}}$ and $B_{\mathrm{pen}}$.
+
 ### Data Leakage and the Baseline Result
 
 In the Part 1 we made a mistake, where we previously reported penalized development BLEU of approximately 39, wich was inflated by train–development leakage. All 273 development IDs were also present in the original training CSV, so the model had been optimized on the same examples used for development evaluation. Consequently, that score was not a valid estimate of performance on unseen data.
 
 After removing every training row whose normalized ETPC `id` occurs in the development set, the training split contains 2,457 examples and the development split remains at 273 genuinely held-out examples. Under this corrected protocol, the constant-learning-rate baseline achieves a penalized development BLEU of approximately 17. The decrease from 39 to 17 should therefore not be interpreted as a model regression: it is the result of eliminating leakage and measuring generalization on a non-overlapping split. All scheduler comparisons use 17—not the leaked score of 39—as the valid baseline.
 
-
 ## Improvement idea
 
-What if instead we used an adaptive learning rate scheduler. 
+What if instead we used an adaptive learning rate scheduler? This way we could better converge our loss function and get better results
 
 
 ### Learning rate scheduler types
@@ -30,6 +58,8 @@ What if instead we used an adaptive learning rate scheduler.
 | Metric-dependent decay | Multiply the current rate by `metric_factor` after penalized development BLEU fails to improve for more than `metric_patience` epochs | Keep the rate high while held-out performance improves and reduce it only on a plateau, adapting decay timing to observed model behavior |
 
 ## Methodology
+
+### Running commands
 
 #### Constant Learning Rate
 
@@ -109,6 +139,7 @@ sbatch run_bart_generation.sh 5 metric \
     --use_gpu
 ```
 
+### 
 
 ## Results
 
@@ -294,10 +325,16 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 ![Metric-dependent top-two runs compared with baseline](paraphrase_generation/figure/metric_training_comparison.png)
 
 ### Ref/Pen Bleu vs Loss
+Let's investigate how does Ref/Pen Bleu depends on the Loss.
 
+Here are the checkpoints values for different epochs. I've excluded some failed experiments with extremely low Bleu score (~87% of the data left)
+![Text 2](paraphrase_generation/figure/loss_bleu_scatter_87.png)
+
+If we exclude further for `ref_bleu <= 46.5` and `pen_bleu <= 10` (successful checkpoints; ~17% of the data left), we get the following: 
 ![Text 1](paraphrase_generation/figure/loss_bleu_scatter.png)
 
-![Text 2](paraphrase_generation/figure/loss_bleu_scatter_87.png)
+We can observe that while the decrease in the loss correlates with better `pen_bleu`, while the `ref_bleu` has no correlation, or even a slgiht negative one
+
 
 ## Discussions
 
