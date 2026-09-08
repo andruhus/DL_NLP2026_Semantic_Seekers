@@ -1,8 +1,10 @@
 from collections.abc import Iterable
 from decimal import Decimal
 from pathlib import Path
+
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.offsetbox import AnchoredOffsetbox, TextArea, VPacker
 import numpy as np
 import pandas as pd
 
@@ -62,7 +64,13 @@ def plot_training_metrics(
             ids.append(baseline_id)
         _validate_ids(ids, training_results)
 
-    figure, axes = plt.subplots(3, 2, figsize=(18, 8), sharex=True)
+    figure, axes = plt.subplots(
+        3,
+        2,
+        figsize=(20, 7.5),
+        sharex=True,
+        gridspec_kw={"width_ratios": (1, 1.35)},
+    )
     color_cycle = plt.rcParams["axes.prop_cycle"].by_key()["color"]
     id_colors = {
         experiment_id: color_cycle[index % len(color_cycle)]
@@ -114,6 +122,7 @@ def plot_training_metrics(
     for experiment_id in ids:
         metadata = summary_results.loc[experiment_id]
         scheduler_type = str(metadata["scheduler_type"])
+        bold_scheduler_type = scheduler_type.replace(" ", r"\ ")
         parameter_values = []
         for column in parameter_columns[1:]:
             value = metadata[column]
@@ -123,40 +132,64 @@ def plot_training_metrics(
                     if column == "gamma" and scheduler_type == "Metric dependent"
                     else column
                 )
-                parameter_values.append(f"{display_column}={value:g}")
+                display_value = f"{value:.0e}" if column == "lr" else f"{value:g}"
+                italic_column = display_column.replace("_", r"\_")
+                parameter_values.append(
+                    rf"$\mathit{{{italic_column}}}$={display_value}"
+                )
         compact_lines = [
-            "; ".join(parameter_values[index:index + 2])
-            for index in range(0, len(parameter_values), 2)
+            "; ".join(parameter_values[index:index + 6])
+            for index in range(0, len(parameter_values), 6)
         ]
         parameter_sections.append(
-            (experiment_id, [scheduler_type, *compact_lines])
+            (experiment_id, [rf"$\mathbf{{{bold_scheduler_type}}}$", *compact_lines])
         )
 
     parameter_axis = axes[1, 1]
     parameter_axis.set_title("Experiment parameters")
     parameter_axis.axis("off")
-    section_height = 1.0 / len(parameter_sections)
-    for index, (experiment_id, parameter_lines) in enumerate(parameter_sections):
-        text_y = 1.0 - index * section_height
-        parameter_axis.text(
-            0.0,
-            text_y,
-            f"Baseline (ID {experiment_id})" if experiment_id == baseline_id else f"ID {experiment_id}",
-            color=id_colors[experiment_id],
-            transform=parameter_axis.transAxes,
-            verticalalignment="top",
-            fontsize=8,
-            fontweight="bold",
+    section_boxes = []
+    for experiment_id, parameter_lines in parameter_sections:
+        heading = (
+            f"Baseline (ID {experiment_id})"
+            if experiment_id == baseline_id
+            else f"ID {experiment_id}"
         )
-        parameter_axis.text(
-            0.0,
-            text_y - 0.06,
-            "\n".join(parameter_lines),
-            transform=parameter_axis.transAxes,
-            verticalalignment="top",
-            fontsize=7.5,
-            linespacing=1.0,
+        section_boxes.append(
+            VPacker(
+                children=[
+                    TextArea(
+                        heading,
+                        textprops={
+                            "color": id_colors[experiment_id],
+                            "fontsize": 12,
+                            "fontweight": "bold",
+                        },
+                    ),
+                    TextArea(
+                        "\n".join(parameter_lines),
+                        textprops={
+                            "fontsize": 10,
+                            "linespacing": 1.0,
+                        },
+                    ),
+                ],
+                align="left",
+                pad=0,
+                sep=2,
+            )
         )
+    parameter_axis.add_artist(
+        AnchoredOffsetbox(
+            loc="upper left",
+            child=VPacker(children=section_boxes, align="left", pad=0, sep=8),
+            frameon=False,
+            pad=0,
+            borderpad=0,
+            bbox_to_anchor=(0, 1),
+            bbox_transform=parameter_axis.transAxes,
+        )
+    )
 
     for axis, _, _ in plots:
         axis.set_xlabel("Epoch")
@@ -307,5 +340,5 @@ if __name__ == "__main__":
     col = "dev_penalized_bleu"
     # col = "dev_reference_bleu"
     # print_info(col)
-    plot_training_metrics([74,70,73])
+    plot_training_metrics([16,70,17])
     # scatter_plot_losses()
