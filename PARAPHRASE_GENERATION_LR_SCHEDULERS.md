@@ -6,20 +6,20 @@ ETPC paraphrase generation is formulated as a conditional sequence-to-sequence t
 
 The original ETPC training CSV contains all 273 development examples. Before tokenization, the pipeline normalizes ETPC `id` values and removes these overlapping rows, leaving 2,457 training examples and 273 non-overlapping held-out development examples. Every comparison run uses this same cleaned split and initializes a fresh `facebook/bart-large` model with the same random seed.
 
-### `reference_bleu` vs. `penalized_bleu`
+### BLEU-Score
 
-To measure the quality of our generation we use **BLEU-Score**
+To measure the quality of our generation, we use **BLEU-Score**.
 
 
 
-For a source input $x$ (`sentence1`), the reference $r$ and the suggestion $h$, we calculate:
+For a source input $x$ (`sentence1`), the reference $r$, and the suggestion $h$, we calculate:
 
 $$
-B_{\mathrm{ref}} = \operatorname{BLEU}(h, r), \qquad
-B_{\mathrm{input}} = \operatorname{BLEU}(h, x).
+B_{\mathrm{ref}} = \operatorname{BLEU}(r, h), \qquad
+B_{\mathrm{input}} = \operatorname{BLEU}(x, h).
 $$
 
-$B_{\mathrm{ref}}$ shows us how similar the suggestion is to the refenrence and $B_{\mathrm{input}}$ - to the input.
+$B_{\mathrm{ref}}$ shows us how similar the suggestion is to the reference, and $B_{\mathrm{input}}$ how similar it is to the input.
 
 
 
@@ -37,15 +37,15 @@ In our experiments we'll track the values for $B_{\mathrm{ref}}$ and $B_{\mathrm
 
 ### Data Leakage and the Baseline Result
 
-In the Part 1 we made a mistake, where we previously reported  `penalized_bleu` in `etpc_dev_dataset` to be approximately 39, wich was inflated by train–development leakage. All 273 development IDs were also present in the original training CSV, so the model had been optimized on the same examples used for development evaluation. Consequently, that score was not a valid estimate of performance on unseen data.
+In Part 1, we made a mistake when we previously reported `penalized_bleu` in `etpc_dev_dataset` to be approximately 39, which was inflated by train–development leakage. All 273 development IDs were also present in the original training CSV, so the model had been optimized on the same examples used for development evaluation. Consequently, that score was not a valid estimate of performance on unseen data.
 
 After removing every training row whose normalized ETPC `id` occurs in the development set, the training split contains 2,457 examples and the development split remains at 273 genuinely held-out examples. Under this corrected protocol, the constant-learning-rate baseline achieves a development `penalized_bleu` of approximately 17. The decrease from 39 to 17 should therefore not be interpreted as a model regression: it is the result of eliminating leakage and measuring generalization on a non-overlapping split. All scheduler comparisons use 17—not the leaked score of 39—as the valid baseline.
 
-As for `reference_bleu`, we've managed to achieve **46.22**, which is close to the expected 47.5 we needed to achieve
+As for `reference_bleu`, we've managed to achieve **46.22**, which is close to the expected 47.5.
 
 ## Improvement idea
 
-What if instead we used an adaptive learning rate scheduler? This way we could better converge our loss function and get better results
+What if we instead used an adaptive learning rate scheduler? This way, we could better converge our loss function and get better results.
 
 
 ### Learning rate scheduler types
@@ -57,21 +57,21 @@ What if instead we used an adaptive learning rate scheduler? This way we could b
 | Cosine decay | Smoothly interpolate from $\alpha_0$ to $\alpha_{min}$ over all optimizer updates | Combine substantial early progress with increasingly conservative refinement, improving final held-out BLEU without abrupt rate changes |
 | Linear decay | Linearly interpolate from $\alpha_0$ to $\alpha_{min}$ over all optimizer updates | Provide predictable annealing and stable late optimization, but risk reducing the rate too quickly for the available epoch budget |
 | Inverse-square-root decay | Optionally warm up linearly to $\alpha_0$, then decay proportionally to $1/\sqrt{t}$ | Protect pretrained parameters from large early updates while retaining a longer high-learning-rate tail than linear or cosine decay |
-| Metric-dependent decay | Multiply the current rate by `metric_factor` after penalized development BLEU fails to improve for more than `metric_patience` epochs | Keep the rate high while held-out performance improves and reduce it only on a plateau, adapting decay timing to observed model behavior |
+| Metric-dependent decay | Multiply the current rate by `metric_factor` after `penalized_bleu` for the `etpc_dev_dataset` fails to improve for more than `metric_patience` epochs | Keep the rate high while held-out performance improves and reduce it only on a plateau, adapting decay timing to observed model behavior |
 
 ### Scope of interest
 
-In this experiments we won't change the other parameters like `batch_size` or `loss_fn` or `n_epochs` to stay close to the baseline
+In these experiments, we won't change the other parameters, such as `batch_size`, `loss_fn`, or `n_epochs`, to stay close to the baseline.
 
-However, we need to mention, that the different `lr` might benefit from changing the `batch_size`
+However, we need to mention that different `lr` values might benefit from changing the `batch_size`.
 
 ## Methodology
 
 ### Model IDs
 
-For each experiment we assign an ID for a model and save the parameters in `run_5epoch_results.csv`. And the information about their BLEU scores during the training we saved into `train_5epoch_results.csv`
+For each experiment, we assign an ID to a model and save the parameters in `run_5epoch_results.csv`. We save the information about their BLEU scores during training in `train_5epoch_results.csv`.
 
-Overall there are 100 different experiments. For each we set the `--batch_size 8` and `--epochs 5` (this makes each experiment run last for ~12 minutes on GPU).
+Overall, there are 100 different experiments. For each, we set `--batch_size 8` and `--epochs 5` (this makes each experiment run for ~12 minutes on a GPU).
 
 ### Running commands
 
@@ -157,7 +157,7 @@ sbatch run_bart_generation.sh 5 metric \
 
 ## Results
 
-Out of `run_5epoch_results.csv` and `train_5epoch_results.csv` we generated the following results plot
+From `run_5epoch_results.csv` and `train_5epoch_results.csv`, we generated the following results plot.
 
 ### Constant Learning Rate
 
@@ -179,14 +179,14 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 67 | 5e-4 | 0.0082 | 0.0079 | 0.0158 |
 | 64 | 1e-3 | 0.0042 | 0.0040 | 0.0081 |
 
-**Training dynamics.** IDs 74 and 65 are compared with the ID 70 baseline
+**Training dynamics.** IDs 74 and 65 are compared with the ID 70 baseline.
 
-![Constant learning-rate top-two runs compared with baseline](paraphrase_generation/figure/constant_training_comparison.png)
+![Constant learning-rate selected runs compared with baseline](paraphrase_generation/figure/constant_training_comparison.png)
 
 #### Observations
 Both candidates have pretty similar `lr` and as we can observe we might get good `penalized_bleu` values for the first 4 epochs, but then the loss for the ID 65 starts growing for the 5th epoch, meaning that we took a large `lr`
 
-However the baseline still posesses a higher `reference_bleu`
+However, the baseline still possesses a higher `reference_bleu`.
 
 ### Step Decay
 
@@ -222,9 +222,9 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 8 | 1e-3 | 1e-7 | 3 | 924 | 0.2 | 0.0042 | 0.0040 | 0.0081 |
 | 9 | 1e-3 | 1e-7 | 3 | 924 | 0.1 | 0.0042 | 0.0040 | 0.0081 |
 
-**Training dynamics.** IDs 16 and 17 are compared with the ID 70 baseline
+**Training dynamics.** IDs 16 and 17 are compared with the ID 70 baseline.
 
-![Step-decay top-two runs compared with baseline](paraphrase_generation/figure/step_training_comparison.png)
+![Step-decay selected runs compared with baseline](paraphrase_generation/figure/step_training_comparison.png)
 
 
 
@@ -247,12 +247,12 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 41 | 1e-5 | 2e-6 | 1540 | 48.5021 | 91.2907 | 8.1234 |
 | 40 | 1e-5 | 1e-6 | 1540 | 48.6739 | 92.6041 | 6.9228 |
 
-**Training dynamics.** IDs 46 and 51 are compared with the ID 70 baseline
+**Training dynamics.** IDs 46 and 51 are compared with the ID 70 baseline.
 
-![Cosine-decay top-two runs compared with baseline](paraphrase_generation/figure/cosine_training_comparison.png)
+![Cosine-decay selected runs compared with baseline](paraphrase_generation/figure/cosine_training_comparison.png)
 
 #### Observations
-The first models that somewhat outperformed the baseline. However we can notice, that approximate average learning rate look like to be `2e-05` and the performance resembles it greatly
+The first models that somewhat outperformed the baseline. However, we can notice that the approximate average learning rate looks to be `2e-05` and the performance resembles it greatly.
 
 ### Linear Decay
 
@@ -273,13 +273,13 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 28 | 1e-5 | 1e-6 | 1540 | 48.8003 | 91.3644 | 8.1042 |
 | 29 | 1e-5 | 2e-6 | 1540 | 48.4397 | 91.3266 | 8.0796 |
 
-**Training dynamics.** IDs 38 and 33 are compared with the ID 70 baseline
+**Training dynamics.** IDs 38 and 33 are compared with the ID 70 baseline.
 
-![Linear-decay top-two runs compared with baseline](paraphrase_generation/figure/linear_training_comparison.png)
+![Linear-decay selected runs compared with baseline](paraphrase_generation/figure/linear_training_comparison.png)
 
-#### Observations 
-1) The model 38 achived its peak of `penalized_bleu` after the 2nd epoch because of the lowest `input_bleu` and despite the abismal `reference_bleu`. We consider this to be an outlier
-2) The model 33 outperformed the baseline in `reference_bleu`, despite being a little worse in `input_bleu`
+#### Observations
+1) Model 38 achieved its peak `penalized_bleu` after the 2nd epoch because of the lowest `input_bleu` and despite the abysmal `reference_bleu`. We consider this to be an outlier.
+2) Model 33 outperformed the baseline in `reference_bleu`, despite being a little worse in `input_bleu`.
 
 
 ### Inverse-Square-Root Decay
@@ -301,12 +301,12 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 52 | 2e-5 | 2e-6 | 1540 | 0 | 48.7384 | 97.0412 | 2.7732 |
 | 53 | 2e-5 | 2e-6 | 1540 | 2 | 48.9237 | 97.8553 | 2.0178 |
 
-**Training dynamics.** IDs 53 and 63 are compared with the ID 70 baseline
+**Training dynamics.** IDs 54 and 63 are compared with the ID 70 baseline.
 
-![Inverse-square-root top-two runs compared with baseline](paraphrase_generation/figure/inverse_sqrt_training_comparison.png)
+![Inverse-square-root selected runs compared with baseline](paraphrase_generation/figure/inverse_sqrt_training_comparison.png)
 
 #### Observations
-Inverse square root schedulers were decreasing extremely fast, what made them analogous to low constant rate schedulers
+Inverse-square-root schedulers decreased extremely fast, which made them analogous to low constant-rate schedulers.
 
 ### Metric-Dependent Decay
 
@@ -340,44 +340,44 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 82 | 2e-5 | 0 | 0.2 | 0 | 4 | 48.3951 | 90.1885 | 9.1313 |
 | 78 | 2e-5 | 0 | 0.1 | 0 | 4 | 48.6880 | 91.7971 | 7.6805 |
 
-**Training dynamics.** IDs 91 and 97 are compared with the ID 70 baseline
+**Training dynamics.** IDs 91 and 97 are compared with the ID 70 baseline.
 
-![Metric-dependent top-two runs compared with baseline](paraphrase_generation/figure/metric_training_comparison.png)
+![Metric-dependent selected runs compared with baseline](paraphrase_generation/figure/metric_training_comparison.png)
 
 #### Observations
-1) The models 95 and 99 are exactly the same, because the threshold and patience didn't let the lr to change significantly
-2) Some of the models (like 79 or 80) performed exactly like a baseline, because of long patience, and apparently not so large threshold 
-3) The metric are showing pretty vividly the `reference_bleu` vs `penalized_bleu` tradeoff, that we currently have.
+1) Models 95 and 99 have identical results because the threshold and patience did not let the `lr` change significantly.
+2) Some models (such as 79 or 80) performed exactly like the baseline because of long patience and an apparently not-so-large threshold.
+3) The metrics show the `reference_bleu` vs. `penalized_bleu` trade-off that we currently have.
 
-### Reference/Penalized Bleu vs Loss
+### Reference/Penalized BLEU vs Loss
 Let's investigate how `reference_bleu` and `penalized_bleu` depend on the loss.
 
-Here are the checkpoint values for different epochs. I've excluded some failed experiments with extremely low BLEU scores (~87% of the data left)
+Here are the checkpoint values for different epochs. I've excluded some failed experiments with extremely low BLEU scores (~87% of the data left).
 ![Text 2](paraphrase_generation/figure/loss_bleu_scatter_87.png)
 
-If we further filter for `reference_bleu <= 46.5` and `penalized_bleu <= 10` (successful checkpoints; ~17% of the data left), we get the following: 
+If we further filter for `reference_bleu <= 46.5` and `penalized_bleu <= 10` (successful checkpoints; ~17% of the data left), we get the following:
 ![Text 1](paraphrase_generation/figure/loss_bleu_scatter.png)
 
-We can observe that while the decrease in the loss correlates with better `penalized_bleu`, while the `reference_bleu` has no correlation, or even a slgiht negative one
+We can observe that a decrease in the loss correlates with better `penalized_bleu`, while `reference_bleu` has no correlation, or even a slight negative one.
 
-### Flagman model
+### Flagship model
 
-Basically there are only 2 models that were the closest to outperforming the baseline:
+Basically, there are only 2 models that were closest to outperforming the baseline:
 | ID | LR | Min LR  | `reference_bleu` | `input_bleu` | `penalized_bleu` |
 | ---: | ---: | ---: | ---: | ---: | ---: |
 | **Baseline** | **2e-5** | **0.0** | **46.2204**| **79.9772** | **17.7973** |
 | **46** | *5e-5* | *1e-6*  | *46.1692* | *79.0771* | *18.5768* |
 | **33** | *2e-5* | *5e-6*  | *47.6035* | *82.7402* | *15.8005* |
 
-**However we decided the Model 33 to be our flagman**, because it improves the `reference_bleu` significantly, while not increasing the `input_bleu` that much
+**However, we decided that Model 33 would be our flagship**, because it improves `reference_bleu` significantly while not increasing `input_bleu` that much.
 
 ## Discussions
 
-The question arises: why did we fail? The obvious reason is that we didn't have enough epochs to schedule meaningfully. Had we had 50 epochs, this could have ad a greater impact. However this doesn't explain the whole picture. For example, why do we get significantly worse `reference_bleu` after improving `penalized_bleu`?
+The question arises: why did we fail? The obvious reason is that we didn't have enough epochs to schedule meaningfully. Had we had 50 epochs, this could have had a greater impact. However, this doesn't explain the whole picture. For example, why do we get significantly worse `reference_bleu` after improving `penalized_bleu`?
 
 ### Output Exploration
 
-Let's try reading into the outputs. The following example was taken from `etpc_dev_dataset` (entry 9). 
+Let's try reading into the outputs. The following example was taken from `etpc_dev_dataset` (entry 9).
 
 **Input:**
 
@@ -403,15 +403,16 @@ Let's try reading into the outputs. The following example was taken from `etpc_d
 > Peterson was arrested near Torrey Pines Golf Course in La Jolla on April 18, the **same** day DNA testing identified the bodies.
 
 We can observe the following:
-1. Both outputs closely copy the source: they add only “same”, to the input.
+1. Both outputs closely copy the source: they add only “same” to the input.
 2. The reference includes information absent from the source, such as Peterson’s age (“30”). That detail cannot be inferred from the supplied input alone. This explains why data leakage had a profound effect on both `reference_bleu` and `penalized_bleu`.
 
 ### Conflicting metrics:
 
-Because the reference contain the information, not present in the inputs, the model don't have any better strategy, rather than just copypasting the input.
+Because the reference contains information not present in the input, the model does not have a better strategy than just copying the input.
 
-We are in the pitfall, where increasing `reference_bleu` means to basically copypaste the input. Slightly deviating from the input sentence decreases `reference_bleu` slightly, but doubles or triples the $(1 - \texttt{input\_bleu})$ component, thereby increasing `penalized_bleu`. 
-A related limitation is discussed by Jin et al. (2022), who note that, in text style transfer, “simply copying the input can result in high BLEU scores.” This supports the general concern that BLEU can reward copying, although it does not establish the specific changes in `penalized_bleu` described here. (Jin et al., 2022))
+We are in the pitfall where increasing `reference_bleu` means basically copying the input. Slightly deviating from the input sentence decreases `reference_bleu` slightly, but doubles or triples the $(1 - \texttt{input\_bleu})$ component, thereby increasing `penalized_bleu`.
+
+A related limitation is discussed by Jin et al. (2022), who note that, in text style transfer, “simply copying the input can result in high BLEU scores.” This supports the general concern that BLEU can reward copying, although it does not establish the specific changes in `penalized_bleu` described here. (Jin et al., 2022)
 
 ## References
 
