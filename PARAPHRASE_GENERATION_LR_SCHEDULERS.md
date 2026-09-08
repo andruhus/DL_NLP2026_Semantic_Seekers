@@ -41,6 +41,8 @@ In the Part 1 we made a mistake, where we previously reported penalized developm
 
 After removing every training row whose normalized ETPC `id` occurs in the development set, the training split contains 2,457 examples and the development split remains at 273 genuinely held-out examples. Under this corrected protocol, the constant-learning-rate baseline achieves a penalized development BLEU of approximately 17. The decrease from 39 to 17 should therefore not be interpreted as a model regression: it is the result of eliminating leakage and measuring generalization on a non-overlapping split. All scheduler comparisons use 17—not the leaked score of 39—as the valid baseline.
 
+As for the reference BLEU we've managed to achieve **46.22**, which is close to the expected 47.5 we needed to achieve
+
 ## Improvement idea
 
 What if instead we used an adaptive learning rate scheduler? This way we could better converge our loss function and get better results
@@ -57,7 +59,19 @@ What if instead we used an adaptive learning rate scheduler? This way we could b
 | Inverse-square-root decay | Optionally warm up linearly to $\alpha_0$, then decay proportionally to $1/\sqrt{t}$ | Protect pretrained parameters from large early updates while retaining a longer high-learning-rate tail than linear or cosine decay |
 | Metric-dependent decay | Multiply the current rate by `metric_factor` after penalized development BLEU fails to improve for more than `metric_patience` epochs | Keep the rate high while held-out performance improves and reduce it only on a plateau, adapting decay timing to observed model behavior |
 
+### Scope of interest
+
+In this experiments we won't change the other parameters like `batch_size` or `loss_fn` or `n_epochs` to stay close to the baseline
+
+However, we need to mention, that the different `lr` might benefit from changing the `batch_size`
+
 ## Methodology
+
+### Model IDs
+
+For each experiment we assign an ID for a model and save the parameters in `run_5epoch_results.csv`. And the information about their BLEU scores during the training we saved into `train_5epoch_results.csv`
+
+Overall there are 100 different experiments. For each we set the `--batch_size 8` and `--epochs 5` (this makes each experiment run last for ~12 minutes on GPU).
 
 ### Running commands
 
@@ -139,36 +153,24 @@ sbatch run_bart_generation.sh 5 metric \
     --use_gpu
 ```
 
-### 
+
 
 ## Results
 
-The plots use the default initial learning rate $\alpha_0=2\times10^{-5}$, minimum learning rate $\alpha_{\min}=0$, five epochs, and batch size 8. With 2,457 cleaned training examples, there are $\lceil2457/8\rceil=308$ optimizer updates per epoch and $T=1540$ updates in total. They can be regenerated with:
-
-```sh
-python paraphrase_generation/plotter.py
-```
-
-The plots illustrate the default schedules; the commands below instead reproduce the parameter grids in the results tables. Submit from the repository root after the training environment and local BART cache are set up. Create the SLURM log directory before submitting:
-
-```sh
-mkdir -p slurm_files
-```
-
-Each command runs its experiments sequentially within one job. The wrapper requests two hours by default; for larger grids, choose a cluster-permitted wall-time override using `sbatch --time=...` before the script name. Run grids separately and archive their outputs before the next job, since runs share output locations and reruns can overwrite checkpoints. Table IDs are persistent CSV identifiers, not the per-job checkpoint indices.
+Out of `run_5epoch_results.csv` and `train_5epoch_results.csv` we generated the following results plot
 
 ### Constant Learning Rate
 
-Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Constant learning rate`. Sorted by descending penalized BLEU (ties by ascending ID). BLEU scores are rounded to four decimal places.
+Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Constant learning rate`. Sorted by descending penalized BLEU. BLEU scores are rounded to four decimal places.
 
 | ID | LR | Dev reference BLEU | Dev input BLEU | Dev penalized BLEU |
 | ---: | ---: | ---: | ---: | ---: |
-| 74 | 9e-5 | 42.6154 | 73.2415 | 21.9293 |
-| 65 | 1e-4 | 42.1565 | 73.1281 | 21.7851 |
+| **74** | *9e-5* | *42.6154* | *73.2415* | *21.9293* |
+| **65** | *1e-4* | *42.1565* | *73.1281* | *21.7851* |
 | 75 | 1.1e-4 | 42.8679 | 74.3334 | 21.1591 |
 | 76 | 1.25e-4 | 44.3238 | 75.5372 | 20.8516 |
 | 73 | 7e-5 | 44.4819 | 76.9212 | 19.7421 |
-| 70 | 2e-5 | 46.2204 | 79.9772 | 17.7973 |
+| **70** | **2e-5** | **46.2204**| **79.9772** | **17.7973** |
 | 69 | 5e-5 | 45.8548 | 80.5357 | 17.1641 |
 | 72 | 4e-5 | 45.1790 | 80.6597 | 16.8034 |
 | 71 | 3e-5 | 46.5307 | 81.7639 | 16.3180 |
