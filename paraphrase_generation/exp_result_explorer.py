@@ -178,8 +178,8 @@ def scatter_plot_losses(show=True):
     df = pd.read_csv(TRAINING_RESULTS_PATH)
     # ref_lim = 40
     # pen_lim = 0
-    ref_lim = 46.5
-    pen_lim = 10
+    ref_lim, ref_max = 46.5, 49
+    pen_lim, pen_max = 10, 20
     df = df[df["dev_reference_bleu"] >= ref_lim]
     df = df[df["dev_penalized_bleu"] >= pen_lim]
     df = df[df["loss"] <= 2.5]
@@ -255,7 +255,7 @@ def scatter_plot_losses(show=True):
         xlabel="Training loss",
         ylabel="Reference BLEU",
         xlim=(0, 2.5),
-        ylim=(ref_lim-1, 49),
+        ylim=(ref_lim-1, ref_max),
     )
 
     pen_axis.set(
@@ -263,7 +263,7 @@ def scatter_plot_losses(show=True):
         xlabel="Training loss",
         ylabel="Penalized BLEU",
         xlim=(0, 2.5),
-        ylim=(pen_lim - 1, 25),
+        ylim=(pen_lim - 1, pen_max),
     )
 
     for axis in (ref_axis, pen_axis):

@@ -295,6 +295,10 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 ### Ref/Pen Bleu vs Loss
 
+![Text 1](paraphrase_generation/figure/loss_bleu_scatter.png)
+
+![Text 2](paraphrase_generation/figure/loss_bleu_scatter_87.png)
+
 ## Discussions
 
 The question arises: why did we fail? The obvious reason is that we didn't have enough epochs to schedule meaningfully. Had we had 50 epochs, this could have ad an impackt. However this doesn't explain the whole picture. For example, why do we get significantly worse $Reference BLEU$ after improving $Penalty BLEU$
