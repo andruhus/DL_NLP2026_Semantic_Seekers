@@ -37,6 +37,17 @@ SCHEDULER_COMPARISONS = (
     ("Metric dependent", "Metric-dependent decay", "metric_training_comparison.png"),
 )
 
+# Choose the experiment IDs to compare for each scheduler. These start with the
+# current top two by penalized BLEU, but can contain any number of valid IDs.
+SELECTED_COMPARISON_IDS = {
+    "Constant learning rate": (74, 65),
+    "Step decay": (16, 17),
+    "Cosine decay": (46, 51),
+    "Linear decay": (38, 39),
+    "Inverse square root": (54, 63),
+    "Metric dependent": (91, 95),
+}
+
 
 def save_update_plot(rates, title, filename, *, mark_warmup=False):
     """Plot an update-based schedule against equivalent training epochs."""
@@ -159,25 +170,19 @@ def plot_metric_dependent_schedule():
 
 
 def plot_scheduler_comparisons():
-    """Compare each scheduler's top two runs with the constant 2e-5 baseline."""
+    """Compare manually selected scheduler runs with the constant 2e-5 baseline."""
     with RESULTS_PATH.open(newline="", encoding="utf-8") as source:
         results = list(csv.DictReader(source))
 
     selected_ids = {}
     for scheduler_type, title, filename in SCHEDULER_COMPARISONS:
-        scheduler_results = [
-            row for row in results if row["scheduler_type"] == scheduler_type
-        ]
-        scheduler_results.sort(
-            key=lambda row: (-float(row["dev_penalized_bleu"]), int(row["id"]))
-        )
-        if len(scheduler_results) < 2:
-            raise ValueError(f"Expected at least two results for {scheduler_type}.")
-        best_ids = [int(row["id"]) for row in scheduler_results[:2]]
-        selected_ids[scheduler_type] = best_ids
+        ids = list(SELECTED_COMPARISON_IDS.get(scheduler_type, ()))
 
-        figure, _ = plot_training_metrics(best_ids, show=False, baseline=True)
-        figure.suptitle(f"{title}: top two runs vs. constant 2e-5 baseline")
+
+        selected_ids[scheduler_type] = ids
+
+        figure, _ = plot_training_metrics(ids, show=False, baseline=True)
+        figure.suptitle(f"{title}: selected runs vs. constant 2e-5 baseline")
         figure.tight_layout(rect=(0, 0, 1, 0.95))
         figure.savefig(FIGURE_DIR / filename, dpi=600, bbox_inches="tight")
         plt.close(figure)
@@ -191,7 +196,7 @@ def main():
     plot_metric_dependent_schedule()
     selected_ids = plot_scheduler_comparisons()
     for scheduler_type, ids in selected_ids.items():
-        print(f"{scheduler_type}: selected IDs {ids[0]} and {ids[1]}")
+        print(f"{scheduler_type}: selected IDs {', '.join(map(str, ids))}")
 
     loss_bleu_figure, _ = scatter_plot_losses(show=False)
     loss_bleu_figure.savefig(
