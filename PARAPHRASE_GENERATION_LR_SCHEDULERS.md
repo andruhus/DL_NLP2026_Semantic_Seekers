@@ -187,7 +187,7 @@ However, the baseline still possesses a higher `reference_bleu`.
 Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Step decay`. Sorted by descending `penalized_bleu`. BLEU scores are rounded to four decimal places.
 
 |     ID |     LR | Min LR | Decay interval (epochs) | Step size (updates) | Gamma | `reference_bleu` | `input_bleu` | `penalized_bleu` |
-| -----: | -----: | -----: | -------------------: | ---------------: | ----: | ---------------: | -----------: | ---------------: |
+| -----: | -------: | -----: | ------------------: | --------------: | ----: | ---------------: | -----------: | ---------------: |
 | **16** | _1e-4_ | _1e-7_ |                     _3_ |               _924_ | _0.5_ |        _42.1565_ |    _73.1281_ |        _21.7851_ |
 | **17** | _1e-4_ | _1e-7_ |                     _3_ |               _924_ | _0.2_ |        _42.1565_ |    _73.1281_ |        _21.7851_ |
 |     18 |   1e-4 |   1e-7 |                       3 |                 924 |   0.1 |          42.1565 |      73.1281 |          21.7851 |
