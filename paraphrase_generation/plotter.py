@@ -45,7 +45,7 @@ SELECTED_COMPARISON_IDS = {
     "Cosine decay": (46, 51),
     "Linear decay": (38, 33),
     "Inverse square root": (54, 63),
-    "Metric dependent": (91, 95),
+    "Metric dependent": (91, 97),
 }
 
 

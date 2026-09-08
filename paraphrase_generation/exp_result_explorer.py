@@ -340,5 +340,5 @@ if __name__ == "__main__":
     col = "dev_penalized_bleu"
     # col = "dev_reference_bleu"
     # print_info(col)
-    plot_training_metrics([16,70,17])
+    plot_training_metrics([91,97,70])
     # scatter_plot_losses()

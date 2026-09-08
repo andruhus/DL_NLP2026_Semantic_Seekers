@@ -183,6 +183,7 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 ![Constant learning-rate top-two runs compared with baseline](paraphrase_generation/figure/constant_training_comparison.png)
 
+#### Observations
 Both candidates have pretty similar `lr` and as we can observe we might get good pen_bleu values for the first 4 epochs, but then the loss for the ID 65 starts growing for the 5th epoch, meaning that we took a large `lr`
 
 However the baseline still posesses a higher ref_bleu
@@ -221,9 +222,11 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 8 | 1e-3 | 1e-7 | 3 | 924 | 0.2 | 0.0042 | 0.0040 | 0.0081 |
 | 9 | 1e-3 | 1e-7 | 3 | 924 | 0.1 | 0.0042 | 0.0040 | 0.0081 |
 
-**Training dynamics.** IDs 16 and 17 are compared with the constant `2e-5` baseline (ID 70, dashed black line).
+**Training dynamics.** IDs 16 and 17 are compared with the ID 70 baseline
 
 ![Step-decay top-two runs compared with baseline](paraphrase_generation/figure/step_training_comparison.png)
+
+
 
 ### Cosine Decay
 
@@ -244,9 +247,12 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 41 | 1e-5 | 2e-6 | 1540 | 48.5021 | 91.2907 | 8.1234 |
 | 40 | 1e-5 | 1e-6 | 1540 | 48.6739 | 92.6041 | 6.9228 |
 
-**Training dynamics.** IDs 46 and 51 are compared with the constant `2e-5` baseline (ID 70, dashed black line).
+**Training dynamics.** IDs 46 and 51 are compared with the ID 70 baseline
 
 ![Cosine-decay top-two runs compared with baseline](paraphrase_generation/figure/cosine_training_comparison.png)
+
+#### Observations
+The first models that somewhat outperformed the baseline. However we can notice, that approximate average learning rate look like to be `2e-05` and the performance resembles it greatly
 
 ### Linear Decay
 
@@ -255,10 +261,10 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | ID | LR | Min LR | Total updates | Dev reference BLEU | Dev input BLEU | Dev penalized BLEU |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | **38** | *1e-4* | *2e-6* | *1540* | *34.8555* | *64.0708* | *24.0833* |
-| **39** | *1e-4* | *5e-6* | *1540* | *46.2525* | *79.3179* | *18.3962* |
+| 39 | 1e-4 | 5e-6 | 1540 | 46.2525 | 79.3179 | 18.3962 |
 | 34 | 5e-5 | 1e-6 | 1540 | 46.4726 | 81.7165 | 16.3400 |
 | 37 | 1e-4 | 1e-6 | 1540 | 46.3186 | 81.8649 | 16.1537 |
-| 33 | 2e-5 | 5e-6 | 1540 | 47.6035 | 82.7402 | 15.8005 |
+| **33** | *2e-5* | *5e-6* | *1540* | *47.6035* | *82.7402* | *15.8005* |
 | 35 | 5e-5 | 2e-6 | 1540 | 46.6066 | 84.8960 | 13.5374 |
 | 32 | 2e-5 | 2e-6 | 1540 | 47.4143 | 85.3911 | 13.3206 |
 | 30 | 1e-5 | 5e-6 | 1540 | 48.2923 | 87.5470 | 11.5651 |
@@ -267,9 +273,14 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 28 | 1e-5 | 1e-6 | 1540 | 48.8003 | 91.3644 | 8.1042 |
 | 29 | 1e-5 | 2e-6 | 1540 | 48.4397 | 91.3266 | 8.0796 |
 
-**Training dynamics.** IDs 38 and 39 are compared with the constant `2e-5` baseline (ID 70, dashed black line).
+**Training dynamics.** IDs 38 and 33 are compared with the ID 70 baseline
 
 ![Linear-decay top-two runs compared with baseline](paraphrase_generation/figure/linear_training_comparison.png)
+
+#### Observations 
+1) The model 38 achived its peak of `pen_bleu` after the 2nd epoch because of the lowest input bleu and despite the abismal `ref_bleu`. We consider this to be an outlier
+2) The model 33 outperformed the baseline in `ref_bleu`, despite being a little worse in `input_bleu`
+
 
 ### Inverse-Square-Root Decay
 
@@ -290,9 +301,12 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 52 | 2e-5 | 2e-6 | 1540 | 0 | 48.7384 | 97.0412 | 2.7732 |
 | 53 | 2e-5 | 2e-6 | 1540 | 2 | 48.9237 | 97.8553 | 2.0178 |
 
-**Training dynamics.** IDs 54 and 63 are compared with the constant `2e-5` baseline (ID 70, dashed black line).
+**Training dynamics.** IDs 53 and 63 are compared with the ID 70 baseline
 
 ![Inverse-square-root top-two runs compared with baseline](paraphrase_generation/figure/inverse_sqrt_training_comparison.png)
+
+#### Observations
+Inverse square root schedulers were decreasing extremely fast, what made them analogous to low constant rate schedulers
 
 ### Metric-Dependent Decay
 
@@ -302,9 +316,9 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | ID | LR | Min LR | Factor (CSV gamma) | Patience | Threshold | Dev reference BLEU | Dev input BLEU | Dev penalized BLEU |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | **91** | *9e-5* | *0* | *0.1* | *1* | *3* | *42.6154* | *73.2415* | *21.9293* |
-| **95** | *9e-5* | *0* | *0.2* | *1* | *3* | *42.6154* | *73.2415* | *21.9293* |
+| 95 | 9e-5 | 0 | 0.2 | 1 | 3 | 42.6154 | 73.2415 | 21.9293 |
 | 99 | 9e-5 | 0 | 0.5 | 1 | 3 | 42.6154 | 73.2415 | 21.9293 |
-| 97 | 9e-5 | 0 | 0.5 | 0 | 3 | 44.9549 | 76.4521 | 20.3576 |
+| **97** | *9e-5* | *0* | *0.5* | *0* | *3* | *44.9549* | *76.4521* | *20.3576* |
 | 98 | 9e-5 | 0 | 0.5 | 0 | 4 | 44.9549 | 76.4521 | 20.3576 |
 | 100 | 9e-5 | 0 | 0.5 | 1 | 4 | 44.3306 | 76.1777 | 20.3088 |
 | 96 | 9e-5 | 0 | 0.2 | 1 | 4 | 44.8140 | 77.1246 | 19.7142 |
@@ -326,9 +340,14 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 82 | 2e-5 | 0 | 0.2 | 0 | 4 | 48.3951 | 90.1885 | 9.1313 |
 | 78 | 2e-5 | 0 | 0.1 | 0 | 4 | 48.6880 | 91.7971 | 7.6805 |
 
-**Training dynamics.** IDs 91 and 95 are compared with the constant `2e-5` baseline (ID 70, dashed black line).
+**Training dynamics.** IDs 91 and 97 are compared with the ID 70 baseline
 
 ![Metric-dependent top-two runs compared with baseline](paraphrase_generation/figure/metric_training_comparison.png)
+
+#### Observations
+1) The models 95 and 99 are exactly the same, because the threshold and patience didn't let the lr to change significantly
+2) Some of the models (like 79 or 80) performed exactly like a baseline, because of long patience, and apparently not so large threshold 
+3) The metric are showing pretty vividly the `ref_bleu` vs `pen_bleu` tradeoff, that we currently have.
 
 ### Ref/Pen Bleu vs Loss
 Let's investigate how does Ref/Pen Bleu depends on the Loss.
@@ -344,7 +363,7 @@ We can observe that while the decrease in the loss correlates with better `pen_b
 
 ## Discussions
 
-The question arises: why did we fail? The obvious reason is that we didn't have enough epochs to schedule meaningfully. Had we had 50 epochs, this could have ad an impackt. However this doesn't explain the whole picture. For example, why do we get significantly worse $Reference BLEU$ after improving $Penalty BLEU$
+The question arises: why did we fail? The obvious reason is that we didn't have enough epochs to schedule meaningfully. Had we had 50 epochs, this could have ad a greater impact. However this doesn't explain the whole picture. For example, why do we get significantly worse $Reference BLEU$ after improving $Penalty BLEU$
 
 ### Output Exploration
 
