@@ -31,7 +31,7 @@ What if instead we used an adaptive learning rate scheduler.
 
 ## Methodology
 
-#### Methodology
+#### Constant Learning Rate
 
 Run the parameter grid recorded below: **13 experiments**, five epochs each. Space-separated option values form a Cartesian product.
 
@@ -43,7 +43,7 @@ sbatch run_bart_generation.sh 5 constant \
     --use_gpu
 ```
 
-#### Methodology
+#### Step Decay
 
 Run the parameter grid recorded below: **27 experiments**, five epochs each. Space-separated option values form a Cartesian product.
 
@@ -57,7 +57,7 @@ sbatch run_bart_generation.sh 5 step \
     --use_gpu
 ```
 
-#### Methodology
+#### Cosine Decay
 
 Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
 
@@ -69,7 +69,7 @@ sbatch run_bart_generation.sh 5 cosine \
     --use_gpu
 ```
 
-#### Methodology
+#### Linear Decay
 
 Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
 
@@ -81,7 +81,7 @@ sbatch run_bart_generation.sh 5 linear \
     --use_gpu
 ```
 
-#### Methodology
+#### Inverse-Square-Root Decay
 
 Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
 
@@ -94,7 +94,7 @@ sbatch run_bart_generation.sh 5 inverse_sqrt \
     --use_gpu
 ```
 
-#### Methodology
+#### Metric-Dependent Decay
 
 Run the parameter grid recorded below: **24 experiments**, five epochs each. Space-separated option values form a Cartesian product.
 
@@ -127,8 +127,6 @@ mkdir -p slurm_files
 Each command runs its experiments sequentially within one job. The wrapper requests two hours by default; for larger grids, choose a cluster-permitted wall-time override using `sbatch --time=...` before the script name. Run grids separately and archive their outputs before the next job, since runs share output locations and reruns can overwrite checkpoints. Table IDs are persistent CSV identifiers, not the per-job checkpoint indices.
 
 ### Constant Learning Rate
-
-#### Results
 
 Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Constant learning rate`. Sorted by descending penalized BLEU (ties by ascending ID). BLEU scores are rounded to four decimal places.
 
@@ -294,6 +292,8 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 **Training dynamics.** IDs 91 and 95 are compared with the constant `2e-5` baseline (ID 70, dashed black line).
 
 ![Metric-dependent top-two runs compared with baseline](paraphrase_generation/figure/metric_training_comparison.png)
+
+### Ref/Pen Bleu vs Loss
 
 ## Discussions
 
