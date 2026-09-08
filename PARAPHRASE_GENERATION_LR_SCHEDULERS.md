@@ -360,6 +360,16 @@ If we exclude further for `ref_bleu <= 46.5` and `pen_bleu <= 10` (successful ch
 
 We can observe that while the decrease in the loss correlates with better `pen_bleu`, while the `ref_bleu` has no correlation, or even a slgiht negative one
 
+### Flagman model
+
+Basically there are 2 models that were the closest to outperforming the baseline:
+| ID | LR | Min LR  | Dev reference BLEU | Dev input BLEU | Dev penalized BLEU |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| **Baseline** | **2e-5** | **0.0** | **46.2204**| **79.9772** | **17.7973** |
+| **46** | *5e-5* | *1e-6*  | *46.1692* | *79.0771* | *18.5768* |
+| **33** | *2e-5* | *5e-6*  | *47.6035* | *82.7402* | *15.8005* |
+
+**However we decided the Model 33 to be our flagman**, because it improves the `ref_bleu` significantly, while not increasing the `input_bleu` that much
 
 ## Discussions
 
