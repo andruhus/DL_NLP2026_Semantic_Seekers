@@ -394,6 +394,9 @@ The preliminary differences are primarily **temporal**, not evidence of a better
 
 Moderate focusing parameters are the most promising candidates for that rerun, while $\gamma=4$ suppresses easy decisions too aggressively in the preliminary sweep. The corrected experiment should predeclare a selection rule and compare epochs-to-target as well as fixed-epoch accuracy and MCC.
 
+### Flagship model
+
+**Model $\gamma=0.87$ is our flagship model**, because it shown best `dev_accuracy` as well as one of the best `MCC`
 
 ## Limitations and Threats to Validity
 
