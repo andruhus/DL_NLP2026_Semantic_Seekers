@@ -50,37 +50,6 @@ matplotlib.pyplot
 
 
 
-As a Baseline of our model we chose the following hyperparameters. These showed to be the best against overfitting (which was our main issue) in our hyperparameter search and provided a good starting point for further improvements.
-
-  
-
-- mode: `finetune`
-
-- epochs: `20`
-
-- learning rate: `8e-5`
-
-- scheduler: `ReduceLROnPlateau`
-
-- optimizer: `AdamW`
-
-- clip norm: `0.25`
-
-- batch size: `64`
-
-  
-
-This allowed us to evaluate the impact of the different improvements to the model. The baseline model was trained at 10.000 samples per epoch until convergence. For further hyperparameter choices, see the default values in the [training script](./multitask_classifier.py).
-
-  
-
----
-
-  
-
-Our multitask model achieves the following performance on:
-
-  
 
 ### [Sentiment Classification on Stanford Sentiment Treebank (SST)](https://paperswithcode.com/sota/sentiment-analysis-on-sst-5-fine-grained)
 
@@ -116,6 +85,9 @@ The main goal for there parameters was to reduce overfitting, which is hypothesi
 The remaining innovations could be adjusted in their degree in which they affect the model training. As baseline for discussion the model state of the end of the project was used.
 All existing parameters, except the one regulating the discussed adjustment where set to the optimum.
 For comparing the results, namely the training accuracy of the train- and dev-dataset, the file logdiff.py was used.
+
+Logfiles for initial experimentation are located in logs/old_logs. Here the optimal hyperparameters where not yet determined.
+Logfiles that build the basis for the following discussion are located in /logs.
 ---
 ### **1. Non Hyperparameter Adjustments**
 ### Complexer Classifier
@@ -230,7 +202,12 @@ For the search following order was followed and the Hyper_optimizer.py file was 
 --> Hyperparameter opti
 
 ## Vizualizations
-neuer run für warmup 0.2
+
+
+![0Base_afterTask1](./logs/0Base_afterTask1.log)
+
+
+**Plot 0: Base_afterTask1.log**
 ## Contributors
 
   
