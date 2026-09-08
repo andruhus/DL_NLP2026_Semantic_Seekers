@@ -179,18 +179,22 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 | 67 | 5e-4 | 0.0082 | 0.0079 | 0.0158 |
 | 64 | 1e-3 | 0.0042 | 0.0040 | 0.0081 |
 
-**Training dynamics.** IDs 74 and 65 are compared with the constant `2e-5` baseline (ID 70, dashed black line).
+**Training dynamics.** IDs 74 and 65 are compared with the ID 70 baseline
 
 ![Constant learning-rate top-two runs compared with baseline](paraphrase_generation/figure/constant_training_comparison.png)
 
+Both candidates have pretty similar `lr` and as we can observe we might get good pen_bleu values for the first 4 epochs, but then the loss for the ID 65 starts growing for the 5th epoch, meaning that we took a large `lr`
+
+However the baseline still posesses a higher ref_bleu
+
 ### Step Decay
 
-Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Step decay`. Sorted by descending penalized BLEU (ties by ascending ID). BLEU scores are rounded to four decimal places.
+Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Step decay`. Sorted by descending penalized BLEU. BLEU scores are rounded to four decimal places.
 
 | ID | LR | Min LR | Decay interval (epochs) | Step size (updates) | Gamma | Dev reference BLEU | Dev input BLEU | Dev penalized BLEU |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 16 | 1e-4 | 1e-7 | 3 | 924 | 0.5 | 42.1565 | 73.1281 | 21.7851 |
-| 17 | 1e-4 | 1e-7 | 3 | 924 | 0.2 | 42.1565 | 73.1281 | 21.7851 |
+| **16** | *1e-4* | *1e-7* | *3* | *924* | *0.5* | *42.1565* | *73.1281* | *21.7851* |
+| **17** | *1e-4* | *1e-7* | *3* | *924* | *0.2* | *42.1565* | *73.1281* | *21.7851* |
 | 18 | 1e-4 | 1e-7 | 3 | 924 | 0.1 | 42.1565 | 73.1281 | 21.7851 |
 | 13 | 1e-4 | 1e-7 | 2 | 616 | 0.5 | 44.5942 | 76.5706 | 20.0926 |
 | 10 | 1e-4 | 1e-7 | 1 | 308 | 0.5 | 46.1225 | 79.6345 | 18.0636 |
@@ -227,8 +231,8 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 | ID | LR | Min LR | Total updates | Dev reference BLEU | Dev input BLEU | Dev penalized BLEU |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 46 | 5e-5 | 1e-6 | 1540 | 46.1692 | 79.0771 | 18.5768 |
-| 51 | 1e-4 | 5e-6 | 1540 | 45.8081 | 79.7121 | 17.8721 |
+| **46** | *5e-5* | *1e-6* | *1540* | *46.1692* | *79.0771* | *18.5768* |
+| **51** | *1e-4* | *5e-6* | *1540* | *45.8081* | *79.7121* | *17.8721* |
 | 48 | 5e-5 | 5e-6 | 1540 | 46.5291 | 80.5299 | 17.4216 |
 | 47 | 5e-5 | 2e-6 | 1540 | 46.6614 | 81.0484 | 17.0059 |
 | 49 | 1e-4 | 1e-6 | 1540 | 46.7160 | 83.2764 | 15.0243 |
@@ -250,8 +254,8 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 | ID | LR | Min LR | Total updates | Dev reference BLEU | Dev input BLEU | Dev penalized BLEU |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 38 | 1e-4 | 2e-6 | 1540 | 34.8555 | 64.0708 | 24.0833 |
-| 39 | 1e-4 | 5e-6 | 1540 | 46.2525 | 79.3179 | 18.3962 |
+| **38** | *1e-4* | *2e-6* | *1540* | *34.8555* | *64.0708* | *24.0833* |
+| **39** | *1e-4* | *5e-6* | *1540* | *46.2525* | *79.3179* | *18.3962* |
 | 34 | 5e-5 | 1e-6 | 1540 | 46.4726 | 81.7165 | 16.3400 |
 | 37 | 1e-4 | 1e-6 | 1540 | 46.3186 | 81.8649 | 16.1537 |
 | 33 | 2e-5 | 5e-6 | 1540 | 47.6035 | 82.7402 | 15.8005 |
@@ -273,8 +277,8 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 | ID | LR | Min LR | Total updates | Warmup updates | Dev reference BLEU | Dev input BLEU | Dev penalized BLEU |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 54 | 2e-5 | 5e-6 | 1540 | 0 | 39.4848 | 75.2960 | 18.7583 |
-| 63 | 1e-4 | 5e-6 | 1540 | 2 | 48.4320 | 92.5608 | 6.9287 |
+| **54** | *2e-5* | *5e-6* | *1540* | *0* | *39.4848* | *75.2960* | *18.7583* |
+| **63** | *1e-4* | *5e-6* | *1540* | *2* | *48.4320* | *92.5608* | *6.9287* |
 | 61 | 1e-4 | 2e-6 | 1540 | 2 | 48.6123 | 92.7174 | 6.8082 |
 | 58 | 5e-5 | 5e-6 | 1540 | 0 | 48.4654 | 93.2922 | 6.2518 |
 | 62 | 1e-4 | 5e-6 | 1540 | 0 | 48.6915 | 93.4709 | 6.1137 |
@@ -297,8 +301,8 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 | ID | LR | Min LR | Factor (CSV gamma) | Patience | Threshold | Dev reference BLEU | Dev input BLEU | Dev penalized BLEU |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 91 | 9e-5 | 0 | 0.1 | 1 | 3 | 42.6154 | 73.2415 | 21.9293 |
-| 95 | 9e-5 | 0 | 0.2 | 1 | 3 | 42.6154 | 73.2415 | 21.9293 |
+| **91** | *9e-5* | *0* | *0.1* | *1* | *3* | *42.6154* | *73.2415* | *21.9293* |
+| **95** | *9e-5* | *0* | *0.2* | *1* | *3* | *42.6154* | *73.2415* | *21.9293* |
 | 99 | 9e-5 | 0 | 0.5 | 1 | 3 | 42.6154 | 73.2415 | 21.9293 |
 | 97 | 9e-5 | 0 | 0.5 | 0 | 3 | 44.9549 | 76.4521 | 20.3576 |
 | 98 | 9e-5 | 0 | 0.5 | 0 | 4 | 44.9549 | 76.4521 | 20.3576 |
