@@ -187,7 +187,7 @@ However, the baseline still possesses a higher `reference_bleu`.
 Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Step decay`. Sorted by descending `penalized_bleu`. BLEU scores are rounded to four decimal places.
 
 |     ID |     LR | Min LR | Decay interval (epochs) | Step size (updates) | Gamma | `reference_bleu` | `input_bleu` | `penalized_bleu` |
-| -----: | -----: | -----: | ----------------------: | ------------------: | ----: | ---------------: | -----------: | ---------------: |
+| -----: | -----: | -----: | -------------------: | ---------------: | ----: | ---------------: | -----------: | ---------------: |
 | **16** | _1e-4_ | _1e-7_ |                     _3_ |               _924_ | _0.5_ |        _42.1565_ |    _73.1281_ |        _21.7851_ |
 | **17** | _1e-4_ | _1e-7_ |                     _3_ |               _924_ | _0.2_ |        _42.1565_ |    _73.1281_ |        _21.7851_ |
 |     18 |   1e-4 |   1e-7 |                       3 |                 924 |   0.1 |          42.1565 |      73.1281 |          21.7851 |
@@ -404,11 +404,11 @@ We can observe the following:
 1. Both outputs closely copy the source: they add only “same” to the input.
 2. The reference includes information absent from the source, such as Peterson’s age (“30”). That detail cannot be inferred from the supplied input alone. This explains why data leakage had a profound effect on both `reference_bleu` and `penalized_bleu`.
 
-### Conflicting metrics:
+### Conflicting metrics
 
 Because the reference contains information not present in the input, the model does not have a better strategy than just copying the input.
 
-We are in the pitfall where increasing `reference_bleu` means basically copying the input. Slightly deviating from the input sentence decreases `reference_bleu` slightly, but doubles or triples the $(1 - \texttt{input\_bleu})$ component, thereby increasing `penalized_bleu`.
+We are in the pitfall where increasing `reference_bleu` means basically copying the input. Slightly deviating from the input sentence decreases `reference_bleu` slightly, but doubles or triples the `1- input_bleu` component, thereby increasing `penalized_bleu`.
 
 A related limitation is discussed by Jin et al. (2022), who note that, in text style transfer, “simply copying the input can result in high BLEU scores.” This supports the general concern that BLEU can reward copying, although it does not establish the specific changes in `penalized_bleu` described here. (Jin et al., 2022)
 
