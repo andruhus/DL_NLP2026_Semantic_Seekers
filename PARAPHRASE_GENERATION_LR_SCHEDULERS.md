@@ -63,7 +63,7 @@ What if we instead used an adaptive learning rate scheduler? This way, we could 
 
 In these experiments, we won't change the other parameters, such as `batch_size`, `loss_fn`, or `n_epochs`, to stay close to the baseline.
 
-However, we need to mention that different `lr` values might benefit from changing the `batch_size`.
+However, we need to mention that different `lr` values might benefit from changing the `batch_size`. Popel and Bojar (2018, Section 4.8) discuss the interaction between learning rate, effective batch size, and the learning-rate schedule in Transformer training. This motivates jointly tuning these parameters in future experiments; our results therefore compare learning rates only under the fixed baseline configuration. (Popel & Bojar, 2018)
 
 ## Methodology
 
@@ -418,3 +418,4 @@ A related limitation is discussed by Jin et al. (2022), who note that, in text s
 
 Jin, D., Jin, Z., Hu, Z., Vechtomova, O., & Mihalcea, R. (2022). Deep learning for text style transfer: A survey. Computational Linguistics, 48(1), 155–205. https://doi.org/10.1162/coli_a_00426
 
+Popel, M., & Bojar, O. (2018). Training tips for the Transformer model. arXiv:1804.00247. https://arxiv.org/abs/1804.00247
