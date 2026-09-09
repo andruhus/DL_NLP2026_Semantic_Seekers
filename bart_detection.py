@@ -30,6 +30,32 @@ from paraphrase_detection.weighted_bce import (
 TQDM_DISABLE = False
 
 
+def remove_dev_overlap(train_dataset, dev_dataset):
+    """Remove training rows whose ETPC ID occurs in the development split."""
+    if "id" not in train_dataset.columns or "id" not in dev_dataset.columns:
+        raise ValueError("Both ETPC datasets must contain an 'id' column.")
+
+    train_ids = train_dataset["id"].astype("string").str.strip().str.lower()
+    dev_ids = dev_dataset["id"].astype("string").str.strip().str.lower()
+    overlap_mask = train_ids.notna() & train_ids.isin(dev_ids.dropna())
+
+    removed_rows = int(overlap_mask.sum())
+    removed_unique_ids = int(train_ids[overlap_mask].nunique())
+    filtered_train = train_dataset.loc[~overlap_mask].reset_index(drop=True)
+
+    remaining_train_ids = (
+        filtered_train["id"].astype("string").str.strip().str.lower().dropna()
+    )
+    remaining_overlap = set(remaining_train_ids) & set(dev_ids.dropna())
+    assert not remaining_overlap, "ETPC train/dev ID leakage remains after filtering."
+
+    print(
+        f"Removed {removed_rows} training rows "
+        f"({removed_unique_ids} unique IDs) overlapping with the dev set."
+    )
+    return filtered_train
+
+
 class BartWithClassifier(nn.Module):
     def __init__(self, num_labels=26):
         super(BartWithClassifier, self).__init__()
@@ -400,6 +426,7 @@ def finetune_paraphrase_detection(args):
     train_dataset = pd.read_csv("data/etpc-paraphrase-train.csv")
     dev_dataset = pd.read_csv("data/etpc-paraphrase-dev.csv")
     test_dataset = pd.read_csv("data/etpc-paraphrase-detection-test-student.csv")
+    train_dataset = remove_dev_overlap(train_dataset, dev_dataset)
 
     train_data = transform_data(train_dataset, batch_size=args.batch_size)
     dev_data = transform_data(

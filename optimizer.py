@@ -14,6 +14,7 @@ class AdamW(Optimizer):
         eps: float = 1e-6,
         weight_decay: float = 0.0,
         correct_bias: bool = True,
+        lr_sched=None,
     ):
         if lr < 0.0:
             raise ValueError("Invalid learning rate: {} - should be >= 0.0".format(lr))
@@ -27,8 +28,20 @@ class AdamW(Optimizer):
             )
         if not 0.0 <= eps:
             raise ValueError("Invalid epsilon value: {} - should be >= 0.0".format(eps))
+        if lr_sched is not None:
+            scheduler_lr = getattr(lr_sched, "lr", None)
+            if not callable(scheduler_lr):
+                raise TypeError("lr_sched must provide a callable lr() method")
+            initial_scheduled_lr = float(scheduler_lr())
+            if not math.isfinite(initial_scheduled_lr) or initial_scheduled_lr < 0.0:
+                raise ValueError("lr_sched.lr() must return a finite, non-negative value")
         defaults = dict(
-            lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, correct_bias=correct_bias
+            lr=lr,
+            betas=betas,
+            eps=eps,
+            weight_decay=weight_decay,
+            correct_bias=correct_bias,
+            lr_sched=lr_sched,
         )
         super().__init__(params, defaults)
 
@@ -51,7 +64,15 @@ class AdamW(Optimizer):
                 state = self.state[p]
 
                 # Access hyperparameters from the `group` dictionary
-                alpha = group["lr"]
+                lr_sched = group["lr_sched"]
+                if lr_sched is None:
+                    alpha = group["lr"]
+                else:
+                    alpha = float(lr_sched.lr())
+                if not math.isfinite(alpha) or alpha < 0.0:
+                    raise ValueError(
+                        "lr_sched.lr() must return a finite, non-negative value"
+                    )
                 beta1, beta2 = group["betas"]
                 eps = group["eps"]
                 weight_decay = group["weight_decay"]
