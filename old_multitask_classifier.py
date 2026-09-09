@@ -634,3 +634,4 @@ if __name__ == "__main__":
     logfile = setup_logging(args.filepath)
     seed_everything(args.seed)  # fix the seed for reproducibility
     train_multitask(args)
+    test_model(args)
