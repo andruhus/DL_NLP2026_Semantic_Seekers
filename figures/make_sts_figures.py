@@ -10,6 +10,8 @@ nothing here is hand-entered.
 Run from the repository root:  python figures/make_sts_figures.py
 """
 import csv, os, re, sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -77,8 +79,7 @@ def v1_progression():
     ax.axhline(TARGET, color=CL["bad"], ls="--", lw=1.1, zorder=0)
     ax.text(10.4, TARGET + .003, f"team target {TARGET}", color=CL["bad"], fontsize=8)
     ax.set_xlabel("training epoch"); ax.set_ylabel("dev Pearson r")
-    ax.set_title("Validation performance during training, per improvement\n"
-                 "(★ = best epoch; the checkpoint saved for that run)")
+    ax.set_title("Dev Pearson r per epoch")
     ax.legend(loc="center left", bbox_to_anchor=(0.015, 0.40))
     ax.set_xlim(0.5, 10.6); ax.set_ylim(0.55, 0.88)
     save(fig, "v1_dev_progression")
@@ -110,7 +111,7 @@ def v2_convergence_speed():
     ax.set_xticks(range(len(ths)))
     ax.set_xticklabels([f"dev r ≥ {t}" for t in ths])
     ax.set_ylabel("epochs required (lower = faster)")
-    ax.set_title("Convergence speed: how many epochs to reach each performance level")
+    ax.set_title("Epochs to reach target dev r")
     ax.legend(loc="upper left"); ax.set_ylim(0, 11)
     save(fig, "v2_convergence_speed")
 
@@ -130,7 +131,7 @@ def v3_overfitting():
         ax.plot(c["ep"], c["train"], "-", color=col, lw=1.8, label=f"{lab} (train)")
         ax.plot(c["ep"], c["dev"], "--", color=col, lw=1.5, alpha=0.85)
     ax.set_xlabel("training epoch"); ax.set_ylabel("Pearson r")
-    ax.set_title("Train (solid) vs dev (dashed) Pearson r")
+    ax.set_title("Train vs dev Pearson r")
     ax.legend(loc="lower right", fontsize=7.5); ax.set_ylim(0.70, 1.0)
 
     ax = axes[1]
@@ -141,10 +142,9 @@ def v3_overfitting():
         ax.plot(c["ep"], c["train"] - c["dev"], "-o", color=col, lw=1.8,
                 ms=3.6, label=lab)
     ax.set_xlabel("training epoch"); ax.set_ylabel("train r − dev r")
-    ax.set_title("Generalisation gap grows monotonically for every variant\n"
-                 "no intervention prevented overfitting — only more data helped")
+    ax.set_title("Generalisation gap")
     ax.legend(loc="lower right", fontsize=7.5)
-    fig.suptitle("Overfitting dynamics", y=1.02, fontweight="bold")
+    fig.suptitle("Overfitting dynamics", y=1.00, fontweight="bold")
     save(fig, "v3_overfitting_dynamics")
 
 
@@ -162,7 +162,7 @@ def v4_train_loss():
             continue
         ax.plot(c["ep"], c["loss"], "-o", color=col, lw=1.9, ms=4, label=lab)
     ax.set_xlabel("training epoch"); ax.set_ylabel("training loss")
-    ax.set_title("Training loss: better initialisation starts lower and drops faster")
+    ax.set_title("Training loss per epoch")
     ax.text(0.98, 0.96,
             "all four share an identical loss\n(MSE + 0.5·cosine + 0.5·MNRL),\n"
             "so the curves are directly comparable",
@@ -187,7 +187,7 @@ def v5_failures():
         a2.plot(c["ep"], c["loss"], "-s", color="#555", lw=1.6, ms=3.6,
                 label="training loss")
         a2.set_ylabel("training loss", labelpad=1); a2.set_ylim(0, 0.04)
-        ax.set_title("SimCSE (unsupervised only)\nloss → 0 while dev DECLINES")
+        ax.set_title("SimCSE (unsupervised)")
         h1, l1 = ax.get_legend_handles_labels(); h2, l2 = a2.get_legend_handles_labels()
         ax.legend(h1 + h2, l1 + l2, loc="upper right", fontsize=7.5)
     ax.set_xlabel("epoch")
@@ -201,7 +201,7 @@ def v5_failures():
     ax.axhline(0.804, color="#333", ls="--", lw=1)
     ax.text(10.2, 0.812, "MNRL baseline", ha="right", fontsize=7.5)
     ax.set_xlabel("epoch"); ax.set_ylabel("dev Pearson r")
-    ax.set_title("CoSENT: a numerical bug, not a\nbad method — exp(Δcos/τ) overflows")
+    ax.set_title("CoSENT temperature")
     ax.legend(loc="lower right", fontsize=7.5)
 
     ax = axes[2]      # MNRL temperature sweep
@@ -212,10 +212,9 @@ def v5_failures():
         if c:
             ax.plot(c["ep"], c["dev"], "-o", color=col, lw=2, ms=4, label=lab)
     ax.set_xlabel("epoch"); ax.set_ylabel("dev Pearson r")
-    ax.set_title("MNRL temperature: τ=0.01 never\nconverges (gradients dominate)")
+    ax.set_title("MNRL temperature")
     ax.legend(loc="lower right", fontsize=7.5)
-    fig.suptitle("Failure modes are visible during training", y=1.03,
-                 fontweight="bold")
+    fig.suptitle("Failure modes", y=1.02, fontweight="bold")
     save(fig, "v5_failure_modes", tight=False)
 
 
@@ -236,8 +235,7 @@ def v6_seed_variance():
     ax.plot(ep, stack.mean(0), "-", color=CL["snli"], lw=2.6, label="mean")
     best = [c["dev"].max() for _, c in cs]
     ax.set_xlabel("training epoch"); ax.set_ylabel("dev Pearson r")
-    ax.set_title(f"Same configuration, three seeds — best runs {min(best):.3f}–{max(best):.3f}\n"
-                 f"spread of {max(best)-min(best):.3f} sets the threshold for a real improvement")
+    ax.set_title(f"Seed variance (spread {max(best)-min(best):.3f})")
     ax.legend(loc="lower left", ncol=2); ax.set_ylim(0.8375, 0.8545)
     save(fig, "v6_seed_variance")
 
@@ -265,7 +263,7 @@ def v7_error_analysis():
     xs = np.linspace(0, 5, 10)
     ax.plot(xs, m * xs + b, color=CL["bad"], lw=1.6, label=f"fit (slope {m:.2f})")
     ax.set_xlabel("gold similarity"); ax.set_ylabel("predicted")
-    ax.set_title(f"Predicted vs gold  (r = {r:.3f})")
+    ax.set_title(f"Predicted vs gold (r = {r:.3f})")
     ax.legend(loc="upper left"); ax.set_xlim(-.2, 5.2); ax.set_ylim(-.2, 5.2)
 
     ax = axes[1]
@@ -279,14 +277,14 @@ def v7_error_analysis():
     ax.set_xticks(range(len(mae)))
     ax.set_xticklabels([f"{bins[i]:.0f}–{bins[i+1]:.0f}" for i in range(len(mae))])
     ax.set_xlabel("gold similarity band"); ax.set_ylabel("mean absolute error")
-    ax.set_title("Error is worst on dissimilar pairs")
+    ax.set_title("Error by similarity band")
 
     ax = axes[2]
     ax.hist(gold, bins=25, alpha=0.55, color="#9E9E9E", label=f"gold (σ={gold.std():.2f})")
     ax.hist(pred, bins=25, alpha=0.65, color=CL["ca"], label=f"predicted (σ={pred.std():.2f})")
     ax.set_xlabel("similarity"); ax.set_ylabel("count")
-    ax.set_title("Predictions are range-compressed"); ax.legend()
-    fig.suptitle("Error analysis on the STS dev set (n=1430)", y=1.03, fontweight="bold")
+    ax.set_title("Prediction distribution"); ax.legend()
+    fig.suptitle("Error analysis (dev set, n=1430)", y=1.02, fontweight="bold")
     save(fig, "v7_error_analysis")
 
 
@@ -307,7 +305,7 @@ def v8_transfer_sources():
             continue
         ax.plot(c["ep"], c["dev"], "-o", color=col, lw=1.9, ms=3.8, label=lab)
     ax.set_xlabel("STS fine-tuning epoch"); ax.set_ylabel("dev Pearson r")
-    ax.set_title("Transfer pretraining: dev performance during fine-tuning")
+    ax.set_title("Dev Pearson r per epoch")
     ax.legend(loc="lower right", fontsize=7.6); ax.set_ylim(0.805, 0.858)
 
     ax = axes[1]
@@ -327,11 +325,9 @@ def v8_transfer_sources():
                 fontweight="bold")
     ax.set_xticks(x); ax.set_xticklabels(labs, fontsize=7.6, rotation=12)
     ax.set_ylabel("dev Pearson r"); ax.set_ylim(0.80, 0.865)
-    ax.set_title("Most of the benefit is already present at epoch 1\n"
-                 "(faded = after 1 epoch, solid = best)")
+    ax.set_title("After 1 epoch vs best")
     ax.legend(loc="upper left", fontsize=7.6)
-    fig.suptitle("Transfer source: volume and label type both matter",
-                 y=1.03, fontweight="bold")
+    fig.suptitle("Transfer pretraining sources", y=1.02, fontweight="bold")
     save(fig, "v8_transfer_sources")
 
 
@@ -354,7 +350,7 @@ def v9_regularisation():
         ax.plot(c["ep"], c["dev"], "-o", color=col, lw=lw, ms=3.6, label=lab,
                 alpha=0.9)
     ax.set_xlabel("training epoch"); ax.set_ylabel("dev Pearson r")
-    ax.set_title("Dev performance: four of five curves overlap the baseline")
+    ax.set_title("Dev Pearson r per epoch")
     ax.legend(loc="lower right", fontsize=7.4); ax.set_xlim(0.6, 8.4)
 
     ax = axes[1]
@@ -365,15 +361,75 @@ def v9_regularisation():
         ax.plot(c["ep"], c["train"], "-o", color=col, lw=lw, ms=3.6, label=lab,
                 alpha=0.9)
     ax.set_xlabel("training epoch"); ax.set_ylabel("train Pearson r")
-    ax.set_title("Train fit: only λ=20 reduces it — and that costs dev r")
+    ax.set_title("Train Pearson r per epoch")
     ax.set_xlim(0.6, 8.4)
     ax.annotate("only curve that moves", xy=(6, 0.972), xytext=(3.4, 0.952),
                 fontsize=8, color=CL["bad"],
                 arrowprops=dict(arrowstyle="->", color=CL["bad"], lw=1.2))
-    fig.suptitle("Regularisation had no measurable effect "
-                 "(decoupled weight decay is lr-scaled, hence inert at usual λ)",
-                 y=1.03, fontweight="bold")
+    fig.suptitle("Regularisation experiments", y=1.02, fontweight="bold")
     save(fig, "v9_regularisation")
+
+
+# --------------------------------------------------------------------- V10
+CKPT = "models/sts_exp08_seed42.pt"
+
+
+def v10_cross_attention():
+    """Attention weights from a trained checkpoint (not from the logs)."""
+    if not os.path.exists(CKPT):
+        print(f"  v10 skipped: {CKPT} not present (checkpoints are not committed)")
+        return
+    import torch, importlib.util
+    from tokenizer import BertTokenizer
+    _argv, sys.argv = sys.argv, ["x"]
+    _spec = importlib.util.spec_from_file_location("mc", "multitask_classifier.py")
+    mc = importlib.util.module_from_spec(_spec); sys.modules["mc"] = mc
+    _spec.loader.exec_module(mc)
+    sys.argv = _argv
+    saved = torch.load("models/sts_exp08_seed42.pt", map_location="cpu")
+    model = mc.MultitaskBERT(saved["model_config"]); model.load_state_dict(saved["model"]); model.eval()
+    tok = BertTokenizer.from_pretrained("bert-base-uncased", local_files_only=True)
+
+    def attend(s1, s2):
+        e1 = tok([s1], return_tensors="pt", padding=True, truncation=True)
+        e2 = tok([s2], return_tensors="pt", padding=True, truncation=True)
+        i1, m1 = torch.LongTensor(e1["input_ids"]), torch.LongTensor(e1["attention_mask"])
+        i2, m2 = torch.LongTensor(e2["input_ids"]), torch.LongTensor(e2["attention_mask"])
+        with torch.no_grad():
+            h1 = model.bert(i1, m1)["last_hidden_state"]
+            h2 = model.bert(i2, m2)["last_hidden_state"]
+            _, w = model.cross_attn_layer(h1, h2, h2, key_padding_mask=(m2 == 0),
+                                          need_weights=True, average_attn_weights=True)
+            pred = model.predict_similarity_sts(i1, m1, i2, m2).item()
+        t1 = tok.convert_ids_to_tokens(i1[0].tolist())
+        t2 = tok.convert_ids_to_tokens(i2[0].tolist())
+        return w[0].numpy(), t1, t2, pred
+
+    # one clearly-similar pair and one clearly-dissimilar pair, both from STS-style data
+    pairs = [("A man is playing a guitar.", "A person is playing an instrument.", "high similarity"),
+             ("A man is playing a guitar.", "A woman is slicing an onion.",       "low similarity")]
+
+    fig, axes = plt.subplots(1, 2, figsize=(13.6, 4.8))
+    fig.subplots_adjust(wspace=0.55)
+    for ax, (s1, s2, label) in zip(axes, pairs):
+        w, t1, t2, pred = attend(s1, s2)
+        im = ax.imshow(w, cmap="viridis", aspect="auto", vmin=0, vmax=w.max())
+        ax.set_xticks(range(len(t2))); ax.set_xticklabels(t2, rotation=45, ha="right", fontsize=8)
+        ax.set_yticks(range(len(t1))); ax.set_yticklabels(t1, fontsize=8)
+        ax.set_xlabel("sentence 2 tokens (keys)"); ax.set_ylabel("sentence 1 tokens (queries)")
+        ax.set_title(f"{label}  (pred {pred:.2f}/5)")
+        # mark the strongest non-special alignment per content token
+        for i in range(1, len(t1) - 1):
+            j = int(np.argmax(w[i, 1:len(t2)-1])) + 1
+            ax.plot(j, i, "s", mfc="none", mec="white", ms=11, mew=1.4)
+        cb = fig.colorbar(im, ax=ax, fraction=0.040, pad=0.03)
+        cb.set_label("attention weight", fontsize=8); cb.ax.tick_params(labelsize=7)
+
+    fig.suptitle("Cross-attention weights (KL from uniform = 0.002)", y=1.02, fontweight="bold")
+
+    fig.savefig(f"{OUT}/v10_cross_attention.png", bbox_inches="tight")
+    plt.close(fig)
+    print("  v10_cross_attention.png")
 
 
 if __name__ == "__main__":
@@ -392,7 +448,8 @@ if __name__ == "__main__":
     print(f"generating figures -> {OUT}")
     for fn in (v1_progression, v2_convergence_speed, v3_overfitting,
                v4_train_loss, v5_failures, v6_seed_variance, v7_error_analysis,
-               v8_transfer_sources, v9_regularisation):
+               v8_transfer_sources, v9_regularisation,
+               v10_cross_attention):
         try:
             fn()
         except Exception as e:
