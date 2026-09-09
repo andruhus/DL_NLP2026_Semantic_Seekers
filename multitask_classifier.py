@@ -261,34 +261,6 @@ class MultitaskBERT(nn.Module):
         output = self.bert(input_ids, attention_mask)
         return output['pooler_output']
 
-    def encode(self, input_ids, attention_mask):
-        # STS (Part 2). Mean pooling over non-padding tokens.
-        hidden = self.bert(input_ids, attention_mask)['last_hidden_state']  # [B, L, 768]
-        mask = attention_mask.unsqueeze(-1).float()                          # [B, L, 1]
-        return (hidden * mask).sum(dim=1) / mask.sum(dim=1)                 # [B, 768]
-
-    def encode_pair(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
-        """STS (Part 2): cross-attention encoding.
-
-        Each sentence attends to the other's token sequence before pooling.
-        """
-        h1 = self.bert(input_ids_1, attention_mask_1)['last_hidden_state']  # [B, L1, 768]
-        h2 = self.bert(input_ids_2, attention_mask_2)['last_hidden_state']  # [B, L2, 768]
-        # True where padding (MultiheadAttention ignores these keys)
-        pad1 = (attention_mask_1 == 0)
-        pad2 = (attention_mask_2 == 0)
-        # h1 attends to h2, h2 attends to h1
-        h1_cross, _ = self.cross_attn_layer(h1, h2, h2, key_padding_mask=pad2)
-        h1_cross = self.cross_attn_norm(h1 + h1_cross)
-        h2_cross, _ = self.cross_attn_layer(h2, h1, h1, key_padding_mask=pad1)
-        h2_cross = self.cross_attn_norm(h2 + h2_cross)
-        # Mean pool over non-padding tokens
-        mask1 = attention_mask_1.unsqueeze(-1).float()
-        mask2 = attention_mask_2.unsqueeze(-1).float()
-        emb1 = (h1_cross * mask1).sum(dim=1) / mask1.sum(dim=1)
-        emb2 = (h2_cross * mask2).sum(dim=1) / mask2.sum(dim=1)
-        return emb1, emb2
-
     def predict_sentiment(self, input_ids, attention_mask):
         """
         Given a batch of sentences, outputs logits for classifying sentiment.
@@ -339,6 +311,34 @@ class MultitaskBERT(nn.Module):
         emb1 = self.forward(input_ids_1, attention_mask_1)
         emb2 = self.forward(input_ids_2, attention_mask_2)
         return self.paraphrase_type_classifier(torch.cat([emb1, emb2], dim=1))
+
+    def encode(self, input_ids, attention_mask):
+        # STS (Part 2). Mean pooling over non-padding tokens.
+        hidden = self.bert(input_ids, attention_mask)['last_hidden_state']  # [B, L, 768]
+        mask = attention_mask.unsqueeze(-1).float()                          # [B, L, 1]
+        return (hidden * mask).sum(dim=1) / mask.sum(dim=1)                 # [B, 768]
+
+    def encode_pair(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
+        """STS (Part 2): cross-attention encoding.
+
+        Each sentence attends to the other's token sequence before pooling.
+        """
+        h1 = self.bert(input_ids_1, attention_mask_1)['last_hidden_state']  # [B, L1, 768]
+        h2 = self.bert(input_ids_2, attention_mask_2)['last_hidden_state']  # [B, L2, 768]
+        # True where padding (MultiheadAttention ignores these keys)
+        pad1 = (attention_mask_1 == 0)
+        pad2 = (attention_mask_2 == 0)
+        # h1 attends to h2, h2 attends to h1
+        h1_cross, _ = self.cross_attn_layer(h1, h2, h2, key_padding_mask=pad2)
+        h1_cross = self.cross_attn_norm(h1 + h1_cross)
+        h2_cross, _ = self.cross_attn_layer(h2, h1, h1, key_padding_mask=pad1)
+        h2_cross = self.cross_attn_norm(h2 + h2_cross)
+        # Mean pool over non-padding tokens
+        mask1 = attention_mask_1.unsqueeze(-1).float()
+        mask2 = attention_mask_2.unsqueeze(-1).float()
+        emb1 = (h1_cross * mask1).sum(dim=1) / mask1.sum(dim=1)
+        emb2 = (h2_cross * mask2).sum(dim=1) / mask2.sum(dim=1)
+        return emb1, emb2
 
 
 def save_model(model, optimizer, args, config, filepath):
