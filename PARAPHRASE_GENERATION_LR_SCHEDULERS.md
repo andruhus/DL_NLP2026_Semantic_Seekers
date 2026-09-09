@@ -124,8 +124,8 @@ To measure the quality of our generation, we use **BLEU-Score**.
 For a source input $x$ (`sentence1`), the reference $r$, and the suggestion $h$, we calculate:
 
 $$
-B_{\mathrm{ref}} = \operatorname{BLEU}(r, h), \qquad
-B_{\mathrm{input}} = \operatorname{BLEU}(x, h).
+B_{\mathrm{ref}} = BLEU(r, h), \qquad
+B_{\mathrm{input}} = BLEU(x, h).
 $$
 
 $B_{\mathrm{ref}}$ shows us how similar the suggestion is to the reference, and $B_{\mathrm{input}}$ how similar it is to the input.
