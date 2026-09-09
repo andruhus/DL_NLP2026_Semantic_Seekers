@@ -9,6 +9,9 @@ models
 slurm_files/*
 !slurm_files/.gitkeep
 
+# Cached SNLI/PAWS triplets (~100 MB) — rebuilt via the README snippet
+data/nli_cache/
+
 # Personal / local files
 claude.md
 documentation_uwaish.md
