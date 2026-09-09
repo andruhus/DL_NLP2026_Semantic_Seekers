@@ -1,10 +1,121 @@
-# ETPC BART Generation: Learning-Rate Scheduler Experiments
+# Semantic Seekers
+
+- **Group name:** Semantic Seekers
+- **Group code:** **TODO: add group code**
+- **Group repository:** **TODO: add group repository URL**
+- **Tutor responsible:** **TODO: add tutor responsible**
+- **Group team leader:** **TODO: add group team leader**
+- **Group members:** **TODO: add group member names**
+
+**ETPC BART Generation: Learning-Rate Scheduler Experiments**
+
+# Setup instructions
+
+## Environment setup
+
+From the repository root, set up the local environment with the existing script and activate the `dnlp` conda environment:
+
+```sh
+source setup.sh
+conda activate dnlp
+```
+
+On GWDG, use the GWDG-specific setup script before activating the same environment:
+
+```sh
+source setup_gwdg.sh
+conda activate dnlp
+```
+
+## Experiment outputs and model IDs
+
+For each experiment, we assign an ID to a model and save the parameters in [`paraphrase_generation/run_5epoch_results.csv`](paraphrase_generation/run_5epoch_results.csv). We save the information about their BLEU scores during training in [`paraphrase_generation/train_5epoch_results.csv`](paraphrase_generation/train_5epoch_results.csv).
+
+## Running commands
+
+### Constant Learning Rate
+
+Run the parameter grid recorded below: **13 experiments**, five epochs each. Space-separated option values form a Cartesian product.
+
+```sh
+sbatch run_bart_generation.sh 5 constant \
+    --batch_size 8 \
+    --learning_rate 1e-3 1e-4 2e-4 5e-4 1e-5 5e-5 2e-5 3e-5 4e-5 7e-5 9e-5 1.1e-4 1.25e-4 \
+    --min_lr 0 \
+    --use_gpu
+```
+
+### Step Decay
+
+Run the parameter grid recorded below: **27 experiments**, five epochs each. Space-separated option values form a Cartesian product.
+
+```sh
+sbatch run_bart_generation.sh 5 step \
+    --batch_size 8 \
+    --learning_rate 1e-3 1e-4 1e-5 \
+    --min_lr 1e-7 \
+    --step_decay_epochs 1 2 3 \
+    --step_gamma 0.5 0.2 0.1 \
+    --use_gpu
+```
+
+### Cosine Decay
+
+Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
+
+```sh
+sbatch run_bart_generation.sh 5 cosine \
+    --batch_size 8 \
+    --learning_rate 1e-5 2e-5 5e-5 1e-4 \
+    --min_lr 1e-6 2e-6 5e-6 \
+    --use_gpu
+```
+
+### Linear Decay
+
+Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
+
+```sh
+sbatch run_bart_generation.sh 5 linear \
+    --batch_size 8 \
+    --learning_rate 1e-5 2e-5 5e-5 1e-4 \
+    --min_lr 1e-6 2e-6 5e-6 \
+    --use_gpu
+```
+
+### Inverse-Square-Root Decay
+
+Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
+
+```sh
+sbatch run_bart_generation.sh 5 inverse_sqrt \
+    --batch_size 8 \
+    --learning_rate 2e-5 5e-5 1e-4 \
+    --min_lr 2e-6 5e-6 \
+    --warmup_steps 0 2 \
+    --use_gpu
+```
+
+### Metric-Dependent Decay
+
+Run the parameter grid recorded below: **24 experiments**, five epochs each. Space-separated option values form a Cartesian product.
+
+```sh
+sbatch run_bart_generation.sh 5 metric \
+    --batch_size 8 \
+    --learning_rate 2e-5 9e-5 \
+    --min_lr 0 \
+    --metric_factor 0.1 0.2 0.5 \
+    --metric_patience 0 1 \
+    --metric_threshold 3 4 \
+    --use_gpu
+```
+
+# Methodology
 
 ## Task description
 
 ETPC paraphrase generation is formulated as a conditional sequence-to-sequence task. Given `sentence1`, its marked segment location, and the requested paraphrase-type IDs, the model generates `sentence2`. Following the course-provided generation setup, the baseline fine-tunes `facebook/bart-large` with token-level sequence-generation loss and the project's `AdamW` implementation. The repository setup already downloads this checkpoint, and `bart_generation.py` uses the corresponding Hugging Face tokenizer and conditional-generation model. This extension retains the provided model, input representation, objective, optimizer, and decoding procedure; it changes only how the optimizer learning rate evolves during fine-tuning.
-
-The original ETPC training CSV contains all 273 development examples. Before tokenization, the pipeline normalizes ETPC `id` values and removes these overlapping rows, leaving 2,457 training examples and 273 non-overlapping held-out development examples. Every comparison run uses this same cleaned split and initializes a fresh `facebook/bart-large` model with the same random seed.
 
 ### BLEU-Score
 
@@ -60,97 +171,26 @@ In these experiments, we won't change the other parameters, such as `batch_size`
 
 However, we need to mention that different `lr` values might benefit from changing the `batch_size`. Popel and Bojar (2018, Section 4.8) discuss the interaction between learning rate, effective batch size, and the learning-rate schedule in Transformer training. This motivates jointly tuning these parameters in future experiments; our results therefore compare learning rates only under the fixed baseline configuration. (Popel & Bojar, 2018)
 
-## Methodology
+# Experiments
 
-### Model IDs
+## Experimental setup and evaluation
 
-For each experiment, we assign an ID to a model and save the parameters in `run_5epoch_results.csv`. We save the information about their BLEU scores during training in `train_5epoch_results.csv`.
+The original ETPC training CSV contains all 273 development examples. Before tokenization, the pipeline normalizes ETPC `id` values and removes these overlapping rows, leaving 2,457 training examples and 273 non-overlapping held-out development examples. Every comparison run uses this same cleaned split and initializes a fresh `facebook/bart-large` model with the same random seed.
 
-Overall, there are 100 different experiments. For each, we set `--batch_size 8` and `--epochs 5` (this makes each experiment run for ~12 minutes on a GPU).
+| Setting | Fixed experimental value |
+| --- | --- |
+| Number of runs | 100 different experiments |
+| Batch size | `8` |
+| Epochs | `5` |
+| Approximate runtime | ~12 minutes per run on a GPU |
+| Optimizer | The project's `AdamW` implementation |
+| Primary metrics | `reference_bleu` ($B_{\mathrm{ref}}$) and `penalized_bleu` ($B_{\mathrm{pen}}$) |
 
-### Running commands
+All runs use the corrected held-out development split for evaluation. `input_bleu` is also reported because it is a component of `penalized_bleu`.
 
-#### Constant Learning Rate
+## Scheduler experiments
 
-Run the parameter grid recorded below: **13 experiments**, five epochs each. Space-separated option values form a Cartesian product.
-
-```sh
-sbatch run_bart_generation.sh 5 constant \
-    --batch_size 8 \
-    --learning_rate 1e-3 1e-4 2e-4 5e-4 1e-5 5e-5 2e-5 3e-5 4e-5 7e-5 9e-5 1.1e-4 1.25e-4 \
-    --min_lr 0 \
-    --use_gpu
-```
-
-#### Step Decay
-
-Run the parameter grid recorded below: **27 experiments**, five epochs each. Space-separated option values form a Cartesian product.
-
-```sh
-sbatch run_bart_generation.sh 5 step \
-    --batch_size 8 \
-    --learning_rate 1e-3 1e-4 1e-5 \
-    --min_lr 1e-7 \
-    --step_decay_epochs 1 2 3 \
-    --step_gamma 0.5 0.2 0.1 \
-    --use_gpu
-```
-
-#### Cosine Decay
-
-Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
-
-```sh
-sbatch run_bart_generation.sh 5 cosine \
-    --batch_size 8 \
-    --learning_rate 1e-5 2e-5 5e-5 1e-4 \
-    --min_lr 1e-6 2e-6 5e-6 \
-    --use_gpu
-```
-
-#### Linear Decay
-
-Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
-
-```sh
-sbatch run_bart_generation.sh 5 linear \
-    --batch_size 8 \
-    --learning_rate 1e-5 2e-5 5e-5 1e-4 \
-    --min_lr 1e-6 2e-6 5e-6 \
-    --use_gpu
-```
-
-#### Inverse-Square-Root Decay
-
-Run the parameter grid recorded below: **12 experiments**, five epochs each. Space-separated option values form a Cartesian product.
-
-```sh
-sbatch run_bart_generation.sh 5 inverse_sqrt \
-    --batch_size 8 \
-    --learning_rate 2e-5 5e-5 1e-4 \
-    --min_lr 2e-6 5e-6 \
-    --warmup_steps 0 2 \
-    --use_gpu
-```
-
-#### Metric-Dependent Decay
-
-Run the parameter grid recorded below: **24 experiments**, five epochs each. Space-separated option values form a Cartesian product.
-
-```sh
-sbatch run_bart_generation.sh 5 metric \
-    --batch_size 8 \
-    --learning_rate 2e-5 9e-5 \
-    --min_lr 0 \
-    --metric_factor 0.1 0.2 0.5 \
-    --metric_patience 0 1 \
-    --metric_threshold 3 4 \
-    --use_gpu
-```
-
-## Results
-
-From `run_5epoch_results.csv` and `train_5epoch_results.csv`, we generated the following results plot.
+The changes and expectations for each scheduler are summarized in the [Learning rate scheduler types](#learning-rate-scheduler-types) table. From `paraphrase_generation/run_5epoch_results.csv` and `paraphrase_generation/train_5epoch_results.csv`, we generated the following results plots. The complete tables below are detailed/raw results and retain the original four-decimal BLEU reporting.
 
 ### Constant Learning Rate
 
@@ -219,6 +259,10 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 **Training dynamics.** IDs 16 and 17 are compared with the ID 70 baseline.
 
 ![Step-decay selected runs compared with baseline](paraphrase_generation/figure/step_training_comparison.png)
+
+#### Observations
+
+IDs 16, 17, and 18 report the same top `penalized_bleu` despite different gamma values at the three-epoch decay interval.
 
 ### Cosine Decay
 
@@ -343,17 +387,19 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 2. Some models (such as 79 or 80) performed exactly like the baseline because of long patience and an apparently not-so-large threshold.
 3. The metrics show the `reference_bleu` vs. `penalized_bleu` trade-off that we currently have.
 
-### Reference/Penalized BLEU vs Loss
+## Results
 
-Let's investigate how `reference_bleu` and `penalized_bleu` depend on the loss.
+The compact Paraphrase Type Generation summary below reports representative selected runs with exactly three decimal places. The rationale column distinguishes the valid baseline, scheduler representatives, and the deliberately selected flagship.
 
-Here are the checkpoint values for different epochs. I've excluded some failed experiments with extremely low BLEU scores (~87% of the data left).
-![Text 2](paraphrase_generation/figure/loss_bleu_scatter_87.png)
-
-If we further filter for `reference_bleu <= 46.5` and `penalized_bleu <= 10` (successful checkpoints; ~17% of the data left), we get the following:
-![Text 1](paraphrase_generation/figure/loss_bleu_scatter.png)
-
-We can observe that a decrease in the loss correlates with better `penalized_bleu`, while `reference_bleu` has no correlation, or even a slight negative one.
+| Paraphrase Type Generation (PTG) selection | `reference_bleu` | `input_bleu` | `penalized_bleu` | Selection rationale |
+| --- | ---: | ---: | ---: | --- |
+| Baseline constant (ID 70) | 46.220 | 79.977 | 17.797 | Valid leakage-corrected baseline |
+| Tuned constant (ID 74) | 42.615 | 73.242 | 21.929 | Highest `penalized_bleu` in the constant-rate grid |
+| Step decay (ID 16) | 42.157 | 73.128 | 21.785 | Representative of the tied top step-decay runs |
+| Cosine decay (ID 46) | 46.169 | 79.077 | 18.577 | Highest `penalized_bleu` in the cosine-decay grid |
+| Linear decay / flagship (ID 33) | 47.604 | 82.740 | 15.801 | Selected flagship rather than outlier ID 38 |
+| Inverse-square-root decay (ID 54) | 39.485 | 75.296 | 18.758 | Highest `penalized_bleu` in the inverse-square-root grid |
+| Metric-dependent decay (ID 91) | 42.615 | 73.242 | 21.929 | Representative of the tied top metric-dependent runs |
 
 ### Flagship model
 
@@ -367,11 +413,17 @@ Basically, there are only 2 models that were closest to outperforming the baseli
 
 **However, we decided that Model 33 would be our flagship**, because it improves `reference_bleu` significantly while not increasing `input_bleu` that much.
 
-## Discussions
+### Hyperparameter Optimization
+
+This is a motivated Cartesian grid of 100 runs across the six scheduler types and their parameters, with the changes and hypotheses recorded in the methodology table. Space-separated option values in each command form a Cartesian product, while non-scheduler settings remain fixed for controlled comparisons.
+
+As discussed in the [Scope of interest](#scope-of-interest), `batch_size` was not jointly tuned because the experiments stay close to the baseline and compare learning rates under the fixed baseline configuration. Different `lr` values might benefit from changing the `batch_size`, so jointly tuning learning rate, effective batch size, and the learning-rate schedule remains future work.
+
+### Overall discussion
 
 The question arises: why did we fail? The obvious reason is that we didn't have enough epochs to schedule meaningfully. Had we had 50 epochs, this could have had a greater impact. However, this doesn't explain the whole picture. For example, why do we get significantly worse `reference_bleu` after improving `penalized_bleu`?
 
-### Output Exploration
+#### Output Exploration
 
 Let's try reading into the outputs. The following example was taken from `etpc_dev_dataset` (entry 9).
 
@@ -404,7 +456,7 @@ We can observe the following:
 1. Both outputs closely copy the source: they add only “same” to the input.
 2. The reference includes information absent from the source, such as Peterson’s age (“30”). That detail cannot be inferred from the supplied input alone. This explains why data leakage had a profound effect on both `reference_bleu` and `penalized_bleu`.
 
-### Conflicting metrics
+#### Conflicting metrics
 
 Because the reference contains information not present in the input, the model does not have a better strategy than just copying the input.
 
@@ -412,7 +464,37 @@ We are in the pitfall where increasing `reference_bleu` means basically copying 
 
 A related limitation is discussed by Jin et al. (2022), who note that, in text style transfer, “simply copying the input can result in high BLEU scores.” This supports the general concern that BLEU can reward copying, although it does not establish the specific changes in `penalized_bleu` described here. (Jin et al., 2022)
 
-## References
+## Visualizations
+
+Scheduler-specific training plots are shown with each scheduler experiment above without duplicating them here.
+
+### Reference/Penalized BLEU vs Loss
+
+Let's investigate how `reference_bleu` and `penalized_bleu` depend on the loss.
+
+Here are the checkpoint values for different epochs. I've excluded some failed experiments with extremely low BLEU scores (~87% of the data left).
+![Text 2](paraphrase_generation/figure/loss_bleu_scatter_87.png)
+
+If we further filter for `reference_bleu <= 46.5` and `penalized_bleu <= 10` (successful checkpoints; ~17% of the data left), we get the following:
+![Text 1](paraphrase_generation/figure/loss_bleu_scatter.png)
+
+We can observe that a decrease in the loss correlates with better `penalized_bleu`, while `reference_bleu` has no correlation, or even a slight negative one.
+
+## Members Contribution
+
+**TODO: Replace the placeholders below with every group member's name and a clear description of their contribution.**
+
+| Group member | Contribution |
+| --- | --- |
+| **TODO: member name** | **TODO: describe this member's contributions** |
+
+# AI-Usage Card
+
+Artificial Intelligence (AI) aided the restructuring of this report.
+
+**TODO: Replace or supplement this notice with a link to the completed project AI-Usage Card. Use [AI Usage Cards](https://ai-cards.org/) as the template resource; no local card is claimed here.**
+
+# References
 
 Jin, D., Jin, Z., Hu, Z., Vechtomova, O., & Mihalcea, R. (2022). Deep learning for text style transfer: A survey. Computational Linguistics, 48(1), 155–205. https://doi.org/10.1162/coli_a_00426
 
