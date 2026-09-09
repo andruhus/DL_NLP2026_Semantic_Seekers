@@ -1,0 +1,36 @@
+2026-09-05 18:25:39 - Logfile gestartet für Modell: models/poolingfinetune-10-2e-05-sst.pt
+2026-09-05 18:25:40 - ------------------------------
+2026-09-05 18:25:40 -     BERT Model Configuration
+2026-09-05 18:25:40 - ------------------------------
+2026-09-05 18:25:40 - {'allnli': False,
+ 'batch_size': 16,
+ 'classifier_dropout': 0.0,
+ 'epochs': 10,
+ 'filepath': 'models/poolingfinetune-10-2e-05-sst.pt',
+ 'hidden_dropout_prob': 0.3,
+ 'label_smoothing': 0.0,
+ 'local_files_only': True,
+ 'lr': 2e-05,
+ 'option': 'finetune',
+ 'seed': 11711,
+ 'task': 'sst',
+ 'use_gpu': True,
+ 'warmup_ratio': 0.0,
+ 'weight_decay': 0.0,
+ 'yelp': False}
+2026-09-05 18:25:40 - ------------------------------
+2026-09-05 18:26:19 - Epoch 01 (sst): train loss :: 1.261, train :: 0.615, dev :: 0.508
+2026-09-05 18:26:21 - Saving the model to models/poolingfinetune-10-2e-05-sst.pt.
+2026-09-05 18:26:55 - Epoch 02 (sst): train loss :: 0.969, train :: 0.717, dev :: 0.514
+2026-09-05 18:26:57 - Saving the model to models/poolingfinetune-10-2e-05-sst.pt.
+2026-09-05 18:27:31 - Epoch 03 (sst): train loss :: 0.746, train :: 0.807, dev :: 0.518
+2026-09-05 18:27:33 - Saving the model to models/poolingfinetune-10-2e-05-sst.pt.
+2026-09-05 18:28:08 - Epoch 04 (sst): train loss :: 0.536, train :: 0.905, dev :: 0.525
+2026-09-05 18:28:10 - Saving the model to models/poolingfinetune-10-2e-05-sst.pt.
+2026-09-05 18:28:44 - Epoch 05 (sst): train loss :: 0.370, train :: 0.940, dev :: 0.517
+2026-09-05 18:29:18 - Epoch 06 (sst): train loss :: 0.249, train :: 0.954, dev :: 0.511
+2026-09-05 18:29:52 - Epoch 07 (sst): train loss :: 0.179, train :: 0.969, dev :: 0.511
+2026-09-05 18:30:26 - Epoch 08 (sst): train loss :: 0.120, train :: 0.979, dev :: 0.515
+2026-09-05 18:31:00 - Epoch 09 (sst): train loss :: 0.101, train :: 0.991, dev :: 0.513
+2026-09-05 18:31:34 - Epoch 10 (sst): train loss :: 0.076, train :: 0.989, dev :: 0.519
+2026-09-05 18:31:41 - Loaded model to test from models/poolingfinetune-10-2e-05-sst.pt

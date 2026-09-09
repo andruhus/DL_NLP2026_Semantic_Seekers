@@ -1,0 +1,19 @@
+2026-09-09 18:05:16 - Logfile gestartet für Modell: models/old_pretrain-10-2e-05-sst.pt
+2026-09-09 18:05:19 - ------------------------------
+2026-09-09 18:05:19 -     BERT Model Configuration
+2026-09-09 18:05:19 - ------------------------------
+2026-09-09 18:05:19 - {'batch_size': 16,
+ 'classifier_dropout': 0.3,
+ 'epochs': 10,
+ 'filepath': 'models/old_pretrain-10-2e-05-sst.pt',
+ 'hidden_dropout_prob': 0.3,
+ 'label_smoothing': 0.0,
+ 'local_files_only': False,
+ 'lr': 2e-05,
+ 'option': 'pretrain',
+ 'seed': 11711,
+ 'task': 'sst',
+ 'use_gpu': False,
+ 'warmup_ratio': 0.1,
+ 'weight_decay': 0.0}
+2026-09-09 18:05:19 - ------------------------------
