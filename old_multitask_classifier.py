@@ -93,7 +93,7 @@ class MultitaskBERT(nn.Module):
                 param.requires_grad = False
             elif config.option == "finetune":
                 param.requires_grad = True
-        self.sentiment_classifier = nn.Sequential(
+        self.sentiment_classifier_sst = nn.Sequential(
             nn.Linear(BERT_HIDDEN_SIZE, 512),
             nn.GELU(),
             nn.Dropout(args.classifier_dropout),
@@ -118,7 +118,7 @@ class MultitaskBERT(nn.Module):
         output = self.bert(input_ids, attention_mask)
         return output['pooler_output']
 
-    def predict_sentiment(self, input_ids, attention_mask):
+    def predict_sentiment__sst(self, input_ids, attention_mask):
         """
         Given a batch of sentences, outputs logits for classifying sentiment.
         There are 5 sentiment classes:
@@ -127,7 +127,7 @@ class MultitaskBERT(nn.Module):
         Dataset: SST
         """
         embedding = self.forward(input_ids, attention_mask)
-        return self.sentiment_classifier(embedding)
+        return self.sentiment_classifier_sst(embedding)
 
     def predict_paraphrase(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
         """
@@ -342,7 +342,7 @@ def train_multitask(args):
                 b_labels = b_labels.to(device)
 
                 optimizer.zero_grad()
-                logits = model.predict_sentiment(b_ids, b_mask)
+                logits = model.predict_sentiment_sst(b_ids, b_mask)
                 loss = F.cross_entropy(logits, b_labels.view(-1), label_smoothing=args.label_smoothing)
                 loss.backward()
                 optimizer.step()
