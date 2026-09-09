@@ -607,22 +607,11 @@ def get_args():
         default=2e-05 if args.option == "pretrain" else 2e-05,
     )
     parser.add_argument("--local_files_only", action="store_true")
-    ###
-    ###
-    ###
     parser.add_argument("--label_smoothing", type=float, default=0.0)
     parser.add_argument("--weight_decay", type=float, default=0.0)
     parser.add_argument("--warmup_ratio", type=float, default=0.1)
     parser.add_argument("--classifier_dropout", type=float, default=0.3)
-    parser.add_argument("--allnli", action="store_true")
     parser.add_argument("--yelp", action="store_true")
-
-
-
-
-    ###
-    ###
-    ###
     args = parser.parse_args()
     return args
 
