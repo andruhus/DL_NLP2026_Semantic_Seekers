@@ -67,6 +67,7 @@ For comparing the results, namely the training accuracy of the train- and dev-da
 
 Logfiles for initial experimentation are located in logs/old_logs. Here the optimal hyperparameters where not yet determined.
 Logfiles that build the basis for the following discussion are located in /logs.
+
 ---
 ### **1. Non-hyperparameter regulated adjustments**
 ### Complexer Classifier
@@ -110,6 +111,7 @@ The idea is to equipt the model with broad semantic abilities before it is train
 #### Expectation
 Pretraining on the ALLNLI Dataset could bring the model in a state where more effective learning is possible.
 When the ability of semantic understanding is enhanced before the training on the original dataset, generalization might be improved and overfitting reduced.
+
 ---
 ### **2. Hyperparameter regulated Adjustments** 
 
