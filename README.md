@@ -557,8 +557,8 @@ independently before being kept.
 
 ### 1. Cosine similarity head over mean-pooled tokens
 
-Following Sentence-BERT ([Reimers & Gurevych, 2019](https://arxiv.org/abs/1908.10084)),
-we replaced the concat-and-regress head with a parameter-free cosine similarity over
+Following Sentence-BERT,[^1] we replaced the concat-and-regress head with a
+parameter-free cosine similarity over
 mean-pooled `last_hidden_state`, rescaled to the label range:
 
 ```python
@@ -576,8 +576,8 @@ independent contributions.
 
 ### 2. MNRL contrastive loss
 
-Multiple Negatives Ranking Loss ([Henderson et al., 2017](https://arxiv.org/abs/1705.00652))
-treats each STS pair as a positive and every other in-batch pair as a negative, optimised
+Multiple Negatives Ranking Loss (MNRL)[^5] treats each STS pair as a positive and every
+other in-batch pair as a negative, optimised
 as NT-Xent/InfoNCE at temperature τ = 0.05:
 
 ```python
@@ -625,8 +625,8 @@ MSE and the cosine embedding loss consume the cross-attended embeddings.
 
 ### 4. NLI triplet pretraining
 
-Following supervised SimCSE ([Gao et al., 2021](https://arxiv.org/abs/2104.08821)), the
-encoder is pretrained for one epoch on 149,145 SNLI triplets — premise as anchor,
+Following supervised SimCSE,[^6] the encoder is pretrained for one epoch on 149,145 SNLI
+triplets — premise as anchor,
 entailed hypothesis as positive, contradicting hypothesis as an explicit hard negative —
 before STS fine-tuning:
 
@@ -647,8 +647,7 @@ loss = cross_entropy(emb_anchor @ keys.T / tau, arange(B))
 
 A contradiction is topically close but semantically opposite: shared vocabulary and
 register, different meaning. That is the discrimination STS demands, and it is more
-informative than a random unrelated sentence. SNLI
-([Bowman et al., 2015](https://arxiv.org/abs/1508.05326)) is also the training data behind
+informative than a random unrelated sentence. SNLI[^7] is also the training data behind
 the original SBERT models, so this is a well-trodden transfer path rather than a novel
 one.
 
@@ -671,7 +670,7 @@ retain it on that basis.
 
 ### Task, Baseline, and Contribution
 
-ETPC paraphrase-type detection is formulated as a multi-label classification problem with 26 output labels. Following the course-provided task setup, the baseline fine-tunes `facebook/bart-large`[^6] with a 26-output linear classification head and binary cross-entropy (BCE). The course-provided task setup explicitly specifies `facebook/bart-large` as the starting point, and `setup_gwdg.sh` downloads that checkpoint. This extension retains that provided model and changes only its training objective; it does not introduce another pretrained model or external embedding.
+ETPC paraphrase-type detection is formulated as a multi-label classification problem with 26 output labels. Following the course-provided task setup, the baseline fine-tunes `facebook/bart-large`[^8] with a 26-output linear classification head and binary cross-entropy (BCE). The course-provided task setup explicitly specifies `facebook/bart-large` as the starting point, and `setup_gwdg.sh` downloads that checkpoint. This extension retains that provided model and changes only its training objective; it does not introduce another pretrained model or external embedding.
 
 The ETPC labels are strongly imbalanced. In the archived, unfiltered 2,730-row training data used for the preliminary results, only 11,648 of the 70,980 binary label assignments are positive (16.410%). Individual-label positive counts range from 3 to 2,711. Plain BCE can therefore obtain high accuracy by favoring negative decisions while learning little about rare positive labels. We investigate whether inverse-frequency Weighted BCE, smoothed Weighted BCE, or focal loss can improve minority-label behavior and/or reach a useful solution faster than BCE.
 
@@ -690,7 +689,7 @@ The ETPC labels are strongly imbalanced. In the archived, unfiltered 2,730-row t
 
 ### Baseline: Unweighted BCE
 
-The baseline concatenates the two sentences with `</s>`, tokenizes to a maximum length of 512, and passes the result through BART-large. The classifier uses the hidden state of the first token to produce one logit for each of the 26 paraphrase types. Every output is treated as an independent binary decision and optimized with `BCEWithLogitsLoss`[^7]; at evaluation time, sigmoid probabilities greater than 0.5 are mapped to positive predictions.
+The baseline concatenates the two sentences with `</s>`, tokenizes to a maximum length of 512, and passes the result through BART-large. The classifier uses the hidden state of the first token to produce one logit for each of the 26 paraphrase types. Every output is treated as an independent binary decision and optimized with `BCEWithLogitsLoss`[^9]; at evaluation time, sigmoid probabilities greater than 0.5 are mapped to positive predictions.
 
 ### Proposed Loss Functions
 
@@ -808,7 +807,7 @@ For the rarest type (label *9*), the raw ratio of *909* is reduced to *30.1496* 
 
 #### Method 3: Focal Loss
 
-We also implemented binary focal loss,[^5] adapted to the multi-label setting. For every example-label pair, the unreduced BCE loss is first computed. The loss is then multiplied by a focusing factor:
+We also implemented binary focal loss,[^10] adapted to the multi-label setting. For every example-label pair, the unreduced BCE loss is first computed. The loss is then multiplied by a focusing factor:
 
 $$
 FL(p_t) = (1-p_t)^\gamma BCE(p_t),
@@ -876,7 +875,7 @@ We investigate whether adaptive learning-rate schedules can improve convergence 
 
 To stay close to the baseline, these experiments keep other parameters such as `batch_size`, `loss_fn`, and `n_epochs` fixed.
 
-Different `lr` values may nevertheless benefit from changing the `batch_size`. Popel and Bojar (2018, Section 4.8) discuss the interaction between learning rate, effective batch size, and the learning-rate schedule in Transformer training. This motivates jointly tuning these parameters in future experiments; our results therefore compare learning rates only under the fixed baseline configuration. (Popel & Bojar, 2018)
+Different `lr` values may nevertheless benefit from changing the `batch_size`. Popel and Bojar (Section 4.8)[^11] discuss the interaction between learning rate, effective batch size, and the learning-rate schedule in Transformer training. This motivates jointly tuning these parameters in future experiments; our results therefore compare learning rates only under the fixed baseline configuration.
 
 # Experiments
 
@@ -1012,9 +1011,8 @@ on.
 ### 2. Loss composition (Exp 4–6, 13)
 
 **Experiment.** Add a cosine embedding loss, then MNRL, then sweep MNRL's weight over
-{0.3, 0.5, 1.0, 2.0}. Separately, add CoSENT
-([Huang et al., 2024](https://ieeexplore.ieee.org/document/10380768)), a ranking loss
-designed for continuous labels.
+{0.3, 0.5, 1.0, 2.0}. Separately, add CoSENT,[^12] a ranking loss designed for continuous
+labels.
 
 **Expectation.** MNRL should help substantially, since contrastive objectives are standard
 for sentence embeddings. CoSENT should help more than MNRL, because it optimises the
@@ -1052,8 +1050,7 @@ from the final number alone.
 **Experiment.** SimCSE unsupervised at three weights; an MNRL temperature sweep over
 {0.01, 0.05, 0.10}; batch size 128; LR warmup with cosine decay.
 
-**Expectation.** SimCSE ([Gao et al., 2021](https://arxiv.org/abs/2104.08821)) reports
-large STS gains, so we expected it to be one of our stronger improvements. Larger batches
+**Expectation.** SimCSE[^6] reports large STS gains, so we expected it to be one of our stronger improvements. Larger batches
 should help MNRL by supplying more in-batch negatives.
 
 **Result.** Nine consecutive experiments, none above the 0.804 MNRL configuration.
@@ -1282,10 +1279,9 @@ silently, and it is the reason the loader now has no fallback path.
 
 ### 8. Auxiliary losses (Exp 14–15)
 
-**Experiment.** AnglE ([Li & Li, 2024](https://arxiv.org/abs/2309.12871)), which optimises
-the angle between embeddings in complex space to avoid cosine's vanishing gradients near
-±1, and SMART ([Jiang et al., 2020](https://arxiv.org/abs/1911.03437)), adversarial
-smoothness regularisation.
+**Experiment.** AnglE,[^13] which optimises the angle between embeddings in complex space
+to avoid cosine's vanishing gradients near ±1, and SMART,[^14] an adversarial smoothness
+regularisation method.
 
 **Expectation.** Low. By this point eight loss-function experiments had produced no gain,
 and we ran these mainly for completeness of the ablation.
@@ -1308,8 +1304,7 @@ classification. A faithful test would require perturbing the embedding layer.
 
 ### 9. Whitening post-processing (post-hoc analysis)
 
-**Experiment.** Whitening ([Su et al., 2021](https://arxiv.org/abs/2103.15316)) centres
-sentence embeddings and rescales them to identity covariance, correcting the anisotropy of
+**Experiment.** Whitening[^15] centres sentence embeddings and rescales them to identity covariance, correcting the anisotropy of
 raw BERT representations. It requires no retraining, so this section reports post-hoc
 analysis of embeddings extracted from an already-trained checkpoint rather than any
 training run. We fitted the transform on training embeddings and applied it to dev. The
@@ -1348,8 +1343,8 @@ It exceeds the noise floor by 0.0009 and is the best of five dimensionalities se
 against the same set it is scored on; with five draws at that noise level, a best-of-five
 near +0.005 is close to what chance alone produces. Confirming it would need validation
 data we do not have, and adopting it would repeat the error that measuring seed variance
-was meant to expose. The overall result matches Gao et al. (2021), who report that
-contrastive training subsumes the benefit of flow- and whitening-based post-processing.
+was meant to expose. The overall result matches the findings of Gao et al.,[^6] who report that contrastive
+training subsumes the benefit of flow- and whitening-based post-processing.
 
 ## Paraphrase Type Detection (PTD)
 
@@ -2145,7 +2140,7 @@ Because the reference contains information that cannot be recovered from the inp
 
 This creates a metric pitfall: increasing `reference_bleu` often means copying the input. Slightly deviating from the input can reduce `reference_bleu`, but it may double or triple the `100 - input_bleu` component and thereby increase `penalized_bleu`.
 
-A related limitation is discussed by Jin et al. (2022), who note that, in text style transfer, “simply copying the input can result in high BLEU scores.” This supports the general concern that BLEU can reward copying, although it does not establish the specific changes in `penalized_bleu` described here. (Jin et al., 2022)
+A related limitation is discussed by Jin et al.,[^16] who note that, in text style transfer, “simply copying the input can result in high BLEU scores.” This supports the general concern that BLEU can reward copying, although it does not establish the specific changes in `penalized_bleu` described here.
 
 # Visualizations
 
@@ -2445,31 +2440,34 @@ The project was modified by [Niklas Bauer](https://github.com/ItsNiklas/) and [T
 
 # References
 
-[^1]: Reimers, N. and Gurevych, I. (2019). [Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks](https://aclanthology.org/D19-1410/). Proceedings of EMNLP-IJCNLP 2019.
+[^1]: Reimers, N., & Gurevych, I. (2019). [Sentence-BERT: Sentence embeddings using Siamese BERT-networks](https://aclanthology.org/D19-1410/). *Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing*.
 
-[^2]: Conneau, A., Kiela, D., Schwenk, H., Barrault, L., and Bordes, A. (2017). [Supervised Learning of Universal Sentence Representations from Natural Language Inference Data](https://aclanthology.org/D17-1070/). Proceedings of EMNLP 2017.
+[^2]: Conneau, A., et al. (2017). [Supervised learning of universal sentence representations from natural language inference data](https://aclanthology.org/D17-1070/). *Proceedings of the 2017 Conference on Empirical Methods in Natural Language Processing*.
 
-[^3]: Srivastava, N., Hinton, G., Krizhevsky, A., Sutskever, I., and Salakhutdinov, R. (2014). [Dropout: A Simple Way to Prevent Neural Networks from Overfitting](https://www.jmlr.org/papers/v15/srivastava14a.html). Journal of Machine Learning Research.
+[^3]: Srivastava, N., et al. (2014). [Dropout: A simple way to prevent neural networks from overfitting](https://www.jmlr.org/papers/v15/srivastava14a.html). *Journal of Machine Learning Research*.
 
-[^4]: Prechelt, L. (1998). [Automatic early stopping using cross validation: quantifying the criteria](https://pubmed.ncbi.nlm.nih.gov/12662814/). Neural Networks.
+[^4]: Prechelt, L. (1998). [Automatic early stopping using cross validation: Quantifying the criteria](https://pubmed.ncbi.nlm.nih.gov/12662814/). *Neural Networks*.
 
-[^5]: Lin, T.-Y., Goyal, P., Girshick, R., He, K., and Dollár, P. (2017). [Focal Loss for Dense Object Detection](https://arxiv.org/abs/1708.02002).
+[^5]: Henderson, M., et al. (2017). [Efficient natural language response suggestion for smart reply](https://arxiv.org/abs/1705.00652). *arXiv preprint arXiv:1705.00652*.
 
-[^6]: Lewis, M. et al. (2020). [BART: Denoising Sequence-to-Sequence Pre-training for Natural Language Generation, Translation, and Comprehension](https://arxiv.org/abs/1910.13461).
+[^6]: Gao, T., Yao, X., & Chen, D. (2021). [SimCSE: Simple contrastive learning of sentence embeddings](https://arxiv.org/abs/2104.08821). *Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing*.
 
-[^7]: PyTorch contributors. [`BCEWithLogitsLoss` documentation](https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss.html).
+[^7]: Bowman, S. R., et al. (2015). [A large annotated corpus for learning natural language inference](https://arxiv.org/abs/1508.05326). *Proceedings of the 2015 Conference on Empirical Methods in Natural Language Processing*.
 
-Jin, D., Jin, Z., Hu, Z., Vechtomova, O., & Mihalcea, R. (2022). Deep learning for text style transfer: A survey. *Computational Linguistics, 48*(1), 155–205. https://doi.org/10.1162/coli_a_00426
+[^8]: Lewis, M., et al. (2020). [BART: Denoising sequence-to-sequence pre-training for natural language generation, translation, and comprehension](https://arxiv.org/abs/1910.13461). *Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics*.
 
-Popel, M., & Bojar, O. (2018). Training tips for the Transformer model. arXiv:1804.00247. https://arxiv.org/abs/1804.00247
+[^9]: PyTorch Contributors. (n.d.). [`BCEWithLogitsLoss` documentation](https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss.html). *PyTorch documentation*.
 
-## Semantic Textual Similarity (STS) references
+[^10]: Lin, T.-Y., et al. (2017). [Focal loss for dense object detection](https://arxiv.org/abs/1708.02002). *Proceedings of the IEEE International Conference on Computer Vision*.
 
-1. Reimers, N. & Gurevych, I. (2019). *Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks.* EMNLP. [arXiv:1908.10084](https://arxiv.org/abs/1908.10084) — mean pooling and the cosine head (Methodology §1).
-2. Henderson, M. et al. (2017). *Efficient Natural Language Response Suggestion for Smart Reply.* [arXiv:1705.00652](https://arxiv.org/abs/1705.00652) — MNRL (Methodology §2).
-3. Gao, T., Yao, X. & Chen, D. (2021). *SimCSE: Simple Contrastive Learning of Sentence Embeddings.* EMNLP. [arXiv:2104.08821](https://arxiv.org/abs/2104.08821) — the unsupervised variant we could not reproduce a gain from (Experiments §3), the supervised NLI-triplet formulation behind our best result (Methodology §4), and the finding that contrastive training subsumes whitening (Experiments §9).
-4. Bowman, S. et al. (2015). *A Large Annotated Corpus for Learning Natural Language Inference.* EMNLP. [arXiv:1508.05326](https://arxiv.org/abs/1508.05326) — SNLI, the source of the 149,145 pretraining triplets.
-5. Huang, X. et al. (2024). *CoSENT: Consistent Sentence Embedding via Similarity Ranking.* IEEE/ACM TASLP. — evaluated in Experiments §2.
-6. Li, X. & Li, J. (2024). *AnglE-optimized Text Embeddings.* ACL. [arXiv:2309.12871](https://arxiv.org/abs/2309.12871) — evaluated in Experiments §8.
-7. Jiang, H. et al. (2020). *SMART: Robust and Efficient Fine-Tuning for Pre-trained Natural Language Models through Principled Regularized Optimization.* ACL. [arXiv:1911.03437](https://arxiv.org/abs/1911.03437) — evaluated in Experiments §8, with the two implementation deviations noted there.
-8. Su, J. et al. (2021). *Whitening Sentence Representations for Better Semantics and Faster Retrieval.* [arXiv:2103.15316](https://arxiv.org/abs/2103.15316) — the post-processing analysed in Experiments §9.
+[^11]: Popel, M., & Bojar, O. (2018). [Training tips for the Transformer model](https://arxiv.org/abs/1804.00247). *arXiv preprint arXiv:1804.00247*.
+
+[^12]: Huang, X., et al. (2024). [CoSENT: Consistent sentence embedding via similarity ranking](https://ieeexplore.ieee.org/document/10380768). *IEEE/ACM Transactions on Audio, Speech, and Language Processing*.
+
+[^13]: Li, X., & Li, J. (2024). [AnglE-optimized text embeddings](https://arxiv.org/abs/2309.12871). *Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics*.
+
+[^14]: Jiang, H., et al. (2020). [SMART: Robust and efficient fine-tuning for pre-trained natural language models through principled regularized optimization](https://arxiv.org/abs/1911.03437). *Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics*.
+
+[^15]: Su, J., et al. (2021). [Whitening sentence representations for better semantics and faster retrieval](https://arxiv.org/abs/2103.15316). *arXiv preprint arXiv:2103.15316*.
+
+[^16]: Jin, D., Jin, Z., Hu, Z., Vechtomova, O., & Mihalcea, R. (2022). [Deep learning for text style transfer: A survey](https://doi.org/10.1162/coli_a_00426). *Computational Linguistics, 48*(1), 155–205.
