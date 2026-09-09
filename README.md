@@ -115,7 +115,13 @@ The corresponding checkpoint was also used to initialize experimental training r
 
 ## Stanford Sentiment Treebank (SST)
 
-_Setup and reproduction instructions are to be added._
+The SST task uses the shared environment described above. The analysis and plotting utilities additionally use `matplotlib` and `tabulate`; `pathlib` is part of the Python standard library.
+
+```sh
+pip install matplotlib tabulate
+```
+
+The experiments evaluate five-class sentiment classification on the [Stanford Sentiment Treebank (SST-5)](https://paperswithcode.com/sota/sentiment-analysis-on-sst-5-fine-grained).
 
 ## Semantic Textual Similarity (STS)
 
@@ -539,7 +545,43 @@ Early stopping is a validation-based model-selection and regularization techniqu
 
 ## Stanford Sentiment Treebank (SST)
 
-_Methodology is to be added._
+SST-5 assigns short movie-review excerpts to five sentiment classes, from highly negative to highly positive. Its fine-grained and subjective labels make generalization and overfitting central concerns.
+
+### Starting point and evaluation
+
+The starting model from Part 1 reached 0.519 development accuracy. Architectural changes were evaluated sequentially against the best accepted model state. Tunable regularization methods were then compared while holding the other selected hyperparameters fixed. Training and development accuracy curves were compared with `logdiff.py`; final experiment logs are stored in `logs/`, and preliminary logs in `logs/old_logs/`.
+
+### Architectural adjustments
+
+#### Multi-layer classifier
+
+The one-layer baseline classifier was replaced with a more expressive classifier containing dropout. The goal was to model nonlinear patterns without increasing overfitting.
+
+#### GELU activation
+
+GELU replaced ReLU to provide a smoother activation with nonzero output for some negative inputs. We expected this to improve optimization and convergence.
+
+#### Expressive pooling
+
+The baseline classifier uses only the final `[CLS]` representation. We tested augmenting it with mean- and max-pooled token representations so sentiment-bearing words could influence the classifier more directly, following the pooling comparison of Xing et al.[^17]
+
+#### AllNLI pretraining
+
+We tested pretraining on AllNLI entailment and contradiction pairs before SST fine-tuning.[^18] The intended benefit was stronger general semantic representations before training on the smaller sentiment dataset.
+
+### Tunable regularization adjustments
+
+#### Label smoothing
+
+Label smoothing was tested to account for ambiguity between adjacent sentiment classes and reduce overconfident fitting, following Si and Gao.[^19]
+
+#### Weight decay
+
+Weight decay was evaluated as parameter regularization to reduce overfitting. This follows the optimization setup used for BERT fine-tuning.[^20]
+
+#### Warmup ratio
+
+Linear learning-rate warmup was tested to limit early updates before gradients stabilize.[^20] We expected slower initial learning but potentially more stable later epochs.
 
 ## Semantic Textual Similarity (STS)
 
@@ -945,7 +987,39 @@ Does lowering dropout from `0.3` to `0.1` and increasing the epoch budget to 7, 
 
 ## Stanford Sentiment Treebank (SST)
 
-_Experiments are to be added._
+The experiments first evaluated architectural changes and then varied one regularization parameter at a time around the selected configuration.
+
+### Optimized baseline
+
+Tuning learning rate and batch size increased development accuracy from 0.519 to 0.523, although the resulting model showed stronger overfitting.
+
+### Multi-layer ReLU classifier
+
+The more expressive ReLU classifier retained 0.523 development accuracy but reduced the train–development gap. It was kept as the basis for the activation comparison.
+
+### GELU classifier
+
+Replacing ReLU with GELU increased development accuracy to 0.528, the best architectural result.
+
+### Expressive pooling
+
+Adding mean and max pooling reduced development accuracy to 0.525. A larger classification layer did not recover the loss, so expressive pooling was discarded.
+
+### Label smoothing
+
+A smoothing value of 0.01 reduced development accuracy to 0.516 and increased overfitting. Larger values degraded performance further, so label smoothing was disabled.
+
+### Weight decay
+
+Weight decay of 0.05 reduced development accuracy to 0.517 and made training less stable. It was therefore disabled in the selected configuration.
+
+### Warmup ratio
+
+Warmup did not improve the peak score beyond 0.528, but a ratio of 0.1 produced more stable accuracy across epochs and was retained.
+
+### AllNLI pretraining
+
+The AllNLI experiment did not improve performance. Because the modified pipeline also failed to recover the original baseline after resetting the encoder, this result is treated as inconclusive rather than evidence against AllNLI pretraining.
 
 ## Semantic Textual Similarity (STS)
 
@@ -1706,9 +1780,18 @@ For QQP, we select the model with sentence-pair interaction features, MLP head, 
 
 ## Stanford Sentiment Treebank (SST)
 
-| Model | Accuracy |
+| Model variant | Development accuracy |
 | --- | ---: |
-| _To be added_ | — |
+| Part 1 baseline | 0.519 |
+| Optimized learning rate and batch size | 0.523 |
+| Multi-layer ReLU classifier | 0.523 |
+| Multi-layer GELU classifier | **0.528** |
+| Expressive pooling | 0.525 |
+| Label smoothing (`0.01`) | 0.516 |
+| Weight decay (`0.05`) | 0.517 |
+| Warmup ratio (`0.1`) | **0.528** |
+
+The selected SST model uses the multi-layer GELU classifier and reaches 0.528 development accuracy. Warmup does not increase the peak score, but it is retained for its more stable training curve. Expressive pooling, label smoothing, weight decay, and the inconclusive AllNLI implementation are not included in the final model.
 
 ## Semantic Textual Similarity (STS)
 
@@ -2097,7 +2180,24 @@ Therefore, this should be interpreted as a targeted training-configuration exper
 
 ## Stanford Sentiment Treebank (SST)
 
-_Hyperparameter optimization is to be added._
+Hyperparameters were tuned sequentially to limit compute cost:
+
+1. learning rate and batch size;
+2. warmup ratio and weight decay;
+3. classifier dropout and label smoothing.
+
+The selected configuration is:
+
+```sh
+--lr 2e-5 \
+--batch_size 16 \
+--warmup_ratio 0.1 \
+--weight_decay 0.0 \
+--label_smoothing 0.0 \
+--classifier_dropout 0.3
+```
+
+Warmup ratios 0 and 0.1 had similar peak accuracy; 0.1 was selected because it remained stronger across more epochs. Weight decay and label smoothing were set to zero because neither improved development accuracy.
 
 ## Semantic Textual Similarity (STS)
 
@@ -2170,7 +2270,47 @@ The training curves show that the strongest model continued to fit the training 
 
 ## Stanford Sentiment Treebank (SST)
 
-_Visualizations are to be added._
+### Baseline hyperparameter tuning
+
+![SST baseline before and after learning-rate and batch-size tuning](figures/0_Task1_to_opt_hyper.png)
+
+Tuning slightly improves development accuracy but increases overfitting.
+
+### Classifier architecture
+
+![SST baseline compared with the multi-layer ReLU classifier](figures/1_Classifier_RELU.png)
+
+The multi-layer classifier preserves peak accuracy while reducing the train–development gap.
+
+### GELU activation
+
+![SST ReLU and GELU classifier comparison](figures/2_RELU_GELU.png)
+
+GELU raises development accuracy from 0.523 to 0.528.
+
+### Expressive pooling
+
+![SST GELU classifier compared with expressive pooling](figures/3_pooling.png)
+
+Adding mean and max pooling lowers development accuracy, so the change is discarded.
+
+### Label smoothing
+
+![SST label-smoothing comparison](figures/smoothing.png)
+
+Label smoothing of 0.01 performs worse than the unsmoothed configuration.
+
+### Weight decay
+
+![SST weight-decay comparison](figures/weight_decay_0.05.png)
+
+Weight decay of 0.05 reduces accuracy and makes training less stable.
+
+### Warmup ratio
+
+![SST warmup-ratio comparison](figures/warmup_ratio_0.0.png)
+
+Warmup does not improve peak accuracy but produces a more stable curve across epochs.
 
 ## Semantic Textual Similarity (STS)
 
@@ -2427,14 +2567,13 @@ Lower loss correlates with better `penalized_bleu`, while `reference_bleu` shows
 
 # AI-Usage Card
 
-Artificial Intelligence (AI) aided the development and restructuring of this project report. Five project-specific [AI-Usage Cards](https://ai-cards.org/) will be stored in `ai_cards/`:
 
+Artificial Intelligence (AI) aided the development and restructuring of this project report. Four project-specific [AI-Usage Cards](https://ai-cards.org/) are stored in `ai_cards/`:
 
-1. **Andrii Demydenko:** [AI-Usage Card](ai_cards/ai-usage-card-andrii.docx)
-2. **Simmon Pummer:** _File link to be added_
-3. **Thorben Neitzke:** _File link to be added_
-4. **Mohd Uwaish:** [AI-Usage Card](ai_cards/ai-usage-card-Uwaish-STS.pdf)
-
+1. **Andrii Demydenko — PTD and PTG:** [AI-Usage Card](ai_cards/ai-usage-card-andrii.docx)
+2. **Simon Pummer — SST:** [AI-Usage Card](ai_cards/ai-usage-card-pummer.pdf)
+3. **Thorben Neitzke — QQP:** [AI-Usage Card](ai_cards/ai-usage-card_qqp_pp_detect_Neitzke_Thorben.pdf)
+4. **Mohd Uwaish — STS:** [AI-Usage Card](ai_cards/ai-usage-card-Uwaish-STS.pdf)
 
 ### Acknowledgement
 
@@ -2481,3 +2620,12 @@ The project was modified by [Niklas Bauer](https://github.com/ItsNiklas/) and [T
 [^15]: Su, J., et al. (2021). [Whitening sentence representations for better semantics and faster retrieval](https://arxiv.org/abs/2103.15316). *arXiv preprint arXiv:2103.15316*.
 
 [^16]: Jin, D., Jin, Z., Hu, Z., Vechtomova, O., & Mihalcea, R. (2022). [Deep learning for text style transfer: A survey](https://doi.org/10.1162/coli_a_00426). *Computational Linguistics, 48*(1), 155–205.
+
+[^17]: Xing, J., Xue, C., Luo, D., & Xing, R. (2024). [Comparative analysis of pooling mechanisms in LLMs: A sentiment analysis perspective](https://arxiv.org/abs/2411.14654). *arXiv preprint arXiv:2411.14654*.
+
+[^18]: Sentence Transformers. (n.d.). [Natural language inference](https://www.sbert.net/examples/sparse_encoder/training/nli/README.html). *Sentence Transformers documentation*.
+
+[^19]: Si, Y., & Gao, X. (2023). *Revisiting the role of label smoothing in enhanced text sentiment classification*. Semantic Scholar.
+
+[^20]: Devlin, J., Chang, M.-W., Lee, K., & Toutanova, K. (2018). [BERT: Pre-training of deep bidirectional transformers for language understanding](https://arxiv.org/abs/1810.04805). *arXiv preprint arXiv:1810.04805*.
+
