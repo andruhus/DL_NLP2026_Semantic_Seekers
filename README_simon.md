@@ -244,25 +244,6 @@ For the search following order was followed and the Hyper_optimizer.py file was 
 | **2.3 Warmup Ratio**                                                                                                                                                                                                                                                                                                                                                          | 0.528        |
 All results were obtained using optimal hyperparameters. For the *1.x models*, this refers to tuning learning rate and batch size. For the *2.x models*, all hyperparameters were set to their optimal values except for the specific parameter being investigated; if adjusting that parameter did not improve performance, the baseline optimal configuration was retained.
 
-
-
-
-## Contributors
-
-  
-
-| Member A  | Member B | Member C |
-| ---------------- | --------------------- | --------------------- |
-| Tagging  | Sophia Optimizer  | Synthetic Data  |
-| Layer Unfreeze | Hyperparameter Tuning | |
-| Classifier Model | Repository  | |
-
-
-
-  
-
-
-
   
 
 
