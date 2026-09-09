@@ -1,27 +1,69 @@
 import argparse
+import math
 import random
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import torch
+from sklearn.metrics import matthews_corrcoef
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 from transformers import AutoTokenizer, BartModel
-from sklearn.metrics import matthews_corrcoef
+
 from optimizer import AdamW
+from paraphrase_detection.focal_loss import create_focal_loss
+from paraphrase_detection.weighted_bce import (
+    compute_aggressive_pos_weights,
+    compute_capped_pos_weights,
+    compute_log_pos_weights,
+    compute_sqrt_pos_weights,
+    count_label_examples,
+    create_weighted_bce_loss,
+    encode_paraphrase_labels,
+    print_label_statistics,
+    verify_positive_training_examples,
+)
 
 
 TQDM_DISABLE = False
+
+
+def remove_dev_overlap(train_dataset, dev_dataset):
+    """Remove training rows whose ETPC ID occurs in the development split."""
+    if "id" not in train_dataset.columns or "id" not in dev_dataset.columns:
+        raise ValueError("Both ETPC datasets must contain an 'id' column.")
+
+    train_ids = train_dataset["id"].astype("string").str.strip().str.lower()
+    dev_ids = dev_dataset["id"].astype("string").str.strip().str.lower()
+    overlap_mask = train_ids.notna() & train_ids.isin(dev_ids.dropna())
+
+    removed_rows = int(overlap_mask.sum())
+    removed_unique_ids = int(train_ids[overlap_mask].nunique())
+    filtered_train = train_dataset.loc[~overlap_mask].reset_index(drop=True)
+
+    remaining_train_ids = (
+        filtered_train["id"].astype("string").str.strip().str.lower().dropna()
+    )
+    remaining_overlap = set(remaining_train_ids) & set(dev_ids.dropna())
+    assert not remaining_overlap, "ETPC train/dev ID leakage remains after filtering."
+
+    print(
+        f"Removed {removed_rows} training rows "
+        f"({removed_unique_ids} unique IDs) overlapping with the dev set."
+    )
+    return filtered_train
 
 
 class BartWithClassifier(nn.Module):
     def __init__(self, num_labels=26):
         super(BartWithClassifier, self).__init__()
 
-        self.bart = BartModel.from_pretrained("facebook/bart-large", local_files_only=True)
+        self.bart = BartModel.from_pretrained(
+            "facebook/bart-large", local_files_only=True,
+        )
         self.classifier = nn.Linear(self.bart.config.hidden_size, num_labels)
-        self.sigmoid = nn.Sigmoid()
 
     def forward(self, input_ids, attention_mask=None):
         # Use the BartModel to obtain the last hidden state
@@ -31,14 +73,13 @@ class BartWithClassifier(nn.Module):
 
         # Add an additional fully connected layer to obtain the logits
         logits = self.classifier(cls_output)
-
-        # Return the probabilities
-        probabilities = self.sigmoid(logits)
-        return probabilities
+        return logits
 
 
-def transform_data(dataset, max_length=512, shuffle=True):
-    tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large", local_files_only=True)
+def transform_data(dataset, max_length=512, batch_size=16, shuffle=True):
+    tokenizer = AutoTokenizer.from_pretrained(
+        "facebook/bart-large", local_files_only=True,
+    )
 
     combined = [
         str(r["sentence1"]) + " </s> " + str(r["sentence2"])
@@ -53,37 +94,42 @@ def transform_data(dataset, max_length=512, shuffle=True):
 
     has_labels = "paraphrase_type_ids" in dataset.columns
     if has_labels:
-        unused = {12, 19, 20, 23, 27}
-        valid_ids = sorted(set(range(1, 32)) - unused)
-        labels = []
-        for type_str in dataset["paraphrase_type_ids"]:
-            type_set = set(eval(str(type_str)))
-            labels.append([1 if t in type_set else 0 for t in valid_ids])
-        labels_tensor = torch.tensor(labels, dtype=torch.float)
+        labels_tensor = encode_paraphrase_labels(dataset)
         ds = TensorDataset(input_ids, attention_mask, labels_tensor)
     else:
         ds = TensorDataset(input_ids, attention_mask)
 
-    return DataLoader(ds, batch_size=16, shuffle=shuffle)
+    return DataLoader(ds, batch_size=batch_size, shuffle=shuffle)
 
 
-def train_model(model, train_data, dev_data, device):
+def train_model(
+    model,
+    train_data,
+    dev_data,
+    criterion,
+    device,
+    checkpoint_path,
+    epochs=5,
+):
     optimizer = AdamW(model.parameters(), lr=2e-5)
-    criterion = nn.BCELoss()
-    best_acc = 0.0
-
-    for epoch in range(5):
+    criterion = criterion.to(device)
+    best_acc = -float("inf")
+    checkpoint_path = Path(checkpoint_path)
+    checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+    if epochs == 0:
+        torch.save(model.state_dict(), checkpoint_path)
+    for epoch in range(epochs):
         model.train()
         total_loss, n_batches = 0.0, 0
-        for batch in tqdm(train_data, desc=f"Epoch {epoch+1}"):
+        for batch in tqdm(train_data, desc=f"Epoch {epoch+1}", disable=TQDM_DISABLE):
             input_ids, attention_mask, labels = batch
             input_ids = input_ids.to(device)
             attention_mask = attention_mask.to(device)
             labels = labels.to(device)
 
             optimizer.zero_grad()
-            probs = model(input_ids=input_ids, attention_mask=attention_mask)
-            loss = criterion(probs, labels)
+            logits = model(input_ids=input_ids, attention_mask=attention_mask)
+            loss = criterion(logits, labels)
             loss.backward()
             optimizer.step()
 
@@ -92,32 +138,38 @@ def train_model(model, train_data, dev_data, device):
 
         avg_loss = total_loss / n_batches
         acc, mcc = evaluate_model(model, dev_data, device)
-        print(f"Epoch {epoch+1}: loss={avg_loss:.4f}, dev_acc={acc:.3f}, MCC={mcc:.3f}")
+        print(
+            f"Epoch {epoch+1}: loss={avg_loss:.4f}, "
+            f"dev_acc={acc:.3f}, MCC={mcc:.3f}"
+        )
 
         if acc > best_acc:
             best_acc = acc
-            torch.save(model.state_dict(), "models/bart_detection_best.pt")
+            torch.save(model.state_dict(), checkpoint_path)
 
-    model.load_state_dict(torch.load("models/bart_detection_best.pt"))
+    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     return model
-
 
 
 def test_model(model, test_data, test_ids, device):
     model.eval()
     all_preds = []
     with torch.no_grad():
-        for batch in tqdm(test_data, desc="Testing"):
+        for batch in tqdm(test_data, desc="Testing", disable=TQDM_DISABLE):
             if len(batch) == 3:
                 input_ids, attention_mask, _ = batch
             else:
                 input_ids, attention_mask = batch
             input_ids = input_ids.to(device)
             attention_mask = attention_mask.to(device)
-            probs = model(input_ids=input_ids, attention_mask=attention_mask)
+            logits = model(input_ids=input_ids, attention_mask=attention_mask)
+            probs = torch.sigmoid(logits)
             preds = (probs > 0.5).int().cpu().numpy().tolist()
             all_preds.extend(preds)
-    return pd.DataFrame({"id": test_ids.tolist(), "Predicted_Paraphrase_Types": all_preds})
+    return pd.DataFrame({
+        "id": test_ids.tolist(),
+        "Predicted_Paraphrase_Types": all_preds,
+    })
 
 
 def evaluate_model(model, test_data, device):
@@ -135,8 +187,8 @@ def evaluate_model(model, test_data, device):
             input_ids = input_ids.to(device)
             attention_mask = attention_mask.to(device)
 
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
-            predicted_labels = (outputs > 0.5).int()
+            logits = model(input_ids=input_ids, attention_mask=attention_mask)
+            predicted_labels = (torch.sigmoid(logits) > 0.5).int()
 
             all_pred.append(predicted_labels)
             all_labels.append(labels)
@@ -151,13 +203,17 @@ def evaluate_model(model, test_data, device):
     accuracies = []
     matthews_coefficients = []
     for label_idx in range(true_labels_np.shape[1]):
-        correct_predictions = np.sum(true_labels_np[:, label_idx] == predicted_labels_np[:, label_idx])
+        correct_predictions = np.sum(
+            true_labels_np[:, label_idx] == predicted_labels_np[:, label_idx]
+        )
         total_predictions = true_labels_np.shape[0]
         label_accuracy = correct_predictions / total_predictions
         accuracies.append(label_accuracy)
 
         # compute Matthwes Correlation Coefficient for each paraphrase type
-        matth_coef = matthews_corrcoef(true_labels_np[:, label_idx], predicted_labels_np[:, label_idx])
+        matth_coef = matthews_corrcoef(
+            true_labels_np[:, label_idx], predicted_labels_np[:, label_idx]
+        )
         matthews_coefficients.append(matth_coef)
 
     # Calculate the average accuracy over all labels
@@ -181,35 +237,267 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=11711)
     parser.add_argument("--use_gpu", action="store_true")
+    parser.add_argument("--epochs", type=int, default=5)
+    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument(
+        "--loss_mode",
+        choices=(
+            "unweighted",
+            "weighted",
+            "weighted_aggressive",
+            "weighted_sqrt",
+            "weighted_log",
+            "weighted_capped",
+            "compare_weighted",
+            "compare_non_aggressive_weighted",
+            "focal",
+            "compare",
+        ),
+        default="compare",
+        help=(
+            "Train one loss, compare the baseline with all weighted BCE "
+            "variants, compare only non-aggressive weighted BCE variants, or "
+            "compare the baseline, aggressive Weighted BCE, and focal loss."
+        ),
+    )
+    parser.add_argument(
+        "--focal_gamma",
+        type=float,
+        action="append",
+        dest="focal_gammas",
+        help=(
+            "Focusing parameter used by focal loss. Repeat this option to run "
+            "multiple focal experiments (default: 2.0)."
+        ),
+    )
+    parser.add_argument(
+        "--compare_bce_only",
+        action="store_true",
+        help=(
+            "In compare mode, run only unweighted BCE and aggressive Weighted "
+            "BCE; do not run focal-loss experiments."
+        ),
+    )
+    parser.add_argument(
+        "--weighted_bce_cap",
+        type=float,
+        default=20.0,
+        help=(
+            "Maximum positive weight for weighted_capped, compare_weighted, "
+            "and compare_non_aggressive_weighted (default: 20.0)."
+        ),
+    )
     args = parser.parse_args()
+    if args.epochs < 0:
+        parser.error("--epochs must be at least 0")
+    if args.batch_size < 1:
+        parser.error("--batch_size must be at least 1")
+    if args.compare_bce_only and args.loss_mode != "compare":
+        parser.error("--compare_bce_only requires --loss_mode compare")
+    if (
+        not math.isfinite(args.weighted_bce_cap)
+        or args.weighted_bce_cap <= 0
+    ):
+        parser.error("--weighted_bce_cap must be a finite, positive number")
+    if args.focal_gammas is None:
+        args.focal_gammas = [2.0]
+    if any(
+        not math.isfinite(gamma) or gamma < 0
+        for gamma in args.focal_gammas
+    ):
+        parser.error("--focal_gamma must be a finite, non-negative number")
+    if len(set(args.focal_gammas)) != len(args.focal_gammas):
+        parser.error("--focal_gamma values must be unique")
     return args
 
 
-def finetune_paraphrase_detection(args):
+def create_experiments(
+    loss_mode,
+    pos_weight_sets,
+    focal_gammas,
+    weighted_bce_cap=20.0,
+    compare_bce_only=False,
+):
+    experiments = []
+    if loss_mode in {"unweighted", "compare", "compare_weighted"}:
+        experiments.append(
+            (
+                "Unweighted BCE",
+                nn.BCEWithLogitsLoss(),
+                "models/bart_detection_unweighted_best.pt",
+            )
+        )
+
+    weighted_variants = (
+        (
+            "weighted_aggressive",
+            "Aggressive Weighted BCE",
+            "aggressive",
+            "models/bart_detection_weighted_aggressive_best.pt",
+        ),
+        (
+            "weighted_sqrt",
+            "Square-Root Weighted BCE",
+            "sqrt",
+            "models/bart_detection_weighted_sqrt_best.pt",
+        ),
+        (
+            "weighted_log",
+            "Logarithmic Weighted BCE",
+            "log",
+            "models/bart_detection_weighted_log_best.pt",
+        ),
+        (
+            "weighted_capped",
+            f"Capped Weighted BCE (cap={weighted_bce_cap:g})",
+            "capped",
+            f"models/bart_detection_weighted_capped_{weighted_bce_cap:g}_best.pt",
+        ),
+    )
+    if loss_mode in {"weighted", "weighted_aggressive", "compare"}:
+        selected_weighted_modes = {"weighted_aggressive"}
+    elif loss_mode == "compare_weighted":
+        selected_weighted_modes = {
+            variant_mode for variant_mode, _, _, _ in weighted_variants
+        }
+    elif loss_mode == "compare_non_aggressive_weighted":
+        selected_weighted_modes = {
+            "weighted_sqrt", "weighted_log", "weighted_capped",
+        }
+    else:
+        selected_weighted_modes = {loss_mode}
+
+    for variant_mode, name, weight_key, checkpoint_path in weighted_variants:
+        if variant_mode in selected_weighted_modes:
+            experiments.append(
+                (
+                    name,
+                    create_weighted_bce_loss(pos_weight_sets[weight_key]),
+                    checkpoint_path,
+                )
+            )
+
+    include_focal = loss_mode == "focal" or (
+        loss_mode == "compare" and not compare_bce_only
+    )
+    if include_focal:
+        for focal_gamma in focal_gammas:
+            gamma_label = f"{focal_gamma:g}"
+            experiments.append(
+                (
+                    f"Focal Loss (gamma={gamma_label})",
+                    create_focal_loss(focal_gamma),
+                    f"models/bart_detection_focal_gamma_{gamma_label}_best.pt",
+                )
+            )
+    return experiments
+
+
+def run_experiment(
+    name, criterion, checkpoint_path, train_data, dev_data, device, seed, epochs,
+):
+    # Reset the seed so compared models start from the same initialization and
+    # see the same shuffled training order.
+    seed_everything(seed)
     model = BartWithClassifier()
-    device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
     model.to(device)
+    print(f"\nTraining {name}...")
+    model = train_model(
+        model,
+        train_data,
+        dev_data,
+        criterion,
+        device,
+        checkpoint_path,
+        epochs=epochs,
+    )
+    accuracy, matthews_corr = evaluate_model(model, dev_data, device)
+    result = {
+        "loss": name,
+        "dev_accuracy": accuracy,
+        "dev_mcc": matthews_corr,
+    }
+    return model, result
+
+
+def finetune_paraphrase_detection(args):
+    device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
 
     train_dataset = pd.read_csv("data/etpc-paraphrase-train.csv")
     dev_dataset = pd.read_csv("data/etpc-paraphrase-dev.csv")
     test_dataset = pd.read_csv("data/etpc-paraphrase-detection-test-student.csv")
+    train_dataset = remove_dev_overlap(train_dataset, dev_dataset)
 
-    train_data = transform_data(train_dataset)
-    dev_data = transform_data(dev_dataset, shuffle=False)
-    test_data = transform_data(test_dataset)
+    train_data = transform_data(train_dataset, batch_size=args.batch_size)
+    dev_data = transform_data(
+        dev_dataset, batch_size=args.batch_size, shuffle=False,
+    )
+    test_data = transform_data(
+        test_dataset, batch_size=args.batch_size, shuffle=False,
+    )
 
     print(f"Loaded {len(train_dataset)} training samples.")
 
-    model = train_model(model, train_data, dev_data, device)
+    # These statistics are computed exclusively from the training split.
+    train_labels = encode_paraphrase_labels(train_dataset)
+    positive_counts, negative_counts = count_label_examples(train_labels)
+    verify_positive_training_examples(positive_counts)
+    pos_weight_sets = {
+        "aggressive": compute_aggressive_pos_weights(
+            positive_counts, negative_counts,
+        ),
+        "sqrt": compute_sqrt_pos_weights(positive_counts, negative_counts),
+        "log": compute_log_pos_weights(positive_counts, negative_counts),
+        "capped": compute_capped_pos_weights(
+            positive_counts, negative_counts, args.weighted_bce_cap,
+        ),
+    }
+    print_label_statistics(
+        positive_counts, negative_counts, pos_weight_sets,
+    )
 
-    print("Training finished.")
+    experiments = create_experiments(
+        args.loss_mode,
+        pos_weight_sets,
+        args.focal_gammas,
+        weighted_bce_cap=args.weighted_bce_cap,
+        compare_bce_only=args.compare_bce_only,
+    )
+    results = []
+    prediction_model = None
+    for experiment_index, experiment in enumerate(experiments):
+        name, criterion, checkpoint_path = experiment
+        model, result = run_experiment(
+            name,
+            criterion,
+            checkpoint_path,
+            train_data,
+            dev_data,
+            device,
+            args.seed,
+            args.epochs,
+        )
+        results.append(result)
 
-    accuracy, matthews_corr = evaluate_model(model, dev_data, device)
-    print(f"The accuracy of the model is: {accuracy:.3f}")
-    print(f"Matthews Correlation Coefficient of the model is: {matthews_corr:.3f}")
+        # Keep only the final experiment's model for test-set prediction so
+        # earlier large BART models can be released before the next run.
+        if experiment_index == len(experiments) - 1:
+            prediction_model = model
+        else:
+            del model
+            if device.type == "cuda":
+                torch.cuda.empty_cache()
+
+    comparison = pd.DataFrame(results)
+    print("\nDevelopment-set comparison:")
+    print(
+        comparison.to_string(
+            index=False, float_format=lambda value: f"{value:.4f}",
+        )
+    )
 
     test_ids = test_dataset["id"]
-    test_results = test_model(model, test_data, test_ids, device)
+    test_results = test_model(prediction_model, test_data, test_ids, device)
     test_results.to_csv("predictions/bart/etpc-paraphrase-detection-test-output.csv", index=False)
 
 
