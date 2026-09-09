@@ -317,7 +317,7 @@ def train_multitask(args):
     # Anzahl Trainingsschritte berechnen
     total_steps = args.epochs * len(sst_train_dataloader)
 
-    # Warmup: 10% der Trainingsschritte
+    # Warmup:
     warmup_steps = int(args.warmup_ratio * total_steps)
 
     # Scheduler: Warmup + Linear Decay
@@ -637,7 +637,7 @@ def get_args():
     parser.add_argument("--classifier_dropout", type=float, default=0.3)
     parser.add_argument("--allnli", action="store_true")
     parser.add_argument("--early_stopping", action="store_true")
-    parser.add_argument("--patience", type=int, default=0)
+    parser.add_argument("--patience", type=int, default=2)
 
     args = parser.parse_args()
     return args
