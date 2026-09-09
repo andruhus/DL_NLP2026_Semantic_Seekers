@@ -218,7 +218,7 @@ class MultitaskBERT(nn.Module):
 
     - Sentiment classification (predict_sentiment)
     - Paraphrase detection (predict_paraphrase)
-    - Semantic Textual Similarity (predict_similarity)
+    - Semantic Textual Similarity (predict_similarity_sts)
     (- Paraphrase type detection (predict_paraphrase_types))
     """
 
@@ -261,15 +261,17 @@ class MultitaskBERT(nn.Module):
         output = self.bert(input_ids, attention_mask)
         return output['pooler_output']
 
-    # --- STS (Part 2): pooling and pair encoding -----------------------------
-
     def encode(self, input_ids, attention_mask):
+        # STS (Part 2). Mean pooling over non-padding tokens.
         hidden = self.bert(input_ids, attention_mask)['last_hidden_state']  # [B, L, 768]
         mask = attention_mask.unsqueeze(-1).float()                          # [B, L, 1]
         return (hidden * mask).sum(dim=1) / mask.sum(dim=1)                 # [B, 768]
 
     def encode_pair(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
-        """Cross-attention encoding: each sentence attends to the other before pooling."""
+        """STS (Part 2): cross-attention encoding.
+
+        Each sentence attends to the other's token sequence before pooling.
+        """
         h1 = self.bert(input_ids_1, attention_mask_1)['last_hidden_state']  # [B, L1, 768]
         h2 = self.bert(input_ids_2, attention_mask_2)['last_hidden_state']  # [B, L2, 768]
         # True where padding (MultiheadAttention ignores these keys)
@@ -286,8 +288,6 @@ class MultitaskBERT(nn.Module):
         emb1 = (h1_cross * mask1).sum(dim=1) / mask1.sum(dim=1)
         emb2 = (h2_cross * mask2).sum(dim=1) / mask2.sum(dim=1)
         return emb1, emb2
-
-    # ----------------------- end STS (Part 2) methods ------------------------
 
     def predict_sentiment(self, input_ids, attention_mask):
         """
@@ -311,7 +311,7 @@ class MultitaskBERT(nn.Module):
         emb2 = self.forward(input_ids_2, attention_mask_2)
         return self.paraphrase_classifier(torch.cat([emb1, emb2], dim=1))
 
-    def predict_similarity(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
+    def predict_similarity_sts(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
         """
         Given a batch of pairs of sentences, outputs a single logit corresponding to how similar they are.
         Since the similarity label is a number in the interval [0,5], your output should be normalized to the interval [0,5];
@@ -988,7 +988,11 @@ def get_args():
                         help="TF-IDF-mined STS hard-negative pretraining epochs")
 
     # --- Optimisation --------------------------------------------------------
-    parser.add_argument("--warmup_ratio", type=float, default=0.0,
+    # NOTE: --warmup_ratio and --weight_decay are also registered on the SST branch
+    # (simon_testbranch) with identical types and defaults. Whoever merges second should
+    # delete one copy — argparse raises "conflicting option string" on a duplicate.
+    # Defaults are kept identical to theirs so either copy behaves the same.
+    parser.add_argument("--warmup_ratio", type=float, default=0.1,
                         help="fraction of STS steps used for linear LR warmup (0=disabled)")
     parser.add_argument("--grad_clip", type=float, default=0.0,
                         help="max grad norm for STS steps (0=disabled)")

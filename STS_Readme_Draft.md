@@ -46,35 +46,25 @@ offline to build a triplet cache (below), and `matplotlib` only by `figures/make
 
 ### One-time data preparation (STS improvements only)
 
-The SNLI and PAWS caches must be built **before** training and **from outside the
-repository directory** — the project's own `datasets.py` shadows the HuggingFace
-`datasets` package on the import path:
+The SNLI and PAWS triplet caches must be built once before training:
 
 ```sh
-cd /tmp && python - <<'PY'
-import json, os
-from collections import defaultdict
-from datasets import load_dataset
-REPO = "/absolute/path/to/DL_NLP2026_Semantic_Seekers"
-CACHE = os.path.join(REPO, "data/nli_cache")
-
-ds = load_dataset("snli", cache_dir=CACHE, split="train")
-by = defaultdict(lambda: {"pos": [], "neg": []})
-for ex in ds:
-    if   ex["label"] == 0: by[ex["premise"]]["pos"].append(ex["hypothesis"])
-    elif ex["label"] == 2: by[ex["premise"]]["neg"].append(ex["hypothesis"])
-trip = [(p, v["pos"][0], v["neg"][0]) for p, v in by.items() if v["pos"] and v["neg"]]
-json.dump(trip, open(os.path.join(CACHE, "snli_triplets.json"), "w"))
-print(f"SNLI: {len(trip):,} triplets")
-
-ds = load_dataset("paws", "labeled_final", cache_dir=CACHE, split="train")
-pairs = [(e["sentence1"], e["sentence2"], int(e["label"])) for e in ds]
-json.dump(pairs, open(os.path.join(CACHE, "paws_pairs.json"), "w"))
-print(f"PAWS: {len(pairs):,} pairs")
-PY
+pip install datasets            # allowed for Part 2; not imported during training
+bash scripts/build_nli_cache.sh
 ```
 
-Expected output: `SNLI: 149,145 triplets` and `PAWS: 49,401 pairs`.
+Expected output:
+
+```
+SNLI: 149,145 triplets -> data/nli_cache/snli_triplets.json
+PAWS:  49,401 pairs    -> data/nli_cache/paws_pairs.json
+```
+
+The script runs the download from a temporary directory on purpose. This project ships
+its own `datasets.py`, which shadows the HuggingFace `datasets` package on the import
+path; importing it from the repository root fails silently. The script writes plain JSON
+caches, so training itself performs no HuggingFace import at all. Re-running is safe —
+existing caches are detected and skipped.
 
 ### Reproducing the STS result
 
@@ -84,6 +74,7 @@ python -u multitask_classifier.py --task sts --option finetune --use_gpu \
   --mnrl_weight 0.5 --mnrl_tau 0.05 \
   --cross_attn --sts_symmetry --nli_pretrain_epochs 1 \
   --hidden_dropout_prob 0.3 --batch_size 64 --epochs 5 --lr 2e-5 \
+  --warmup_ratio 0.0 \
   --init_checkpoint models/<qqp_encoder>.pt \
   --filepath models/sts_best.pt --local_files_only
 ```
@@ -97,8 +88,18 @@ On the Grete cluster:
 ```sh
 sbatch --partition=grete:shared --gres=gpu:A100:1 --time=01:00:00 --mem=16G \
   --cpus-per-task=4 --output=slurm_files/sts_best.out \
-  --wrap="source activate dnlp && python -u multitask_classifier.py <args as above>"
+  --wrap="source activate dnlp && python -u multitask_classifier.py \
+    --task sts --option finetune --use_gpu \
+    --cosent --cosent_weight 0.0 --cosent_tau 0.05 \
+    --mnrl_weight 0.5 --mnrl_tau 0.05 \
+    --cross_attn --sts_symmetry --nli_pretrain_epochs 1 \
+    --hidden_dropout_prob 0.3 --batch_size 64 --epochs 5 --lr 2e-5 \
+    --warmup_ratio 0.0 \
+    --init_checkpoint models/<qqp_encoder>.pt \
+    --filepath models/sts_best.pt --local_files_only"
 ```
+
+Monitor with `squeue --me`; output lands in `slurm_files/sts_best.out`.
 
 ### Key STS parameters
 
