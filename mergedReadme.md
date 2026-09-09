@@ -578,6 +578,87 @@ For comparing the results, namely the training accuracy of the train- and dev-da
 Logfiles for initial experimentation are located in logs/old_logs. Here the optimal hyperparameters where not yet determined.
 Logfiles that build the basis for the following discussion are located in /logs.
 
+---
+
+### **1. Non-hyperparameter regulated adjustments**
+### Complexer Classifier
+#### Idea
+The Classifier of the baseline only consists of one layer.
+This might limit the learning capacity of the model since one layer is not enough to represent nonlinear patterns.
+A good embedding is not enough, when there is not enough potential in the classifier to untangle the complexity.
+Dropout included to limit overfitting.
+#### Expectation
+The expactation is that overall accuracy will be increased. The overfitting behavior will be an interesting topic.
+The limiting learning potential might induce overfitting on the one hand.
+On the other hand overfitting could also be increased if the classifier is over-complex for to task. 
+### GELU activation function
+#### Idea
+As discussed in the lecture, ReLU, which is currently used in the classifier, is in many cases not the optimal activation function.
+As an alternative GELU will be tested, since it enables a smoother learning process and reduces the chance of dead neurons.
+(GELU does not deactivate the neuron strictly at values <0)
+#### Expectation
+A generally smother, more direct learning curve is expected as well as faster convergence.
+This notion is caused in a more effective learning process with introduction of GELU.
+### Expressive Pooling
+#### Idea
+This adjustment deals with the last state of the embedding of the base model, the so called [CLS] token.
+The current classifier is operation solely based on this token.
+Especially in sentiment analysis, single words can have very high informative value. (words such as "recommend")
+The information of these single words could not be emphasized enough in the CLS token.
+Based on ideas from research mean and max pooling was added to the CLS token.
+The idea was adapted from Xing et al. (2024).
+#### Expectation
+The introduction of pooling layers might reduce the overfitting problem. 
+Single words "signal-words" can have strong influence on the class. With additional pooling layers,
+the classifier, whose expressiveness was increased in the last step, could get more sensitive signals to those "signal-words".
+All in all, there will be more experimentation needed to investigate the effect of different pooling layers on the training.
+### Pretraining on Allnli Dataset
+#### Idea
+AllNLI provides many positive pairs (entailment) and meaningful negative pairs (contradiction). 
+(https://www.sbert.net/examples/sparse_encoder/training/nli/README.html)
+Through this, the model learns to recognize semantic similarity, distinguish opposing meanings, and handle ambiguous or partially related statements.
+The idea is to equipt the model with broad semantic abilities before it is trained on the small, fine‑grained sentiment dataset.
+
+#### Expectation
+Pretraining on the ALLNLI Dataset could bring the model in a state where more effective learning is possible.
+When the ability of semantic understanding is enhanced before the training on the original dataset, generalization might be improved and overfitting reduced.
+
+---
+
+### **2. Hyperparameter regulated Adjustments** 
+
+### Label smoothing
+#### idea
+This adjustment is supposed to reduce overfitting.
+Since there are 5 sentiment classes in the dataset it can be assumed, that labeling of the training-dataset is highly subjective.
+If a one sample is labeled as 4 or as 3, for example, might in many cases be ambiguous.
+To account for this uncertainty noise was added to the labels. 
+The idea was adapted from Si und Gao (2023).
+#### expectation
+Overfitting is expected to shrink, since training on discrete labels is less strict.
+Overall accuracy may also reduced since noise is introduced to the training data.
+
+### Weight decay
+#### Idea
+A common way to improve learning performance and overfitting is regularization.
+Here weight decay is introduced in the model, which penalizes big parameter updates.
+The idea was adapted from Devlin et al. (2018).
+#### Expectation
+The expectation here is obviously reduced overfitting.
+Overall accuracy might increase as well, since the learning process is more controlled.
+
+### Warumup Ratio
+#### Idea
+This adjustment also can possibly control the learning process.
+Here learning rates increase linearly in the beginning of the training.
+The idea is to reduce weight updates, when gradients are not stabilized yet.
+So it can be seen as a form of regularization in the beginning of the training.
+The idea was adapted from Devlin et al. (2018).
+#### Expectation 
+The model may converge in later epochs, but find a better optimum in the end.
+
+---
+
 
 ## Semantic Textual Similarity (STS)
 
@@ -1047,7 +1128,6 @@ Unfortunately pretraining on this Dataset did not improve the model performance.
 This result has to be relativiced, since model performance did not recover when the bert-uncased model was chosen as the model prestate again.
 Since the original code had to be adjusted in different files, the error could not be found. Reasonable discussion is therefore not possible.
 
-Since the original code had to be adjusted in multiple files
 
 
 ## Semantic Textual Similarity (STS)
