@@ -124,7 +124,7 @@ def model_eval_multitask(
                 b_ids = b_ids.to(device)
                 b_mask = b_mask.to(device)
 
-                logits = model.predict_sentiment(b_ids, b_mask)
+                logits = model.predict_sentiment_sst(b_ids, b_mask)
                 y_hat = logits.argmax(dim=-1).flatten().cpu().numpy()
                 b_labels = b_labels.flatten().cpu().numpy()
 
@@ -273,7 +273,7 @@ def model_eval_test_multitask(
                 b_ids = b_ids.to(device)
                 b_mask = b_mask.to(device)
 
-                logits = model.predict_sentiment(b_ids, b_mask)
+                logits = model.predict_sentiment_sst(b_ids, b_mask)
                 y_hat = logits.argmax(dim=-1).flatten().cpu().numpy()
 
                 sst_y_pred.extend(y_hat)
