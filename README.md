@@ -1703,11 +1703,6 @@ Early stopping was added mainly as a practical compute-saving mechanism. Since t
 
 For QQP, we select the model with sentence-pair interaction features, MLP head, `hidden_dropout_prob = 0.1`, and best-checkpoint selection over a 7-epoch budget to be included in our main branch that is to be submitted since it achieved the best development accuracy among our tested QQP variants.
 
-### QQP Hyperparameter Optimization
-
-The value `hidden_dropout_prob = 0.1` was **not** selected by an exhaustive hyperparameter sweep. We compared the original default value `0.3` with one targeted lower value, `0.1`. We did not test additional values such as `0.01`, `0.05`, `0.15`, or `0.2`.
-
-Therefore, this should be interpreted as a targeted training-configuration experiment rather than complete hyperparameter optimization. In addition, the lower-dropout run increased the epoch budget from 3 to 7 and enabled early stopping, so the observed improvement cannot be attributed to dropout alone. A stricter follow-up would compare dropout values under the same epoch budget, early-stopping protocol, and multiple random seeds.
 
 ## Stanford Sentiment Treebank (SST)
 
@@ -1869,44 +1864,6 @@ overfitting, but no penalty setting improved dev r, while adding 149,145 externa
 improved it by 0.019. The gap indicated a data shortage rather than an over-flexible
 model.
 
-### Hyperparameter Optimization
-
-We did not run automated search (Ray Tune, Optuna). With runs at 6–19 minutes and a noise
-floor of 0.004, a random search would mostly have sampled noise, and could not have
-distinguished a real effect from a lucky seed without repeated runs per configuration.
-Instead each hyperparameter was swept individually, with a stated hypothesis, on top of
-the best configuration available at the time.
-
-| Parameter | Values tried | Chosen | Result |
-| --- | --- | --- | --- |
-| Pooling | CLS, mean, max | mean | 0.379 / 0.659 / 0.463 |
-| Similarity head | concat+linear, cosine | cosine | 0.379 / 0.659 |
-| MNRL weight | 0.3, 0.5, 1.0, 2.0 | 0.5 | 0.794 / 0.804 / 0.798 / 0.782 |
-| MNRL temperature τ | 0.01, 0.05, 0.10 | 0.05 | 0.746 / 0.804 / 0.801 |
-| CoSENT temperature | 0.05, 0.5 | dropped | 0.490 / 0.800 |
-| Batch size | 64, 128 | 64 | 0.804 / 0.803 |
-| Hidden dropout | 0.1, 0.3 | 0.3 | see confound note below |
-| Warmup ratio | 0.0, 0.1 | 0.0 | 0.804 / 0.803 |
-| Weight decay λ | 0, 0.01, 0.1, 20 | 0 | 0.831 / 0.830 / 0.829 / 0.823 |
-| Cross-attention heads | 8 | 8 | not swept |
-| Cross-attention dropout | 0.1, 0.3 | 0.1 | 0.831 / 0.829 |
-| Epochs | 4–15 | 4–5 | peak moved 9 → 4 → 3 as initialisation improved |
-| SNLI pretrain epochs | 1, 2 | 1 | same result, two minutes cheaper |
-
-Two findings from this sweep are worth more than the values themselves.
-
-**Temperature is not a free parameter.** Both τ = 0.01 in MNRL and τ = 0.05 in CoSENT
-produced catastrophic failures for the same underlying reason, an exponential term
-overwhelming the rest of the loss. Sweeping τ blindly and reading only the final scores
-would have recorded two bad methods instead of one numerical bug and one genuine
-redundancy.
-
-**A carried-over default silently confounded eight experiments.** We lowered dropout from
-0.3 to 0.1 for the SimCSE experiments, where dropout is the augmentation. That setting
-then persisted through seven further experiments, exaggerating overfitting in all of them.
-It was caught only when a CoSENT rerun with dropout restored scored 0.140 higher than the
-same configuration at dropout 0.1. Every run afterwards passes `--hidden_dropout_prob 0.3`
-explicitly rather than relying on the default.
 
 ## Paraphrase Type Detection (PTD)
 
@@ -2046,13 +2003,6 @@ The preliminary differences are primarily **temporal**, not evidence of a better
 
 Moderate focusing parameters are the most promising candidates for that rerun, while $\gamma=4$ suppresses easy decisions too aggressively in the preliminary sweep. The corrected experiment should predeclare a selection rule and compare epochs-to-target as well as fixed-epoch accuracy and MCC.
 
-### PTD Hyperparameter Optimization
-
-The 16 focal gamma values formed a motivated 5-epoch exploratory sweep of focusing strength. Based on the development accuracy and MCC scores, four moderate values ($\gamma=0.87$, $1.1$, $1.15$, and $1.25$) were selected for the 25-epoch confirmatory run. Moderate values were the most promising, while $\gamma=4$ was too aggressive and substantially reduced both metrics.
-
-For capped Weighted BCE, `cap=20` was the predefined capped-weighting setting; it was not a broad or random parameter search.
-
-Many gamma values were screened and the confirmatory values were selected using the same overlapping development data used for historical reporting. This reuse is a validity limitation, and final claims should use a corrected non-overlapping split with a predeclared selection rule where possible.
 
 ### PTD Model Selection
 
@@ -2091,11 +2041,6 @@ Two scheduler runs came closest to improving on the baseline while retaining com
 
 **We selected Model 33 as the flagship** because it improves `reference_bleu` substantially while keeping the increase in `input_bleu` comparatively limited.
 
-### Hyperparameter Optimization
-
-This is a motivated Cartesian grid of 100 runs across the six scheduler types and their parameters, with the changes and hypotheses recorded in the methodology table. Space-separated option values in each command form a Cartesian product, while non-scheduler settings remain fixed for controlled comparisons.
-
-As discussed in the [Scope of interest](#scope-of-interest), `batch_size` was not jointly tuned because the experiments stay close to the baseline and compare learning rates under the fixed baseline configuration. Different `lr` values might benefit from changing the `batch_size`, so jointly tuning learning rate, effective batch size, and the learning-rate schedule remains future work.
 
 ### Overall discussion
 
@@ -2141,6 +2086,71 @@ Because the reference contains information that cannot be recovered from the inp
 This creates a metric pitfall: increasing `reference_bleu` often means copying the input. Slightly deviating from the input can reduce `reference_bleu`, but it may double or triple the `100 - input_bleu` component and thereby increase `penalized_bleu`.
 
 A related limitation is discussed by Jin et al.,[^16] who note that, in text style transfer, “simply copying the input can result in high BLEU scores.” This supports the general concern that BLEU can reward copying, although it does not establish the specific changes in `penalized_bleu` described here.
+
+# Hyperparameter Optimization
+
+## Quora Question Pairs (QQP)
+
+The value `hidden_dropout_prob = 0.1` was **not** selected by an exhaustive hyperparameter sweep. We compared the original default value `0.3` with one targeted lower value, `0.1`. We did not test additional values such as `0.01`, `0.05`, `0.15`, or `0.2`.
+
+Therefore, this should be interpreted as a targeted training-configuration experiment rather than complete hyperparameter optimization. In addition, the lower-dropout run increased the epoch budget from 3 to 7 and enabled early stopping, so the observed improvement cannot be attributed to dropout alone. A stricter follow-up would compare dropout values under the same epoch budget, early-stopping protocol, and multiple random seeds.
+
+## Stanford Sentiment Treebank (SST)
+
+_Hyperparameter optimization is to be added._
+
+## Semantic Textual Similarity (STS)
+
+We did not run automated search (Ray Tune, Optuna). With runs at 6–19 minutes and a noise
+floor of 0.004, a random search would mostly have sampled noise, and could not have
+distinguished a real effect from a lucky seed without repeated runs per configuration.
+Instead each hyperparameter was swept individually, with a stated hypothesis, on top of
+the best configuration available at the time.
+
+| Parameter | Values tried | Chosen | Result |
+| --- | --- | --- | --- |
+| Pooling | CLS, mean, max | mean | 0.379 / 0.659 / 0.463 |
+| Similarity head | concat+linear, cosine | cosine | 0.379 / 0.659 |
+| MNRL weight | 0.3, 0.5, 1.0, 2.0 | 0.5 | 0.794 / 0.804 / 0.798 / 0.782 |
+| MNRL temperature τ | 0.01, 0.05, 0.10 | 0.05 | 0.746 / 0.804 / 0.801 |
+| CoSENT temperature | 0.05, 0.5 | dropped | 0.490 / 0.800 |
+| Batch size | 64, 128 | 64 | 0.804 / 0.803 |
+| Hidden dropout | 0.1, 0.3 | 0.3 | see confound note below |
+| Warmup ratio | 0.0, 0.1 | 0.0 | 0.804 / 0.803 |
+| Weight decay λ | 0, 0.01, 0.1, 20 | 0 | 0.831 / 0.830 / 0.829 / 0.823 |
+| Cross-attention heads | 8 | 8 | not swept |
+| Cross-attention dropout | 0.1, 0.3 | 0.1 | 0.831 / 0.829 |
+| Epochs | 4–15 | 4–5 | peak moved 9 → 4 → 3 as initialisation improved |
+| SNLI pretrain epochs | 1, 2 | 1 | same result, two minutes cheaper |
+
+Two findings from this sweep are worth more than the values themselves.
+
+**Temperature is not a free parameter.** Both τ = 0.01 in MNRL and τ = 0.05 in CoSENT
+produced catastrophic failures for the same underlying reason, an exponential term
+overwhelming the rest of the loss. Sweeping τ blindly and reading only the final scores
+would have recorded two bad methods instead of one numerical bug and one genuine
+redundancy.
+
+**A carried-over default silently confounded eight experiments.** We lowered dropout from
+0.3 to 0.1 for the SimCSE experiments, where dropout is the augmentation. That setting
+then persisted through seven further experiments, exaggerating overfitting in all of them.
+It was caught only when a CoSENT rerun with dropout restored scored 0.140 higher than the
+same configuration at dropout 0.1. Every run afterwards passes `--hidden_dropout_prob 0.3`
+explicitly rather than relying on the default.
+
+## Paraphrase Type Detection (PTD)
+
+The 16 focal gamma values formed a motivated 5-epoch exploratory sweep of focusing strength. Based on the development accuracy and MCC scores, four moderate values ($\gamma=0.87$, $1.1$, $1.15$, and $1.25$) were selected for the 25-epoch confirmatory run. Moderate values were the most promising, while $\gamma=4$ was too aggressive and substantially reduced both metrics.
+
+For capped Weighted BCE, `cap=20` was the predefined capped-weighting setting; it was not a broad or random parameter search.
+
+Many gamma values were screened and the confirmatory values were selected using the same overlapping development data used for historical reporting. This reuse is a validity limitation, and final claims should use a corrected non-overlapping split with a predeclared selection rule where possible.
+
+## Paraphrase Type Generation (PTG)
+
+This is a motivated Cartesian grid of 100 runs across the six scheduler types and their parameters, with the changes and hypotheses recorded in the methodology table. Space-separated option values in each command form a Cartesian product, while non-scheduler settings remain fixed for controlled comparisons.
+
+As discussed in the [Scope of interest](#scope-of-interest), `batch_size` was not jointly tuned because the experiments stay close to the baseline and compare learning rates under the fixed baseline configuration. Different `lr` values might benefit from changing the `batch_size`, so jointly tuning learning rate, effective batch size, and the learning-rate schedule remains future work.
 
 # Visualizations
 
