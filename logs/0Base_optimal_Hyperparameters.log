@@ -1,0 +1,36 @@
+2026-09-05 16:59:41 - Logfile gestartet für Modell: models/BASEmitparameternfinetune-10-2e-05-sst.pt
+2026-09-05 16:59:43 - ------------------------------
+2026-09-05 16:59:43 -     BERT Model Configuration
+2026-09-05 16:59:43 - ------------------------------
+2026-09-05 16:59:43 - {'allnli': False,
+ 'batch_size': 16,
+ 'classifier_dropout': 0.0,
+ 'epochs': 10,
+ 'filepath': 'models/BASEmitparameternfinetune-10-2e-05-sst.pt',
+ 'hidden_dropout_prob': 0.3,
+ 'label_smoothing': 0.0,
+ 'local_files_only': True,
+ 'lr': 2e-05,
+ 'option': 'finetune',
+ 'seed': 11711,
+ 'task': 'sst',
+ 'use_gpu': True,
+ 'warmup_ratio': 0.0,
+ 'weight_decay': 0.0,
+ 'yelp': False}
+2026-09-05 16:59:43 - ------------------------------
+2026-09-05 17:00:20 - Epoch 01 (sst): train loss :: 1.226, train :: 0.602, dev :: 0.500
+2026-09-05 17:00:22 - Saving the model to models/BASEmitparameternfinetune-10-2e-05-sst.pt.
+2026-09-05 17:00:54 - Epoch 02 (sst): train loss :: 0.924, train :: 0.778, dev :: 0.511
+2026-09-05 17:00:56 - Saving the model to models/BASEmitparameternfinetune-10-2e-05-sst.pt.
+2026-09-05 17:01:28 - Epoch 03 (sst): train loss :: 0.668, train :: 0.821, dev :: 0.513
+2026-09-05 17:01:30 - Saving the model to models/BASEmitparameternfinetune-10-2e-05-sst.pt.
+2026-09-05 17:02:02 - Epoch 04 (sst): train loss :: 0.453, train :: 0.915, dev :: 0.523
+2026-09-05 17:02:04 - Saving the model to models/BASEmitparameternfinetune-10-2e-05-sst.pt.
+2026-09-05 17:02:37 - Epoch 05 (sst): train loss :: 0.280, train :: 0.959, dev :: 0.521
+2026-09-05 17:03:09 - Epoch 06 (sst): train loss :: 0.174, train :: 0.976, dev :: 0.520
+2026-09-05 17:03:41 - Epoch 07 (sst): train loss :: 0.107, train :: 0.989, dev :: 0.515
+2026-09-05 17:04:13 - Epoch 08 (sst): train loss :: 0.065, train :: 0.996, dev :: 0.508
+2026-09-05 17:04:45 - Epoch 09 (sst): train loss :: 0.051, train :: 0.996, dev :: 0.515
+2026-09-05 17:05:18 - Epoch 10 (sst): train loss :: 0.038, train :: 0.998, dev :: 0.519
+2026-09-05 17:05:20 - Loaded model to test from models/BASEmitparameternfinetune-10-2e-05-sst.pt
