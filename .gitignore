@@ -6,7 +6,8 @@
 *output*
 logdir
 models
-slurm_files
+slurm_files/*
+!slurm_files/.gitkeep
 
 # Personal / local files
 claude.md
