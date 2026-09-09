@@ -638,7 +638,7 @@ def get_args():
     parser.add_argument("--classifier_dropout", type=float, default=0.3)
     parser.add_argument("--allnli", action="store_true")
     parser.add_argument("--early_stopping", action="store_true")
-    parser.add_argument("--patience", type=int, default=2)
+    parser.add_argument("--patience", type=int, default=0)
 
     args = parser.parse_args()
     return args
@@ -646,7 +646,7 @@ def get_args():
 
 if __name__ == "__main__":
     args = get_args()
-    args.filepath = f"models/weightdecay0.01{args.option}-{args.epochs}-{args.lr}-{args.task}.pt"  # save path
+    args.filepath = f"models/finetune{args.option}-{args.epochs}-{args.lr}-{args.task}.pt"  # save path
     # Logging aktivieren
     logfile = setup_logging(args.filepath)
     seed_everything(args.seed)  # fix the seed for reproducibility
