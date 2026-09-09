@@ -1,7 +1,7 @@
 # Semantic Seekers
 
 - **Group name:** Semantic Seekers
-- **Group code:** _To be added_
+- **Group code:** G11
 - **Group repository:** [DL_NLP2026_Semantic_Seekers](https://github.com/andruhus/DL_NLP2026_Semantic_Seekers)
 - **Tutor responsible:** _To be added_
 - **Group team leader:** _To be added_
