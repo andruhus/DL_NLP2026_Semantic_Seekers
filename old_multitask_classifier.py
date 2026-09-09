@@ -154,8 +154,12 @@ def train_sst(args):
         args.sst_dev, args.quora_dev, args.sts_dev, args.etpc_dev, split="train"
     )
 
-    sst_train_dataloader = None
-    sst_dev_dataloader = None
+    quora_train_dataloader = None
+    quora_dev_dataloader = None
+    sts_train_dataloader = None
+    sts_dev_dataloader = None
+    etpc_train_dataloader = None
+    etpc_dev_dataloader = None
 
     sst_train_data = SentenceClassificationDataset(sst_train_data, args)
     sst_dev_data = SentenceClassificationDataset(sst_dev_data, args)
