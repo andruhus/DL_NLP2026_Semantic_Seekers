@@ -486,9 +486,7 @@ def train_multitask(args):
     model = model.to(device)
 
     lr = args.lr
-    # getattr keeps this safe if the --weight_decay flag is dropped during a merge:
-    # this is a shared line, and a bare args.weight_decay would break every task, not just STS.
-    optimizer = AdamW(model.parameters(), lr=lr, weight_decay=getattr(args, 'weight_decay', 0.0))
+    optimizer = AdamW(model.parameters(), lr=lr, weight_decay=args.weight_decay)
     best_dev_acc = float("-inf")
 
     # --- STS (Part 2): optional LR warmup + cosine decay ---------------------

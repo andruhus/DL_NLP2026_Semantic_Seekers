@@ -9,7 +9,7 @@ nothing here is hand-entered.
 
 Run from the repository root:  python figures/make_sts_figures.py
 """
-import csv, os, re
+import csv, os, re, sys
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
@@ -377,6 +377,18 @@ def v9_regularisation():
 
 
 if __name__ == "__main__":
+    # The SLURM logs these figures are built from are gitignored, so a fresh clone
+    # cannot regenerate them. Fail loudly rather than silently emitting empty plots
+    # over the committed ones.
+    have = [f for f in os.listdir(LOGS) if f.endswith(".out")] if os.path.isdir(LOGS) else []
+    if len(have) < 10:
+        sys.exit(
+            f"Refusing to run: found {len(have)} training logs in {LOGS}/ (expected ~43).\n"
+            "These figures are generated from the raw SLURM logs of the experiment runs,\n"
+            "which are not committed. The committed PNGs in figures/sts/ are the\n"
+            "originals; this script is provided to document how they were produced and\n"
+            "to regenerate them from a full set of logs."
+        )
     print(f"generating figures -> {OUT}")
     for fn in (v1_progression, v2_convergence_speed, v3_overfitting,
                v4_train_loss, v5_failures, v6_seed_variance, v7_error_analysis,

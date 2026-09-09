@@ -121,7 +121,8 @@ Monitor with `squeue --me`; output lands in `slurm_files/sts_best.out`.
 | `--warmup_ratio`, `--grad_clip`, `--weight_decay` | Optimisation controls |
 
 Every STS flag defaults to a no-op, so SST / QQP / ETPC runs are unaffected.
-`python multitask_classifier.py --help` lists all of them.
+(Note: `--help` only lists the five arguments parsed before `parse_known_args()`
+in the course scaffold, not the full set — the table above is the reference.)
 
 ### Generating predictions
 
