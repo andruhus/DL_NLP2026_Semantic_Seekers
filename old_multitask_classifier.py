@@ -103,6 +103,10 @@ class MultitaskBERT(nn.Module):
             nn.Linear(128, N_SENTIMENT_CLASSES)
         )
 
+        self.paraphrase_classifier = nn.Linear(BERT_HIDDEN_SIZE * 2, 1)
+        self.similarity_regressor = nn.Linear(BERT_HIDDEN_SIZE * 2, 1)
+        self.paraphrase_type_classifier = nn.Linear(BERT_HIDDEN_SIZE * 2, 26)
+
     def forward(self, input_ids, attention_mask):
         """Takes a batch of sentences and produces embeddings for them."""
 
@@ -125,6 +129,41 @@ class MultitaskBERT(nn.Module):
         embedding = self.forward(input_ids, attention_mask)
         return self.sentiment_classifier_sst(embedding)
 
+    def predict_paraphrase(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
+        """
+        Given a batch of pairs of sentences, outputs a single logit for predicting whether they are paraphrases.
+        Note that your output should be unnormalized (a logit); it will be passed to the sigmoid function
+        during evaluation, and handled as a logit by the appropriate loss function.
+        Dataset: Quora
+        """
+        emb1 = self.forward(input_ids_1, attention_mask_1)
+        emb2 = self.forward(input_ids_2, attention_mask_2)
+        return self.paraphrase_classifier(torch.cat([emb1, emb2], dim=1))
+
+    def predict_similarity(self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2):
+        """
+        Given a batch of pairs of sentences, outputs a single logit corresponding to how similar they are.
+        Since the similarity label is a number in the interval [0,5], your output should be normalized to the interval [0,5];
+        it will be handled as a logit by the appropriate loss function.
+        Dataset: STS
+        """
+        emb1 = self.forward(input_ids_1, attention_mask_1)
+        emb2 = self.forward(input_ids_2, attention_mask_2)
+        return torch.sigmoid(self.similarity_regressor(torch.cat([emb1, emb2], dim=1))) * 5
+
+    def predict_paraphrase_types(
+        self, input_ids_1, attention_mask_1, input_ids_2, attention_mask_2
+    ):
+        """
+        Given a batch of pairs of sentences, outputs logits for detecting the paraphrase types.
+        There are 26 different types of paraphrases.
+        Thus, your output should contain 26 unnormalized logits for each sentence. It will be passed to the sigmoid function
+        during evaluation, and handled as a logit by the appropriate loss function.
+        Dataset: ETPC
+        """
+        emb1 = self.forward(input_ids_1, attention_mask_1)
+        emb2 = self.forward(input_ids_2, attention_mask_2)
+        return self.paraphrase_type_classifier(torch.cat([emb1, emb2], dim=1))
 
 
 def save_model(model, optimizer, args, config, filepath):
@@ -143,7 +182,7 @@ def save_model(model, optimizer, args, config, filepath):
 
 
 # TODO Currently only trains on SST dataset!
-def train_sst(args):
+def train_multitask(args):
     device = torch.device("cuda") if args.use_gpu else torch.device("cpu")
     # Load data
     # Create the data and its corresponding datasets and dataloader:
@@ -154,6 +193,8 @@ def train_sst(args):
         args.sst_dev, args.quora_dev, args.sts_dev, args.etpc_dev, split="train"
     )
 
+    sst_train_dataloader = None
+    sst_dev_dataloader = None
     quora_train_dataloader = None
     quora_dev_dataloader = None
     sts_train_dataloader = None
@@ -161,22 +202,59 @@ def train_sst(args):
     etpc_train_dataloader = None
     etpc_dev_dataloader = None
 
-    sst_train_data = SentenceClassificationDataset(sst_train_data, args)
-    sst_dev_data = SentenceClassificationDataset(sst_dev_data, args)
+    # SST dataset
+    if args.task == "sst" or args.task == "multitask":
+        sst_train_data = SentenceClassificationDataset(sst_train_data, args)
+        sst_dev_data = SentenceClassificationDataset(sst_dev_data, args)
 
-    sst_train_dataloader = DataLoader(
-        sst_train_data,
-        shuffle=True,
-        batch_size=args.batch_size,
-        collate_fn=sst_train_data.collate_fn,
-    )
-    sst_dev_dataloader = DataLoader(
-        sst_dev_data,
-        shuffle=False,
-        batch_size=args.batch_size,
-        collate_fn=sst_dev_data.collate_fn,
-    )
+        sst_train_dataloader = DataLoader(
+            sst_train_data,
+            shuffle=True,
+            batch_size=args.batch_size,
+            collate_fn=sst_train_data.collate_fn,
+        )
+        sst_dev_dataloader = DataLoader(
+            sst_dev_data,
+            shuffle=False,
+            batch_size=args.batch_size,
+            collate_fn=sst_dev_data.collate_fn,
+        )
 
+    if args.task == "sts" or args.task == "multitask":
+        sts_train_data = SentencePairDataset(sts_train_data, args, isRegression=True)
+        sts_dev_data = SentencePairDataset(sts_dev_data, args, isRegression=True)
+        sts_train_dataloader = DataLoader(
+            sts_train_data, shuffle=True, batch_size=args.batch_size,
+            collate_fn=sts_train_data.collate_fn,
+        )
+        sts_dev_dataloader = DataLoader(
+            sts_dev_data, shuffle=False, batch_size=args.batch_size,
+            collate_fn=sts_dev_data.collate_fn,
+        )
+
+    if args.task == "qqp" or args.task == "multitask":
+        quora_train_data = SentencePairDataset(quora_train_data, args)
+        quora_dev_data = SentencePairDataset(quora_dev_data, args)
+        quora_train_dataloader = DataLoader(
+            quora_train_data, shuffle=True, batch_size=args.batch_size,
+            collate_fn=quora_train_data.collate_fn,
+        )
+        quora_dev_dataloader = DataLoader(
+            quora_dev_data, shuffle=False, batch_size=args.batch_size,
+            collate_fn=quora_dev_data.collate_fn,
+        )
+
+    if args.task == "etpc" or args.task == "multitask":
+        etpc_train_data = SentencePairDataset(etpc_train_data, args)
+        etpc_dev_data = SentencePairDataset(etpc_dev_data, args)
+        etpc_train_dataloader = DataLoader(
+            etpc_train_data, shuffle=True, batch_size=args.batch_size,
+            collate_fn=etpc_train_data.collate_fn,
+        )
+        etpc_dev_dataloader = DataLoader(
+            etpc_dev_data, shuffle=False, batch_size=args.batch_size,
+            collate_fn=etpc_dev_data.collate_fn,
+        )
 
     # Init model
     config = {
@@ -198,11 +276,32 @@ def train_sst(args):
 
     model = MultitaskBERT(config)
     model = model.to(device)
+
+    ###
+    ### Pretrained Model laden
+    ###
+    if args.allnli==True:
+        logging.info("Loading pretrained AllNLI model...")
+        pretrained = torch.load("models/pretrain-allnli.pt", map_location="cpu")
+        full_state = pretrained["model"]
+
+        bert_state = {
+            k.replace("bert.", ""): v
+            for k, v in full_state.items()
+            if k.startswith("bert.")
+        }
+
+        model.bert.load_state_dict(bert_state)
+
+    ###
+    ###
+    ###
+
     lr = args.lr
     optimizer = AdamW(model.parameters(), lr=lr, weight_decay=args.weight_decay)
-
+###
 ### Hier kommt learning rate scheduler
-
+###
     # Anzahl Trainingsschritte berechnen
     total_steps = args.epochs * len(sst_train_dataloader)
 
@@ -215,6 +314,9 @@ def train_sst(args):
         num_warmup_steps=warmup_steps,
         num_training_steps=total_steps
     )
+###
+###
+###
     best_dev_acc = float("-inf")
 
     # Run for the specified number of epochs
@@ -223,31 +325,95 @@ def train_sst(args):
         train_loss = 0
         num_batches = 0
 
-        # Train the model on the sst dataset.
+        if args.task == "sst" or args.task == "multitask":
+            # Train the model on the sst dataset.
 
-        for batch in tqdm(
-            sst_train_dataloader, desc=f"train-{epoch+1:02}", disable=TQDM_DISABLE
-        ):
-            b_ids, b_mask, b_labels = (
-                batch["token_ids"],
-                batch["attention_mask"],
-                batch["labels"],
-            )
+            for batch in tqdm(
+                sst_train_dataloader, desc=f"train-{epoch+1:02}", disable=TQDM_DISABLE
+            ):
+                b_ids, b_mask, b_labels = (
+                    batch["token_ids"],
+                    batch["attention_mask"],
+                    batch["labels"],
+                )
 
-            b_ids = b_ids.to(device)
-            b_mask = b_mask.to(device)
-            b_labels = b_labels.to(device)
+                b_ids = b_ids.to(device)
+                b_mask = b_mask.to(device)
+                b_labels = b_labels.to(device)
 
-            optimizer.zero_grad()
-            logits = model.predict_sentiment_sst(b_ids, b_mask)
-            loss = F.cross_entropy(logits, b_labels.view(-1), label_smoothing=args.label_smoothing)
-            loss.backward()
-            optimizer.step()
-            scheduler.step()
+                optimizer.zero_grad()
+                logits = model.predict_sentiment_sst(b_ids, b_mask)
+                loss = F.cross_entropy(logits, b_labels.view(-1), label_smoothing=args.label_smoothing)
+                loss.backward()
+                optimizer.step()
+                scheduler.step()
 
-            train_loss += loss.item()
-            num_batches += 1
+                train_loss += loss.item()
+                num_batches += 1
 
+        if args.task == "sts" or args.task == "multitask":
+            for batch in tqdm(sts_train_dataloader, desc=f"train-{epoch+1:02}", disable=TQDM_DISABLE):
+                b_ids1, b_mask1, b_ids2, b_mask2, b_labels = (
+                    batch["token_ids_1"], batch["attention_mask_1"],
+                    batch["token_ids_2"], batch["attention_mask_2"],
+                    batch["labels"],
+                )
+                b_ids1, b_mask1 = b_ids1.to(device), b_mask1.to(device)
+                b_ids2, b_mask2 = b_ids2.to(device), b_mask2.to(device)
+                b_labels = b_labels.to(device)
+
+                optimizer.zero_grad()
+                logits = model.predict_similarity(b_ids1, b_mask1, b_ids2, b_mask2)
+                loss = F.mse_loss(logits.flatten().float(), b_labels.flatten().float())
+                loss.backward()
+                optimizer.step()
+
+                train_loss += loss.item()
+                num_batches += 1
+
+        if args.task == "qqp" or args.task == "multitask":
+            for batch in tqdm(quora_train_dataloader, desc=f"train-{epoch+1:02}", disable=TQDM_DISABLE):
+                b_ids1, b_mask1, b_ids2, b_mask2, b_labels = (
+                    batch["token_ids_1"], batch["attention_mask_1"],
+                    batch["token_ids_2"], batch["attention_mask_2"],
+                    batch["labels"],
+                )
+                b_ids1, b_mask1 = b_ids1.to(device), b_mask1.to(device)
+                b_ids2, b_mask2 = b_ids2.to(device), b_mask2.to(device)
+                b_labels = b_labels.to(device)
+
+                optimizer.zero_grad()
+                logits = model.predict_paraphrase(b_ids1, b_mask1, b_ids2, b_mask2)
+                loss = F.binary_cross_entropy_with_logits(
+                    logits.flatten().float(), b_labels.flatten().float()
+                )
+                loss.backward()
+                optimizer.step()
+
+                train_loss += loss.item()
+                num_batches += 1
+
+        if args.task == "etpc" or args.task == "multitask":
+            for batch in tqdm(etpc_train_dataloader, desc=f"train-{epoch+1:02}", disable=TQDM_DISABLE):
+                b_ids1, b_mask1, b_ids2, b_mask2, b_labels = (
+                    batch["token_ids_1"], batch["attention_mask_1"],
+                    batch["token_ids_2"], batch["attention_mask_2"],
+                    batch["labels"],
+                )
+                b_ids1, b_mask1 = b_ids1.to(device), b_mask1.to(device)
+                b_ids2, b_mask2 = b_ids2.to(device), b_mask2.to(device)
+                b_labels = b_labels.to(device)
+
+                optimizer.zero_grad()
+                logits = model.predict_paraphrase_types(b_ids1, b_mask1, b_ids2, b_mask2)
+                loss = F.binary_cross_entropy_with_logits(
+                    logits.float(), b_labels.float()
+                )
+                loss.backward()
+                optimizer.step()
+
+                train_loss += loss.item()
+                num_batches += 1
 
         train_loss = train_loss / num_batches
 
@@ -344,6 +510,10 @@ def get_args():
     parser.add_argument("--sts_train", type=str, default="data/sts-similarity-train.csv")
     parser.add_argument("--sts_dev", type=str, default="data/sts-similarity-dev.csv")
     parser.add_argument("--sts_test", type=str, default="data/sts-similarity-test-student.csv")
+
+    # TODO
+    # You should split the train data into a train and dev set first and change the
+    # default path of the --etpc_dev argument to your dev set.
     parser.add_argument("--etpc_train", type=str, default="data/etpc-paraphrase-train.csv")
     parser.add_argument("--etpc_dev", type=str, default="data/etpc-paraphrase-dev.csv")
     parser.add_argument(
@@ -370,7 +540,62 @@ def get_args():
         ),
     )
 
+    parser.add_argument(
+        "--quora_dev_out",
+        type=str,
+        default=(
+            "predictions/bert/quora-paraphrase-dev-output.csv"
+            if not args.task == "multitask"
+            else "predictions/bert/multitask/quora-paraphrase-dev-output.csv"
+        ),
+    )
+    parser.add_argument(
+        "--quora_test_out",
+        type=str,
+        default=(
+            "predictions/bert/quora-paraphrase-test-output.csv"
+            if not args.task == "multitask"
+            else "predictions/bert/multitask/quora-paraphrase-test-output.csv"
+        ),
+    )
 
+    parser.add_argument(
+        "--sts_dev_out",
+        type=str,
+        default=(
+            "predictions/bert/sts-similarity-dev-output.csv"
+            if not args.task == "multitask"
+            else "predictions/bert/multitask/sts-similarity-dev-output.csv"
+        ),
+    )
+    parser.add_argument(
+        "--sts_test_out",
+        type=str,
+        default=(
+            "predictions/bert/sts-similarity-test-output.csv"
+            if not args.task == "multitask"
+            else "predictions/bert/multitask/sts-similarity-test-output.csv"
+        ),
+    )
+
+    parser.add_argument(
+        "--etpc_dev_out",
+        type=str,
+        default=(
+            "predictions/bert/etpc-paraphrase-detection-dev-output.csv"
+            if not args.task == "multitask"
+            else "predictions/bert/multitask/etpc-paraphrase-detection-dev-output.csv"
+        ),
+    )
+    parser.add_argument(
+        "--etpc_test_out",
+        type=str,
+        default=(
+            "predictions/bert/etpc-paraphrase-detection-test-output.csv"
+            if not args.task == "multitask"
+            else "predictions/bert/multitask/etpc-paraphrase-detection-test-output.csv"
+        ),
+    )
 
     # Hyperparameters
     parser.add_argument("--batch_size", help="sst: 64 can fit a 12GB GPU", type=int, default=16)
@@ -382,10 +607,22 @@ def get_args():
         default=2e-05 if args.option == "pretrain" else 2e-05,
     )
     parser.add_argument("--local_files_only", action="store_true")
+    ###
+    ###
+    ###
     parser.add_argument("--label_smoothing", type=float, default=0.0)
     parser.add_argument("--weight_decay", type=float, default=0.0)
     parser.add_argument("--warmup_ratio", type=float, default=0.1)
     parser.add_argument("--classifier_dropout", type=float, default=0.3)
+    parser.add_argument("--allnli", action="store_true")
+    parser.add_argument("--yelp", action="store_true")
+
+
+
+
+    ###
+    ###
+    ###
     args = parser.parse_args()
     return args
 
@@ -396,5 +633,4 @@ if __name__ == "__main__":
     # Logging aktivieren
     logfile = setup_logging(args.filepath)
     seed_everything(args.seed)  # fix the seed for reproducibility
-    train_sst(args)
-    test_model(args)
+    train_multitask(args)
