@@ -118,7 +118,7 @@ class MultitaskBERT(nn.Module):
         output = self.bert(input_ids, attention_mask)
         return output['pooler_output']
 
-    def predict_sentiment__sst(self, input_ids, attention_mask):
+    def predict_sentiment_sst(self, input_ids, attention_mask):
         """
         Given a batch of sentences, outputs logits for classifying sentiment.
         There are 5 sentiment classes:
