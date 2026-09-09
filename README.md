@@ -3,9 +3,13 @@
 - **Group name:** Semantic Seekers
 - **Group code:** G11
 - **Group repository:** [DL_NLP2026_Semantic_Seekers](https://github.com/andruhus/DL_NLP2026_Semantic_Seekers)
-- **Tutor responsible:** _To be added_
-- **Group team leader:** _To be added_
-- **Group members:** _To be added_
+- **Tutor responsible:** Martina Juharova
+- **Group team leader:** Andrii Demydenko ("andruhus")
+- **Group members:** 
+  - Simon Pummer ("GOESTERN-1159210"/SimonP), 
+  - Thorben Neitzke ("thorbenN2")
+  - Mohd Uwaish 
+
 
 # Setup instructions
 
@@ -2411,28 +2415,21 @@ Lower loss correlates with better `penalized_bleu`, while `reference_bleu` shows
 
 # Members Contribution
 
-Contributions from the remaining group members are _to be added_.
-
-**Mohd Uwaish — Semantic Textual Similarity (STS):** implemented the STS improvements in
-`multitask_classifier.py`: masked mean pooling and cosine similarity head, MNRL/NT-Xent
-contrastive loss, the cross-attention interaction layer (`encode_pair`), symmetry
-augmentation, and four transfer-pretraining paths (SNLI, PAWS, Quora, TF-IDF-mined hard
-negatives), plus the CoSENT, AnglE and SMART auxiliary losses. Built the offline triplet
-caching pipeline, the checkpoint warm-start mechanism (`--init_checkpoint`), and the
-LR-scheduler, gradient-clipping and weight-decay controls. Ran and analysed 43 training
-runs, established the seed-variance noise floor, produced all
-figures (`figures/make_sts_figures.py`), and wrote the STS sections of this README. Raised
-STS dev Pearson r from 0.379 to 0.849.
+- Andrii Demydenko ("andruhus"): implemented all experiments for PTD and PTG + code review for QQP/SST/STS
+- Simon Pummer ("GOESTERN-1159210"/SimonP): implemented all experiments for SST + code review for PTG
+- Thorben Neitzke ("thorbenN2"): implemented all experiments for QQP + code review for PTD
+- Mohd Uwaish: implemented all experiments for STS + prepared the submission for Part01
 
 # AI-Usage Card
 
 Artificial Intelligence (AI) aided the development and restructuring of this project report. Five project-specific [AI-Usage Cards](https://ai-cards.org/) will be stored in `ai_cards/`:
 
-1. **Mohd Uwaish — Semantic Textual Similarity (STS):** [AI-Usage Card](ai_cards/ai-usage-card-Uwaish-STS.pdf)
-2. **AI-Usage Card 2:** _File link to be added_
-3. **AI-Usage Card 3:** _File link to be added_
-4. **AI-Usage Card 4:** _File link to be added_
-5. **AI-Usage Card 5:** _File link to be added_
+
+1. **Andrii Demydenko:** [AI-Usage Card](ai_cards/ai-usage-card-andrii.docx)
+2. **Simmon Pummer:** _File link to be added_
+3. **Thorben Neitzke:** _File link to be added_
+4. **Mohd Uwaish:** [AI-Usage Card](ai_cards/ai-usage-card-Uwaish-STS.pdf)
+
 
 ### Acknowledgement
 
