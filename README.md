@@ -1419,7 +1419,13 @@ Individual member contributions are _to be added_. This section should identify 
 
 # AI-Usage Card
 
-Artificial Intelligence (AI) aided the development and restructuring of this project report. The project-specific [AI-Usage Card](https://ai-cards.org/) is _to be added here_ before final submission.
+Artificial Intelligence (AI) aided the development and restructuring of this project report. Five project-specific [AI-Usage Cards](https://ai-cards.org/) will be stored in `ai_cards/`:
+
+1. **AI-Usage Card 1:** _File link to be added_
+2. **AI-Usage Card 2:** _File link to be added_
+3. **AI-Usage Card 3:** _File link to be added_
+4. **AI-Usage Card 4:** _File link to be added_
+5. **AI-Usage Card 5:** _File link to be added_
 
 ### Acknowledgement
 
