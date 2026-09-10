@@ -549,7 +549,7 @@ SST-5 assigns short movie-review excerpts to five sentiment classes, from highly
 
 ### Starting point and evaluation
 
-The starting model from Part 1 reached 0.519 development accuracy. Architectural changes were evaluated sequentially against the best accepted model state. Tunable regularization methods were then compared while holding the other selected hyperparameters fixed. Training and development accuracy curves were compared with `logdiff.py`; final experiment logs are stored in `logs/`, and preliminary logs in `logs/old_logs/`.
+The starting model from Part 1 reached 0.519 development accuracy. Architectural changes were evaluated sequentially against the best accepted model state. Tunable regularization methods were then compared while holding the other selected hyperparameters at the optimum. Training and development accuracy curves were compared with `logdiff.py`; final experiment logs are stored in `logs/`, and preliminary logs in `logs/old_logs/`.
 
 ### Architectural adjustments
 
