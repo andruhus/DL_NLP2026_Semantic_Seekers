@@ -29,7 +29,7 @@ conda activate dnlp
 
 ## Experiment outputs and model IDs
 
-For each experiment, we assign an ID to a model and save the parameters in [`paraphrase_generation/run_5epoch_results.csv`](paraphrase_generation/run_5epoch_results.csv). We save the information about their BLEU scores during training in [`paraphrase_generation/train_5epoch_results.csv`](paraphrase_generation/train_5epoch_results.csv).
+For each experiment, we assign an ID to a model and save the parameters in [`paraphrase_generation/run_5epoch_results.csv`](../paraphrase_generation/run_5epoch_results.csv). We save the information about their BLEU scores during training in [`paraphrase_generation/train_5epoch_results.csv`](../paraphrase_generation/train_5epoch_results.csv).
 
 ## Running commands
 
@@ -194,7 +194,7 @@ The changes and expectations for each scheduler are summarized in the [Learning 
 
 ### Constant Learning Rate
 
-Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Constant learning rate`. Sorted by descending `penalized_bleu`. BLEU scores are rounded to four decimal places.
+Source: [run_5epoch_results.csv](../paraphrase_generation/run_5epoch_results.csv), filtered to `Constant learning rate`. Sorted by descending `penalized_bleu`. BLEU scores are rounded to four decimal places.
 
 |     ID |       LR | `reference_bleu` | `input_bleu` | `penalized_bleu` |
 | -----: | -------: | ---------------: | -----------: | ---------------: |
@@ -214,7 +214,7 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 **Training dynamics.** IDs 74 and 65 are compared with the ID 70 baseline.
 
-![Constant learning-rate selected runs compared with baseline](paraphrase_generation/figure/constant_training_comparison.png)
+![Constant learning-rate selected runs compared with baseline](../figure/ptg/constant_training_comparison.png)
 
 #### Observations
 
@@ -224,7 +224,7 @@ However, the baseline still possesses a higher `reference_bleu`.
 
 ### Step Decay
 
-Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Step decay`. Sorted by descending `penalized_bleu`. BLEU scores are rounded to four decimal places.
+Source: [run_5epoch_results.csv](../paraphrase_generation/run_5epoch_results.csv), filtered to `Step decay`. Sorted by descending `penalized_bleu`. BLEU scores are rounded to four decimal places.
 
 |     ID |     LR | Min LR | Decay interval (epochs) | Step size (updates) | Gamma | `reference_bleu` | `input_bleu` | `penalized_bleu` |
 | -----: | -----: | -----: | ----------------------: | ------------------: | ----: | ---------------: | -----------: | ---------------: |
@@ -258,7 +258,7 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 **Training dynamics.** IDs 16 and 17 are compared with the ID 70 baseline.
 
-![Step-decay selected runs compared with baseline](paraphrase_generation/figure/step_training_comparison.png)
+![Step-decay selected runs compared with baseline](../figure/ptg/step_training_comparison.png)
 
 #### Observations
 
@@ -266,7 +266,7 @@ IDs 16, 17, and 18 report the same top `penalized_bleu` despite different gamma 
 
 ### Cosine Decay
 
-Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Cosine decay`. Sorted by descending `penalized_bleu` (ties by ascending ID). BLEU scores are rounded to four decimal places.
+Source: [run_5epoch_results.csv](../paraphrase_generation/run_5epoch_results.csv), filtered to `Cosine decay`. Sorted by descending `penalized_bleu` (ties by ascending ID). BLEU scores are rounded to four decimal places.
 
 |     ID |     LR | Min LR | Total updates | `reference_bleu` | `input_bleu` | `penalized_bleu` |
 | -----: | -----: | -----: | ------------: | ---------------: | -----------: | ---------------: |
@@ -285,7 +285,7 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 **Training dynamics.** IDs 46 and 51 are compared with the ID 70 baseline.
 
-![Cosine-decay selected runs compared with baseline](paraphrase_generation/figure/cosine_training_comparison.png)
+![Cosine-decay selected runs compared with baseline](../figure/ptg/cosine_training_comparison.png)
 
 #### Observations
 
@@ -293,7 +293,7 @@ The first models that somewhat outperformed the baseline. However, we can notice
 
 ### Linear Decay
 
-Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Linear decay`. Sorted by descending `penalized_bleu` (ties by ascending ID). BLEU scores are rounded to four decimal places.
+Source: [run_5epoch_results.csv](../paraphrase_generation/run_5epoch_results.csv), filtered to `Linear decay`. Sorted by descending `penalized_bleu` (ties by ascending ID). BLEU scores are rounded to four decimal places.
 
 |     ID |     LR | Min LR | Total updates | `reference_bleu` | `input_bleu` | `penalized_bleu` |
 | -----: | -----: | -----: | ------------: | ---------------: | -----------: | ---------------: |
@@ -312,7 +312,7 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 **Training dynamics.** IDs 38 and 33 are compared with the ID 70 baseline.
 
-![Linear-decay selected runs compared with baseline](paraphrase_generation/figure/linear_training_comparison.png)
+![Linear-decay selected runs compared with baseline](../figure/ptg/linear_training_comparison.png)
 
 #### Observations
 
@@ -321,7 +321,7 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 ### Inverse-Square-Root Decay
 
-Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Inverse square root`. Sorted by descending `penalized_bleu` (ties by ascending ID). BLEU scores are rounded to four decimal places.
+Source: [run_5epoch_results.csv](../paraphrase_generation/run_5epoch_results.csv), filtered to `Inverse square root`. Sorted by descending `penalized_bleu` (ties by ascending ID). BLEU scores are rounded to four decimal places.
 
 |     ID |     LR | Min LR | Total updates | Warmup updates | `reference_bleu` | `input_bleu` | `penalized_bleu` |
 | -----: | -----: | -----: | ------------: | -------------: | ---------------: | -----------: | ---------------: |
@@ -340,7 +340,7 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 **Training dynamics.** IDs 54 and 63 are compared with the ID 70 baseline.
 
-![Inverse-square-root selected runs compared with baseline](paraphrase_generation/figure/inverse_sqrt_training_comparison.png)
+![Inverse-square-root selected runs compared with baseline](../figure/ptg/inverse_sqrt_training_comparison.png)
 
 #### Observations
 
@@ -348,7 +348,7 @@ Inverse-square-root schedulers decreased extremely fast, which made them analogo
 
 ### Metric-Dependent Decay
 
-Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), filtered to `Metric dependent`. Sorted by descending `penalized_bleu` (ties by ascending ID). BLEU scores are rounded to four decimal places.
+Source: [run_5epoch_results.csv](../paraphrase_generation/run_5epoch_results.csv), filtered to `Metric dependent`. Sorted by descending `penalized_bleu` (ties by ascending ID). BLEU scores are rounded to four decimal places.
 
 |     ID |     LR | Min LR | Factor (CSV gamma) | Patience | Threshold | `reference_bleu` | `input_bleu` | `penalized_bleu` |
 | -----: | -----: | -----: | -----------------: | -------: | --------: | ---------------: | -----------: | ---------------: |
@@ -379,7 +379,7 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 **Training dynamics.** IDs 91 and 97 are compared with the ID 70 baseline.
 
-![Metric-dependent selected runs compared with baseline](paraphrase_generation/figure/metric_training_comparison.png)
+![Metric-dependent selected runs compared with baseline](../figure/ptg/metric_training_comparison.png)
 
 #### Observations
 
@@ -473,10 +473,10 @@ Scheduler-specific training plots are shown with each scheduler experiment above
 Let's investigate how `reference_bleu` and `penalized_bleu` depend on the loss.
 
 Here are the checkpoint values for different epochs. I've excluded some failed experiments with extremely low BLEU scores (~87% of the data left).
-![Text 2](paraphrase_generation/figure/loss_bleu_scatter_87.png)
+![Text 2](../figure/ptg/loss_bleu_scatter_87.png)
 
 If we further filter for `reference_bleu <= 46.5` and `penalized_bleu <= 10` (successful checkpoints; ~17% of the data left), we get the following:
-![Text 1](paraphrase_generation/figure/loss_bleu_scatter.png)
+![Text 1](../figure/ptg/loss_bleu_scatter.png)
 
 We can observe that a decrease in the loss correlates with better `penalized_bleu`, while `reference_bleu` has no correlation, or even a slight negative one.
 

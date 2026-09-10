@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # Output directory
-FIGURE_DIR = Path("paraphrase_detection/figure")
-FIGURE_DIR.mkdir(exist_ok=True)
+FIGURE_DIR = Path("figure/ptd")
+FIGURE_DIR.mkdir(parents=True, exist_ok=True)
 
 def __plot_graph(
     y_unweighted,

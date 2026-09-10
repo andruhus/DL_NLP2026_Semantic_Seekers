@@ -7,17 +7,17 @@ Follows the project guideline for the Visualizations section: plot metrics
 Every number is parsed from the SLURM logs in experiments/slurm_files/, so
 nothing here is hand-entered.
 
-Run from the repository root:  python figures/make_sts_figures.py
+Run from the repository root:  python figure/sts/make_sts_figures.py
 """
 import csv, os, re, sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-LOGS, OUT = "slurm_files", "figures/sts"
+LOGS, OUT = "slurm_files", "figure/sts"
 os.makedirs(OUT, exist_ok=True)
 
 plt.rcParams.update({
@@ -440,7 +440,7 @@ if __name__ == "__main__":
         sys.exit(
             f"Refusing to run: found {len(have)} training logs in {LOGS}/ (expected ~43).\n"
             "These figures are generated from the raw SLURM logs of the experiment runs,\n"
-            "which are not committed. The committed PNGs in figures/sts/ are the\n"
+            "which are not committed. The committed PNGs in figure/sts/ are the\n"
             "originals; this script is provided to document how they were produced and\n"
             "to regenerate them from a full set of logs."
         )

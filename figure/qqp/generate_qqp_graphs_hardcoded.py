@@ -92,7 +92,7 @@ def save_loss_plot(output_dir: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output_dir", type=Path, default=Path("figures/qqp"))
+    parser.add_argument("--output_dir", type=Path, default=Path("figure/qqp"))
     args = parser.parse_args()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)

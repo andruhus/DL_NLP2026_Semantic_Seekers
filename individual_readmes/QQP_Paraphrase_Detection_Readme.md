@@ -225,7 +225,7 @@ The final configuration kept the same pair features and the same MLP head, but r
 Default dropout; did not improve over the linear-head pair-feature model. Default dropout; did not improve over the linear-head pair-feature model.
 
 This comparison does **not** isolate dropout alone because the stronger run also used a longer epoch budget and optional early stopping. It should therefore be interpreted as a combined training-configuration improvement rather than as a complete dropout hyperparameter optimization.
-![QQP train/dev accuracy curves](qqp_paraphrase_predict/figures/qqp_train_dev_accuracy_curves.png)
+![QQP train/dev accuracy curves](../figure/qqp/qqp_train_dev_accuracy_curves.png)
 
 ### Best Run: Epoch-Level Results
 
@@ -275,7 +275,7 @@ All reported QQP experiments use the same random seed, `11711`. We therefore did
 The development set was used to compare model variants and training configurations. Therefore, the development accuracy should be interpreted as a model-selection metric, not as an independent estimate of final test performance.
 
 We did not perform a complete dropout sweep over values such as `0.01`, `0.05`, `0.15`, or `0.2`. Such a sweep would be necessary to make a stronger claim about the optimal dropout value for this MLP head.
-![QQP training loss curves](qqp_paraphrase_predict/figures/qqp_train_loss_curves.png)
+![QQP training loss curves](../figure/qqp/qqp_train_loss_curves.png)
 
 ## Conclusion
 

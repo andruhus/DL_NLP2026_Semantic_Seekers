@@ -1597,7 +1597,7 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 **Training dynamics.** IDs 74 and 65 are compared with the ID 70 baseline.
 
-![Constant learning-rate selected runs compared with baseline](paraphrase_generation/figure/constant_training_comparison.png)
+![Constant learning-rate selected runs compared with baseline](figure/ptg/constant_training_comparison.png)
 
 ##### Observations
 
@@ -1641,7 +1641,7 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 **Training dynamics.** IDs 16 and 17 are compared with the ID 70 baseline.
 
-![Step-decay selected runs compared with baseline](paraphrase_generation/figure/step_training_comparison.png)
+![Step-decay selected runs compared with baseline](figure/ptg/step_training_comparison.png)
 
 ##### Observations
 
@@ -1668,7 +1668,7 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 **Training dynamics.** IDs 46 and 51 are compared with the ID 70 baseline.
 
-![Cosine-decay selected runs compared with baseline](paraphrase_generation/figure/cosine_training_comparison.png)
+![Cosine-decay selected runs compared with baseline](figure/ptg/cosine_training_comparison.png)
 
 ##### Observations
 
@@ -1695,7 +1695,7 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 **Training dynamics.** IDs 38 and 33 are compared with the ID 70 baseline.
 
-![Linear-decay selected runs compared with baseline](paraphrase_generation/figure/linear_training_comparison.png)
+![Linear-decay selected runs compared with baseline](figure/ptg/linear_training_comparison.png)
 
 ##### Observations
 
@@ -1723,7 +1723,7 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 **Training dynamics.** IDs 54 and 63 are compared with the ID 70 baseline.
 
-![Inverse-square-root selected runs compared with baseline](paraphrase_generation/figure/inverse_sqrt_training_comparison.png)
+![Inverse-square-root selected runs compared with baseline](figure/ptg/inverse_sqrt_training_comparison.png)
 
 ##### Observations
 
@@ -1762,7 +1762,7 @@ Source: [run_5epoch_results.csv](paraphrase_generation/run_5epoch_results.csv), 
 
 **Training dynamics.** IDs 91 and 97 are compared with the ID 70 baseline.
 
-![Metric-dependent selected runs compared with baseline](paraphrase_generation/figure/metric_training_comparison.png)
+![Metric-dependent selected runs compared with baseline](figure/ptg/metric_training_comparison.png)
 
 ##### Observations
 
@@ -2344,13 +2344,13 @@ As discussed in the [Scope of interest](#scope-of-interest), `batch_size` was no
 
 ### Train and Development Accuracy
 
-![QQP train/dev accuracy curves](qqp_paraphrase_predict/figures/qqp_train_dev_accuracy_curves.png)
+![QQP train/dev accuracy curves](figure/qqp/qqp_train_dev_accuracy_curves.png)
 
 The development accuracy of the strongest run peaked at epoch 6. In epoch 7, training accuracy continued to increase, but development accuracy dropped from `0.868` to `0.866`. This indicates mild overfitting after epoch 6 and supports selecting the best development checkpoint rather than the final epoch checkpoint.
 
 ### Training Loss
 
-![QQP training loss curves](qqp_paraphrase_predict/figures/qqp_train_loss_curves.png)
+![QQP training loss curves](figure/qqp/qqp_train_loss_curves.png)
 
 The training curves show that the strongest model continued to fit the training data throughout all epochs, while development accuracy peaked at epoch 6. The pair-feature linear-head model and MLP model with dropout `0.3` were also still improving at the end of their 3-epoch budgets, which limits direct attribution of the final gain to dropout or the MLP head alone.
 
@@ -2358,43 +2358,43 @@ The training curves show that the strongest model continued to fit the training 
 
 ### Baseline hyperparameter tuning
 
-![SST baseline before and after learning-rate and batch-size tuning](figures/0_Task1_to_opt_hyper.png)
+![SST baseline before and after learning-rate and batch-size tuning](figure/sst/0_Task1_to_opt_hyper.png)
 
 Tuning slightly improves development accuracy but increases overfitting.
 
 ### Classifier architecture
 
-![SST baseline compared with the multi-layer ReLU classifier](figures/1_Classifier_RELU.png)
+![SST baseline compared with the multi-layer ReLU classifier](figure/sst/1_Classifier_RELU.png)
 
 The multi-layer classifier preserves peak accuracy while reducing the train–development gap.
 
 ### GELU activation
 
-![SST ReLU and GELU classifier comparison](figures/2_RELU_GELU.png)
+![SST ReLU and GELU classifier comparison](figure/sst/2_RELU_GELU.png)
 
 GELU raises development accuracy from 0.523 to 0.528.
 
 ### Expressive pooling
 
-![SST GELU classifier compared with expressive pooling](figures/3_pooling.png)
+![SST GELU classifier compared with expressive pooling](figure/sst/3_pooling.png)
 
 Adding mean and max pooling lowers development accuracy, so the change is discarded.
 
 ### Label smoothing
 
-![SST label-smoothing comparison](figures/smoothing.png)
+![SST label-smoothing comparison](figure/sst/smoothing.png)
 
 Label smoothing of 0.01 performs worse than the unsmoothed configuration.
 
 ### Weight decay
 
-![SST weight-decay comparison](figures/weight_decay_0.05.png)
+![SST weight-decay comparison](figure/sst/weight_decay_0.05.png)
 
 Weight decay of 0.05 reduces accuracy and makes training less stable.
 
 ### Warmup ratio
 
-![SST warmup-ratio comparison](figures/warmup_ratio_0.0.png)
+![SST warmup-ratio comparison](figure/sst/warmup_ratio_0.0.png)
 
 Warmup does not improve peak accuracy but produces a more stable curve across epochs.
 
@@ -2410,7 +2410,7 @@ quantity rather than a logged one, the transformation is stated in the text belo
 
 ### Dev performance per epoch
 
-![Dev Pearson r per epoch for each improvement stage](figures/sts/v1_dev_progression.png)
+![Dev Pearson r per epoch for each improvement stage](figure/sts/v1_dev_progression.png)
 
 One curve per improvement stage; the star marks the epoch whose checkpoint was saved.
 
@@ -2424,7 +2424,7 @@ every other configuration's best score at any epoch, and needs only five epochs 
 
 ### Convergence speed
 
-![Epochs required to reach each dev r level](figures/sts/v2_convergence_speed.png)
+![Epochs required to reach each dev r level](figure/sts/v2_convergence_speed.png)
 
 For each configuration and each dev-r threshold, the bar height is the first epoch at which
 that threshold was reached; "never" means the run finished below it. Lower is faster.
@@ -2440,7 +2440,7 @@ properties, and symmetry augmentation buys the first without the second.
 
 ### Overfitting dynamics
 
-![Train and dev Pearson r, and the gap between them](figures/sts/v3_overfitting_dynamics.png)
+![Train and dev Pearson r, and the gap between them](figure/sts/v3_overfitting_dynamics.png)
 
 Left: train (solid) against dev (dashed) Pearson r. Right: the generalisation gap, computed
 as train r minus dev r at the same epoch.
@@ -2455,7 +2455,7 @@ is what constrains the model.
 
 ### Training loss
 
-![Training loss per epoch for four runs with identical loss composition](figures/sts/v4_training_loss.png)
+![Training loss per epoch for four runs with identical loss composition](figure/sts/v4_training_loss.png)
 
 Restricted to four runs sharing an identical loss composition
 (`MSE + 0.5·cosine + 0.5·MNRL`). Loss is not comparable across runs with different terms,
@@ -2470,7 +2470,7 @@ metric we select on.
 
 ### Failure modes visible during training
 
-![SimCSE, CoSENT and MNRL temperature failure modes](figures/sts/v5_failure_modes.png)
+![SimCSE, CoSENT and MNRL temperature failure modes](figure/sts/v5_failure_modes.png)
 
 Left: SimCSE's training loss falls from 0.033 to 0.005 while dev r declines from 0.651 to
 0.608, the signature of a model solving the pretext task rather than learning semantics.
@@ -2482,7 +2482,7 @@ band and are nearly indistinguishable from each other.
 
 ### Seed variance
 
-![Dev Pearson r under three random seeds](figures/sts/v6_seed_variance.png)
+![Dev Pearson r under three random seeds](figure/sts/v6_seed_variance.png)
 
 The same configuration under three seeds; the shaded band is the full spread across seeds
 at each epoch, and the heavy line is their mean.
@@ -2495,7 +2495,7 @@ the 4–5 epoch setting in the final recipe.
 
 ### Transfer sources
 
-![Dev performance by transfer pretraining source](figures/sts/v8_transfer_sources.png)
+![Dev performance by transfer pretraining source](figure/sts/v8_transfer_sources.png)
 
 Left: dev r during STS fine-tuning for each pretraining source. Right: dev r after one
 fine-tuning epoch (faded) against the best epoch (solid).
@@ -2509,7 +2509,7 @@ cannot attribute SNLI's advantage to either alone.
 
 ### Regularisation
 
-![Dev and train Pearson r for five regularisation settings](figures/sts/v9_regularisation.png)
+![Dev and train Pearson r for five regularisation settings](figure/sts/v9_regularisation.png)
 
 Five regularisation settings against the unregularised baseline. Left: dev r. Right: train
 r, which is what a regulariser is supposed to move first.
@@ -2523,7 +2523,7 @@ fits its training data has not been tested, whatever its dev score says.
 
 ### Cross-attention weights
 
-![Cross-attention weights for two dev pairs](figures/sts/v10_cross_attention.png)
+![Cross-attention weights for two dev pairs](figure/sts/v10_cross_attention.png)
 
 Attention weights extracted from the trained model (`models/sts_exp08_seed42.pt`) for two
 dev pairs, one with a high gold score and one unrelated. Rows are sentence 1 tokens acting
@@ -2567,7 +2567,7 @@ single worked example.
 
 ### Error analysis
 
-![Predicted against gold similarity, error by band, and score distributions](figures/sts/v7_error_analysis.png)
+![Predicted against gold similarity, error by band, and score distributions](figure/sts/v7_error_analysis.png)
 
 Left: predicted against gold similarity for all 1,430 dev pairs, with an ordinary
 least-squares fit. Middle: mean absolute error within each gold-similarity band. Right:
@@ -2592,37 +2592,37 @@ The PTD plots visualize the same historical preliminary runs with overlapping de
 
 ### Aggressive Weighted BCE
 
-![PTD aggressive Weighted BCE development accuracy](paraphrase_detection/figure/dev_acc.png)
+![PTD aggressive Weighted BCE development accuracy](figure/ptd/dev_acc.png)
 
-![PTD aggressive Weighted BCE MCC](paraphrase_detection/figure/mcc.png)
+![PTD aggressive Weighted BCE MCC](figure/ptd/mcc.png)
 
 These curves show the aggressive objective eventually approaching the baseline, while remaining worse at the reported accuracy-selected checkpoints.
 
 ### Smoothed Weighted BCE
 
-![PTD smoothed Weighted BCE development accuracy](paraphrase_detection/figure/dev_acc_soft_weighted.png)
+![PTD smoothed Weighted BCE development accuracy](figure/ptd/dev_acc_soft_weighted.png)
 
-![PTD smoothed Weighted BCE MCC](paraphrase_detection/figure/mcc_soft_weighted.png)
+![PTD smoothed Weighted BCE MCC](figure/ptd/mcc_soft_weighted.png)
 
 These curves show the smoothed objectives' early MCC advantage and the unweighted BCE baseline catching up and slightly surpassing them with additional training.
 
 ### Focal Exploratory Sweep
 
-![PTD focal-loss exploratory sweep](paraphrase_detection/figure/focal_best_performance.png)
+![PTD focal-loss exploratory sweep](figure/ptd/focal_best_performance.png)
 
 The exploratory plot shows the stronger moderate gamma values at epoch 5 and the degradation from the aggressive $\gamma=4$ setting.
 
 ### Confirmatory Focal Run
 
-![PTD confirmatory focal development accuracy](paraphrase_detection/figure/dev_acc_focal.png)
+![PTD confirmatory focal development accuracy](figure/ptd/dev_acc_focal.png)
 
-![PTD confirmatory focal MCC](paraphrase_detection/figure/mcc_focal.png)
+![PTD confirmatory focal MCC](figure/ptd/mcc_focal.png)
 
 The difference plots show each focal run relative to the separately obtained BCE curve:
 
-![PTD confirmatory focal development-accuracy difference](paraphrase_detection/figure/dev_acc_focal_diff.png)
+![PTD confirmatory focal development-accuracy difference](figure/ptd/dev_acc_focal_diff.png)
 
-![PTD confirmatory focal MCC difference](paraphrase_detection/figure/mcc_focal_diff.png)
+![PTD confirmatory focal MCC difference](figure/ptd/mcc_focal_diff.png)
 
 The confirmatory curves show focal loss ahead at the reported early epochs and the differences mostly disappearing by final convergence at epoch 25.
 
@@ -2636,11 +2636,11 @@ We examine how `reference_bleu` and `penalized_bleu` relate to the loss.
 
 The following plot shows checkpoint values from different epochs after excluding failed experiments with extremely low BLEU scores; about 87% of the data remains.
 
-![PTG loss versus BLEU scores for the broad checkpoint set](paraphrase_generation/figure/loss_bleu_scatter_87.png)
+![PTG loss versus BLEU scores for the broad checkpoint set](figure/ptg/loss_bleu_scatter_87.png)
 
 Further filtering to `reference_bleu <= 46.5` and `penalized_bleu <= 10` leaves the successful checkpoints (about 17% of the data):
 
-![PTG loss versus BLEU scores for successful checkpoints](paraphrase_generation/figure/loss_bleu_scatter.png)
+![PTG loss versus BLEU scores for successful checkpoints](figure/ptg/loss_bleu_scatter.png)
 
 Lower loss correlates with better `penalized_bleu`, while `reference_bleu` shows no clear correlation and may even have a slight negative relationship.
 

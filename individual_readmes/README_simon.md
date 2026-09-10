@@ -157,7 +157,7 @@ Here only batch size and learning rate was optimized.
 Has a higher chance to explore are local minimum better that a larger one, since smaller steps lead to lower update and hence lower overshoot over the minimum.
 
 Plot 1.0: Base after Task1 -> Base with optimized hyperparameters
-![0Base_afterTask1](./figures/0_Task1_to_opt_hyper.png)
+![0Base_afterTask1](../figure/sst/0_Task1_to_opt_hyper.png)
 
 ### 1.2 ReLU Classifier
 This result where interesting, since accuracy was not improved as expected.
@@ -167,7 +167,7 @@ More expressiveness should either result in better performance, since complexer 
 or over fitting should increase since the model is over-complex. (So patterns that are only based on randomness are learned.)
 
 Plot 1.1: Base with optimized hyperparameters -> Classifier RELU
-![0Base_afterTask1](./figures/1_Classifier_RELU.png) 
+![0Base_afterTask1](../figure/sst/1_Classifier_RELU.png)
 
 ### 1.3 GELU Classifier
 Performance increased with this adjustment as expected. The learning process was not smother though.
@@ -176,7 +176,7 @@ This signal can on the one and contain meaningful information, on the other hand
 This notion would explain the training result.
 
 Plot 1.2: Classifier RELU -> Classifier GELU
-![2_RELU_GELU](figures/2_RELU_GELU.png)
+![2_RELU_GELU](../figure/sst/2_RELU_GELU.png)
 
 ### 1.4 Expressive Pooling
 The result of adjusting the Pooling was quite disappointing. Performance dropped in all regards.
@@ -186,7 +186,7 @@ Therefore the overall idea was dropped and hence not integrated in the model.
 It seems that the more expressive pooling does not contain enough useful information to counteract additional overfitting, which can be expected when additional data of low value is added.
 
 Plot 1.3: Classifier GELU -> Extendet Pooling
-![3_pooling](figures/3_pooling.png)
+![3_pooling](../figure/sst/3_pooling.png)
 ### 2.1 Label Smoothing
 Label smoothing, here implemented in a very low rate to emphasize the sensibility of this factor, does also not improve performance.
 It yields in higher overfitting and lower overall dev-accuracy. This issue increases when label smoothing is increased.
@@ -194,7 +194,8 @@ This is quite counterintuitive. At least overfitting should be limited by adding
 It would be interesting to search here for suitable explanations, unfortunately this question remains open.
 
 Plot 2.1: Label smoothing (0 vs 0.01)
-![4_smoothing](figures/smoothing.png)
+![4_smoothing](../figure/sst/smoothing.png)
+
 ### 2.2 Weight Decay
 Here no improvement can be seen as well. Training is getting more unstable with weight decay.
 Since learning rate was optimized first, irrespective of the effect of weight decay,
@@ -202,7 +203,7 @@ the learning rate might be small enough to make more regularization unnecessary.
 With higher learning rates, positive effects of weight decay still is expected.
 
 Plot 2.2 Weight decay (0 vs 0.05)
-![6_weight_decay](figures/weight_decay_0.05.png)
+![6_weight_decay](../figure/sst/weight_decay_0.05.png)
 ### 2.3 Warmup Ratio
 Even though the warmup ratio did not impove the overall dev accuracy over all epochs,
 it still results in more stable training with less overfitting behavior.
@@ -210,7 +211,7 @@ It can be clearly seen that learning beginns slower, but seems to find a more st
 is more stable over the epochs. It is reasonable to assume that this improvement can improve test accuracy.
 
 Plot 2.3: Warmup ratio (0 vs 0.2)
-![5_warmup](figures/warmup_ratio_0.0.png)
+![5_warmup](../figure/sst/warmup_ratio_0.0.png)
 ### AllNLI Dataset
 Unfortunately pretraining on this Dataset did not improve the model performance.
 This result has to be relativiced, since model performance did not recover when the bert-uncased model was chosen as the model prestate again.
