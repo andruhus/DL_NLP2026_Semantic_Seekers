@@ -120,6 +120,22 @@ The SST task uses the shared environment described above. The analysis and plott
 ```sh
 pip install matplotlib tabulate
 ```
+For reproducing the results, run following command:
+
+```sh
+python sst_classifier.py --task sst --option finetune --use_gpu
+```
+The hyperparameters are set at the optimum as default.
+Following additional hyperparameters can be set:
+
+    --label_smoothing       -> Regulate label smoothing methodology
+
+    --weight_decay          -> Regulate the degree of the weight decay
+
+    --warmup_ratio          -> Regulate the degree of the warm up ratio
+
+    --classifier_dropout    -> Set the dropout rate for the classifier
+
 
 The experiments evaluate five-class sentiment classification on the [Stanford Sentiment Treebank (SST-5)](https://paperswithcode.com/sota/sentiment-analysis-on-sst-5-fine-grained).
 
