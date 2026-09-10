@@ -2180,11 +2180,18 @@ Therefore, this should be interpreted as a targeted training-configuration exper
 
 ## Stanford Sentiment Treebank (SST)
 
-Hyperparameters were tuned sequentially to limit compute cost:
-
-1. learning rate and batch size;
-2. warmup ratio and weight decay;
-3. classifier dropout and label smoothing.
+### Hyperparameter search
+All Models where run with the best hyperparameters found.
+Parameters where tested step by step to avoid high computation time and cost.
+Parameters with bigger expected influence on training where optimized first.
+For the search following order was followed and the Hyper_optimizer.py file was used:
+1. Learning Rate and Batch Size
+2. Warmup Ratio and Weight Decay
+3. Classifier Dropout and Label Smoothing
+- Workflow: Optimize first based on common suggestions, then optimize again with values around the best result
+- For initial experimentation label_smoothing and weight_decay was set 0, because it resulted in higher accuracy
+- for warmup 0 and 0.1 was optimal, 0.1 was chosen since accuracy was higher over more epochs. This indicates more stable training
+- weight decay does not improve performance. so it is set as 0
 
 The selected configuration is:
 
