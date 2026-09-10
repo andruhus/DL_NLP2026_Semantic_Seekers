@@ -1048,13 +1048,12 @@ Does lowering dropout from `0.3` to `0.1` and increasing the epoch budget to 7, 
 
 The experiments first evaluated architectural changes and then varied one regularization parameter at a time around the selected configuration.
 
-### **1. Architectural adjustments**   
+### **1. Architectural adjustments** 
+
 ### 1.1 Hyperparameter Optimization
 After hyperparameter optimization on dev accuracy the model showed higher overfitting behavior.
 Here only batch size and learning rate was optimized.
 Has a higher chance to explore are local minimum better that a larger one, since smaller steps lead to lower update and hence lower overshoot over the minimum.
-
-(see Plot 1.0)
 
 ### 1.2 ReLU Classifier
 This result where interesting, since accuracy was not improved as expected.
@@ -1063,15 +1062,11 @@ The fact that more the more expressive model has a similar performance on the op
 More expressiveness should either result in better performance, since complexer patterns can be learned more effectively,
 or over fitting should increase since the model is over-complex. (So patterns that are only based on randomness are learned.)
 
-(see Plot 1.1): 
-
 ### 1.3 GELU Classifier
 Performance increased with this adjustment as expected. The learning process was not smother though.
 After rethinking my expectation this makes sence. In GeELU generally more signal can be expected to be passed.
 This signal can on the one and contain meaningful information, on the other hand it can also be quite noisy.
 This notion would explain the training result.
-
-(see Plot 1.2)
 
 ### 1.4 Expressive Pooling
 The result of adjusting the Pooling was quite disappointing. Performance dropped in all regards.
@@ -1080,7 +1075,7 @@ the success was very limited. overall performance dropped slightly. (see logs/ol
 Therefore the overall idea was dropped and hence not integrated in the model.
 It seems that the more expressive pooling does not contain enough useful information to counteract additional overfitting, which can be expected when additional data of low value is added.
 
-(see Plot 1.3)
+### **2. Tunable regularization adjustments**
 
 ### 2.1 Label Smoothing
 Label smoothing, here implemented in a very low rate to emphasize the sensibility of this factor, does also not improve performance.
@@ -1088,24 +1083,17 @@ It yields in higher overfitting and lower overall dev-accuracy. This issue incre
 This is quite counterintuitive. At least overfitting should be limited by adding noise to training data.
 It would be interesting to search here for suitable explanations, unfortunately this question remains open.
 
-### **2. Tunable regularization adjustments**
-(see Plot 2.1) 
-
 ### 2.2 Weight Decay
 Here no improvement can be seen as well. Training is getting more unstable with weight decay.
 Since learning rate was optimized first, irrespective of the effect of weight decay,
 the learning rate might be small enough to make more regularization unnecessary.
 With higher learning rates, positive effects of weight decay still is expected.
 
-(see Plot 2.2)
-
 ### 2.3 Warmup Ratio
 Even though the warmup ratio did not impove the overall dev accuracy over all epochs,
 it still results in more stable training with less overfitting behavior.
 It can be clearly seen that learning beginns slower, but seems to find a more stable optimum,
 is more stable over the epochs. It is reasonable to assume that this improvement can improve test accuracy.
-
-(see Plot 2.3)
 
 ### AllNLI Dataset
 Unfortunately pretraining on this Dataset did not improve the model performance.
