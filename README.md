@@ -1213,10 +1213,10 @@ partner sentence. This measurement changes the working explanation, not the resu
 
 **Experiment.** Two ways to give the encoder a better starting point: intermediate-task
 pretraining with MNRL on the 49,796 positive pairs of the course-provided Quora set, and
-warm-starting from a teammate's QQP-finetuned encoder (0.868 QQP dev accuracy, against our
+warm-starting from a QQP-finetuned encoder (0.868 QQP dev accuracy, against our
 own untouched Part 1 QQP model at 0.781).
 
-**Expectation.** The teammate checkpoint should be the stronger start. It is a much better
+**Expectation.** The QQP Encoder checkpoint should be the stronger start. It is a much better
 model on a closely related paraphrase task, and its supervised training used Quora's
 roughly 85,000 negative pairs, which our contrastive pretraining discards.
 
@@ -1227,22 +1227,22 @@ roughly 85,000 negative pairs, which our contrastive pretraining discards.
 | Stock minBERT | 0.831 |
 | + Quora MNRL pretraining (1 epoch) | **0.838** (mean of 3 seeds) |
 | Quora pretraining, 2 epochs | 0.840 |
-| Teammate QQP encoder | 0.830 |
-| Teammate QQP encoder + Quora pretraining | 0.832 |
+| QQP encoder | 0.830 |
+| QQP encoder + Quora pretraining | 0.832 |
 
-**Observation.** The teammate checkpoint performed no better than stock minBERT. Diffing
+**Observation.** The QQP Encoder's checkpoint performed no better than stock minBERT. Diffing
 it against stock minBERT before the run showed 199 of 200 tensors differing, with the
 largest changes concentrated in `bert_layers.11.*` and `pooler_dense.weight`. Quora
 pretraining added 0.007; a second epoch added nothing further despite halving the Quora
 loss, from 0.069 to 0.046.
 
-**Discussion.** The teammate result is explained by where their gradients went.
+**Discussion.** The QQP Encoder's result is explained by where their gradients went.
 `predict_paraphrase()` trains through `forward()` to `pooler_output` (`[CLS]`, dense,
 tanh), so their adaptations shaped the CLS pathway and the pooler. Our `encode()` ignores
 the pooler entirely and mean-pools `last_hidden_state`. Their strongest adaptations live
 in exactly the components our pipeline discards, and the top-layer specialisation for a
 binary decision appears to cost us slightly on graded similarity. Encoder transfer between
-teammates requires a shared consumption path, not merely a shared backbone; the same
+QQP requires a shared consumption path, not merely a shared backbone; the same
 asymmetry would apply in reverse if they warm-started from our mean-pooling-trained
 encoder.
 
@@ -1874,7 +1874,7 @@ to embeddings from a saved checkpoint, with the 0.830 of Exp 25a as their refere
 | Improvement 3 — + MNRL contrastive loss | 0.804 |
 | Improvement 4 — + cross-attention layer | 0.828 |
 | Improvement 5 — + symmetry augmentation | 0.831 |
-| Improvement 6 — + teammate encoder init | 0.830 |
+| Improvement 6 — + QQP encoder init | 0.830 |
 | **Improvement 7 — + SNLI triplet pretraining** | **0.849** |
 
 Final dev Pearson r is 0.849, the mean of three seeds (0.847 / 0.851 / 0.848), an increase
@@ -1892,11 +1892,11 @@ Experiments §4 and §5, not for their scores.
 | MNRL contrastive (τ = 0.05, w = 0.5) | 0.804 |
 | Cross-attention interaction layer | 0.828 |
 | STS symmetry augmentation | 0.831 |
-| Teammate QQP encoder initialisation | 0.830 |
+| QQP encoder initialisation | 0.830 |
 | SNLI triplet pretraining | 0.849 |
 
 Retained does not mean each of these improved dev r. Symmetry augmentation is kept for
-convergence speed and the teammate encoder initialisation only so the reported run
+convergence speed and the QQP encoder initialisation only so the reported run
 reproduces exactly; both sit inside the noise floor on score. Four of the seven — the
 cosine head, MNRL, cross-attention and SNLI pretraining — account for 0.450 of the 0.470
 total improvement.
@@ -2376,7 +2376,7 @@ Restricted to four runs sharing an identical loss composition
 since adding a term mechanically raises the total.
 
 Epoch-1 loss orders exactly by quality of initialisation: 2.99 for cross-attention from
-stock weights, 2.58 with symmetry augmentation, 2.43 with the teammate encoder, 2.19 after
+stock weights, 2.58 with symmetry augmentation, 2.43 with the QQP encoder, 2.19 after
 SNLI pretraining. Better-initialised runs also descend faster. The symmetry run reaches
 the lowest final loss of the four while scoring 0.018 below the SNLI run on dev, a
 reminder that within this family the training loss ranks the runs differently from the
@@ -2628,4 +2628,3 @@ The project was modified by [Niklas Bauer](https://github.com/ItsNiklas/) and [T
 [^19]: Si, Y., & Gao, X. (2023). *Revisiting the role of label smoothing in enhanced text sentiment classification*. Semantic Scholar.
 
 [^20]: Devlin, J., Chang, M.-W., Lee, K., & Toutanova, K. (2018). [BERT: Pre-training of deep bidirectional transformers for language understanding](https://arxiv.org/abs/1810.04805). *arXiv preprint arXiv:1810.04805*.
-
