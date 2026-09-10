@@ -873,7 +873,7 @@ quantity rather than a logged one, the transformation is stated in the text belo
 
 ### Dev performance per epoch
 
-![Dev Pearson r per epoch for each improvement stage](figures/sts/v1_dev_progression.png)
+![Dev Pearson r per epoch for each improvement stage](../figures/sts/v1_dev_progression.png)
 
 One curve per improvement stage; the star marks the epoch whose checkpoint was saved.
 
@@ -887,7 +887,7 @@ every other configuration's best score at any epoch, and needs only five epochs 
 
 ### Convergence speed
 
-![Epochs required to reach each dev r level](figures/sts/v2_convergence_speed.png)
+![Epochs required to reach each dev r level](../figures/sts/v2_convergence_speed.png)
 
 For each configuration and each dev-r threshold, the bar height is the first epoch at which
 that threshold was reached; "never" means the run finished below it. Lower is faster.
@@ -903,7 +903,7 @@ properties, and symmetry augmentation buys the first without the second.
 
 ### Overfitting dynamics
 
-![Train and dev Pearson r, and the gap between them](figures/sts/v3_overfitting_dynamics.png)
+![Train and dev Pearson r, and the gap between them](../figures/sts/v3_overfitting_dynamics.png)
 
 Left: train (solid) against dev (dashed) Pearson r. Right: the generalisation gap, computed
 as train r minus dev r at the same epoch.
@@ -918,7 +918,7 @@ is what constrains the model.
 
 ### Training loss
 
-![Training loss per epoch for four runs with identical loss composition](figures/sts/v4_training_loss.png)
+![Training loss per epoch for four runs with identical loss composition](../figures/sts/v4_training_loss.png)
 
 Restricted to four runs sharing an identical loss composition
 (`MSE + 0.5·cosine + 0.5·MNRL`). Loss is not comparable across runs with different terms,
@@ -933,7 +933,7 @@ metric we select on.
 
 ### Failure modes visible during training
 
-![SimCSE, CoSENT and MNRL temperature failure modes](figures/sts/v5_failure_modes.png)
+![SimCSE, CoSENT and MNRL temperature failure modes](../figures/sts/v5_failure_modes.png)
 
 Left: SimCSE's training loss falls from 0.033 to 0.005 while dev r declines from 0.651 to
 0.608, the signature of a model solving the pretext task rather than learning semantics.
@@ -945,7 +945,7 @@ band and are nearly indistinguishable from each other.
 
 ### Seed variance
 
-![Dev Pearson r under three random seeds](figures/sts/v6_seed_variance.png)
+![Dev Pearson r under three random seeds](../figures/sts/v6_seed_variance.png)
 
 The same configuration under three seeds; the shaded band is the full spread across seeds
 at each epoch, and the heavy line is their mean.
@@ -958,7 +958,7 @@ the 4–5 epoch setting in the final recipe.
 
 ### Transfer sources
 
-![Dev performance by transfer pretraining source](figures/sts/v8_transfer_sources.png)
+![Dev performance by transfer pretraining source](../figures/sts/v8_transfer_sources.png)
 
 Left: dev r during STS fine-tuning for each pretraining source. Right: dev r after one
 fine-tuning epoch (faded) against the best epoch (solid).
@@ -972,7 +972,7 @@ cannot attribute SNLI's advantage to either alone.
 
 ### Regularisation
 
-![Dev and train Pearson r for five regularisation settings](figures/sts/v9_regularisation.png)
+![Dev and train Pearson r for five regularisation settings](../figures/sts/v9_regularisation.png)
 
 Five regularisation settings against the unregularised baseline. Left: dev r. Right: train
 r, which is what a regulariser is supposed to move first.
@@ -986,7 +986,7 @@ fits its training data has not been tested, whatever its dev score says.
 
 ### Cross-attention weights
 
-![Cross-attention weights for two dev pairs](figures/sts/v10_cross_attention.png)
+![Cross-attention weights for two dev pairs](../figures/sts/v10_cross_attention.png)
 
 Attention weights extracted from the trained model (`models/sts_exp08_seed42.pt`) for two
 dev pairs, one with a high gold score and one unrelated. Rows are sentence 1 tokens acting
@@ -1028,7 +1028,7 @@ single worked example.
 
 ### Error analysis
 
-![Predicted against gold similarity, error by band, and score distributions](figures/sts/v7_error_analysis.png)
+![Predicted against gold similarity, error by band, and score distributions](../figures/sts/v7_error_analysis.png)
 
 Left: predicted against gold similarity for all 1,430 dev pairs, with an ordinary
 least-squares fit. Middle: mean absolute error within each gold-similarity band. Right:
