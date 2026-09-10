@@ -2560,9 +2560,9 @@ Lower loss correlates with better `penalized_bleu`, while `reference_bleu` shows
 
 # Members Contribution
 
-- Andrii Demydenko ("andruhus"): implemented all experiments for PTD and PTG + code review for QQP/SST/STS + Task01 Bert
-- Simon Pummer ("GOESTERN-1159210"/SimonP): implemented all experiments for SST + code review for PTG + Task01 Bert
-- Thorben Neitzke ("thorbenN2"): implemented all experiments for QQP + code review for PTD + Task01 Bert
+- Andrii Demydenko ("andruhus"): implemented all experiments for PTD and PTG + code review for QQP/SST/STS + Part01 Bert
+- Simon Pummer ("GOESTERN-1159210"/SimonP): implemented all experiments for SST + code review for PTG + Part01 Bert
+- Thorben Neitzke ("thorbenN2"): implemented all experiments for QQP + code review for PTD + Part01 Bert
 - Mohd Uwaish: implemented all experiments for STS + provided submission version for Part01, since he was the first to finish
 
 # AI-Usage Card
