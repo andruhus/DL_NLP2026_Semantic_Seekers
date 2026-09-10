@@ -2623,7 +2623,7 @@ The project was modified by [Niklas Bauer](https://github.com/ItsNiklas/) and [T
 
 [^17]: Xing, J., Xue, C., Luo, D., & Xing, R. (2024). [Comparative analysis of pooling mechanisms in LLMs: A sentiment analysis perspective](https://arxiv.org/abs/2411.14654). *arXiv preprint arXiv:2411.14654*.
 
-[^18]: Sentence Transformers. (n.d.). [Natural language inference](https://www.sbert.net/examples/sparse_encoder/training/nli/README.html). *Sentence Transformers documentation*.
+[^18]: ALLNLI Dataset: https://www.sbert.net/examples/sparse_encoder/training/nli/README.html
 
 [^19]: Si, Y., & Gao, X. (2023). *Revisiting the role of label smoothing in enhanced text sentiment classification*. Semantic Scholar.
 
