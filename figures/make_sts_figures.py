@@ -77,7 +77,6 @@ def v1_progression():
         ax.plot(c["ep"][k], c["dev"][k], "*", color=col, ms=15,
                 markeredgecolor="white", markeredgewidth=0.7, zorder=6)
     ax.axhline(TARGET, color=CL["bad"], ls="--", lw=1.1, zorder=0)
-    ax.text(10.4, TARGET + .003, f"team target {TARGET}", color=CL["bad"], fontsize=8)
     ax.set_xlabel("training epoch"); ax.set_ylabel("dev Pearson r")
     ax.set_title("Dev Pearson r per epoch")
     ax.legend(loc="center left", bbox_to_anchor=(0.015, 0.40))
@@ -153,7 +152,7 @@ def v4_train_loss():
     """Loss is only comparable across runs with an identical loss composition."""
     runs = [("sts_exp16_crossattn", "cross-attention", CL["ca"]),
             ("sts_exp19_ca_symmetry", "+ symmetry", CL["sym"]),
-            ("sts_exp25a_qqpckpt", "+ teammate encoder init", CL["quora"]),
+            ("sts_exp25a_qqpckpt", "+ QQP encoder init", CL["quora"]),
             ("sts_exp08_seed42", "+ SNLI pretraining", CL["snli"])]
     fig, ax = plt.subplots(figsize=(7.4, 4.2))
     for f, lab, col in runs:
