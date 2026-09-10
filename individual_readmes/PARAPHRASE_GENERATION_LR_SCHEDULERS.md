@@ -214,7 +214,7 @@ Source: [run_5epoch_results.csv](../paraphrase_generation/run_5epoch_results.csv
 
 **Training dynamics.** IDs 74 and 65 are compared with the ID 70 baseline.
 
-![Constant learning-rate selected runs compared with baseline](../paraphrase_generation/figure/constant_training_comparison.png)
+![Constant learning-rate selected runs compared with baseline](../figure/ptg/constant_training_comparison.png)
 
 #### Observations
 
@@ -258,7 +258,7 @@ Source: [run_5epoch_results.csv](../paraphrase_generation/run_5epoch_results.csv
 
 **Training dynamics.** IDs 16 and 17 are compared with the ID 70 baseline.
 
-![Step-decay selected runs compared with baseline](../paraphrase_generation/figure/step_training_comparison.png)
+![Step-decay selected runs compared with baseline](../figure/ptg/step_training_comparison.png)
 
 #### Observations
 
@@ -285,7 +285,7 @@ Source: [run_5epoch_results.csv](../paraphrase_generation/run_5epoch_results.csv
 
 **Training dynamics.** IDs 46 and 51 are compared with the ID 70 baseline.
 
-![Cosine-decay selected runs compared with baseline](../paraphrase_generation/figure/cosine_training_comparison.png)
+![Cosine-decay selected runs compared with baseline](../figure/ptg/cosine_training_comparison.png)
 
 #### Observations
 
@@ -312,7 +312,7 @@ Source: [run_5epoch_results.csv](../paraphrase_generation/run_5epoch_results.csv
 
 **Training dynamics.** IDs 38 and 33 are compared with the ID 70 baseline.
 
-![Linear-decay selected runs compared with baseline](../paraphrase_generation/figure/linear_training_comparison.png)
+![Linear-decay selected runs compared with baseline](../figure/ptg/linear_training_comparison.png)
 
 #### Observations
 
@@ -340,7 +340,7 @@ Source: [run_5epoch_results.csv](../paraphrase_generation/run_5epoch_results.csv
 
 **Training dynamics.** IDs 54 and 63 are compared with the ID 70 baseline.
 
-![Inverse-square-root selected runs compared with baseline](../paraphrase_generation/figure/inverse_sqrt_training_comparison.png)
+![Inverse-square-root selected runs compared with baseline](../figure/ptg/inverse_sqrt_training_comparison.png)
 
 #### Observations
 
@@ -379,7 +379,7 @@ Source: [run_5epoch_results.csv](../paraphrase_generation/run_5epoch_results.csv
 
 **Training dynamics.** IDs 91 and 97 are compared with the ID 70 baseline.
 
-![Metric-dependent selected runs compared with baseline](../paraphrase_generation/figure/metric_training_comparison.png)
+![Metric-dependent selected runs compared with baseline](../figure/ptg/metric_training_comparison.png)
 
 #### Observations
 
@@ -473,10 +473,10 @@ Scheduler-specific training plots are shown with each scheduler experiment above
 Let's investigate how `reference_bleu` and `penalized_bleu` depend on the loss.
 
 Here are the checkpoint values for different epochs. I've excluded some failed experiments with extremely low BLEU scores (~87% of the data left).
-![Text 2](../paraphrase_generation/figure/loss_bleu_scatter_87.png)
+![Text 2](../figure/ptg/loss_bleu_scatter_87.png)
 
 If we further filter for `reference_bleu <= 46.5` and `penalized_bleu <= 10` (successful checkpoints; ~17% of the data left), we get the following:
-![Text 1](../paraphrase_generation/figure/loss_bleu_scatter.png)
+![Text 1](../figure/ptg/loss_bleu_scatter.png)
 
 We can observe that a decrease in the loss correlates with better `penalized_bleu`, while `reference_bleu` has no correlation, or even a slight negative one.
 

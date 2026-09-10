@@ -471,38 +471,38 @@ Many gamma values were screened and the confirmatory values were selected using 
 
 ### Aggressive Weighted BCE
 
-<img src="../paraphrase_detection/figure/dev_acc.png" width="700">
+<img src="../figure/ptd/dev_acc.png" width="700">
 
-<img src="../paraphrase_detection/figure/mcc.png" width="700">
+<img src="../figure/ptd/mcc.png" width="700">
 
 These curves show the aggressive objective eventually approaching the baseline, while remaining worse at the reported accuracy-selected checkpoints.
 
 ### Smoothed Weighted BCE
 
-<img src="../paraphrase_detection/figure/dev_acc_soft_weighted.png" width="700">
+<img src="../figure/ptd/dev_acc_soft_weighted.png" width="700">
 
-<img src="../paraphrase_detection/figure/mcc_soft_weighted.png" width="700">
+<img src="../figure/ptd/mcc_soft_weighted.png" width="700">
 
 These curves show the smoothed objectives' early MCC advantage and the unweighted BCE baseline catching up and slightly surpassing them with additional training.
 
 ### Focal exploratory sweep
 
-<img src="../paraphrase_detection/figure/focal_best_performance.png" width="700">
+<img src="../figure/ptd/focal_best_performance.png" width="700">
 
 The exploratory plot shows the stronger moderate gamma values at epoch 5 and the degradation from the aggressive $\gamma=4$ setting.
 
 ### Confirmatory focal run
 
 <div style="display: flex; gap: 10px;">
-  <img src="../paraphrase_detection/figure/dev_acc_focal.png" width="500">
-  <img src="../paraphrase_detection/figure/mcc_focal.png" width="500">
+  <img src="../figure/ptd/dev_acc_focal.png" width="500">
+  <img src="../figure/ptd/mcc_focal.png" width="500">
 </div>
 
 The difference plots show each focal run relative to the separately obtained BCE curve:
 
 <div style="display: flex; gap: 10px;">
-  <img src="../paraphrase_detection/figure/dev_acc_focal_diff.png" width="500">
-  <img src="../paraphrase_detection/figure/mcc_focal_diff.png" width="500">
+  <img src="../figure/ptd/dev_acc_focal_diff.png" width="500">
+  <img src="../figure/ptd/mcc_focal_diff.png" width="500">
 </div>
 
 The confirmatory curves show focal loss ahead at the reported early epochs and the differences mostly disappearing by final convergence at epoch 25.

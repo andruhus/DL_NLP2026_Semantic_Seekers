@@ -26,7 +26,7 @@ WARMUP_STEPS = 100
 METRIC_FACTOR = 0.5
 METRIC_PATIENCE = 1
 
-FIGURE_DIR = Path(__file__).resolve().parent / "figure"
+FIGURE_DIR = Path(__file__).resolve().parent.parent / "figure" / "ptg"
 RESULTS_PATH = Path(__file__).resolve().parent / "run_5epoch_results.csv"
 SCHEDULER_COMPARISONS = (
     ("Constant learning rate", "Constant learning rate", "constant_training_comparison.png"),
