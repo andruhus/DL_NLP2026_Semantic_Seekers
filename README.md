@@ -2274,43 +2274,43 @@ The training curves show that the strongest model continued to fit the training 
 
 ![SST baseline before and after learning-rate and batch-size tuning](figures/0_Task1_to_opt_hyper.png)
 
-Tuning slightly improves development accuracy but increases overfitting.
+Plot 1.0: Tuning slightly improves development accuracy but increases overfitting.
 
 ### Classifier architecture
 
 ![SST baseline compared with the multi-layer ReLU classifier](figures/1_Classifier_RELU.png)
 
-The multi-layer classifier preserves peak accuracy while reducing the train–development gap.
+Plot 1.1: The multi-layer classifier preserves peak accuracy while reducing the train–development gap.
 
 ### GELU activation
 
 ![SST ReLU and GELU classifier comparison](figures/2_RELU_GELU.png)
 
-GELU raises development accuracy from 0.523 to 0.528.
+Plot 1.2: GELU raises development accuracy from 0.523 to 0.528.
 
 ### Expressive pooling
 
 ![SST GELU classifier compared with expressive pooling](figures/3_pooling.png)
 
-Adding mean and max pooling lowers development accuracy, so the change is discarded.
+Plot 1.3: Adding mean and max pooling lowers development accuracy, so the change is discarded.
 
 ### Label smoothing
 
 ![SST label-smoothing comparison](figures/smoothing.png)
 
-Label smoothing of 0.01 performs worse than the unsmoothed configuration.
+Plot 2.1: Label smoothing of 0.01 performs worse than the unsmoothed configuration.
 
 ### Weight decay
 
 ![SST weight-decay comparison](figures/weight_decay_0.05.png)
 
-Weight decay of 0.05 reduces accuracy and makes training less stable.
+Plot 2.2: Weight decay of 0.05 reduces accuracy and makes training less stable.
 
 ### Warmup ratio
 
 ![SST warmup-ratio comparison](figures/warmup_ratio_0.0.png)
 
-Warmup does not improve peak accuracy but produces a more stable curve across epochs.
+Plot 2.3: Warmup does not improve peak accuracy but produces a more stable curve across epochs.
 
 ## Semantic Textual Similarity (STS)
 
